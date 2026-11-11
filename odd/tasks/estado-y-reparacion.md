@@ -60,3 +60,9 @@ L10: Pendiente conocido de S22, no implementado: sólo se repara la nave capitan
 - Merge y PR los hace el usuario, como pidió.
 - Para jugar: `python3 -m http.server 8765` en la raíz y `http://localhost:8765/index.html`.
 - La reparación se paga con doblones del mar: al botar una nave el astillero reinicia la bolsa, así que el precio de 400 se paga con lo que se rescató.
+
+L11 (verbatim): "las barras relacionadas con el lado del barco, ponmelas a cada lado, no todos juntas"
+
+L12: S21 ajustada por pedido del usuario: las barras de daño y recarga de cada costado se dibujan a su banda (babor a babor, estribor a estribor), no apiladas con las de condición. Casco, aparejo y tripulación van en un bloque a popa, sobre la quilla. Los bloques giran con el casco (la banda es un lugar del barco, no de la pantalla) y cada uno se coloca a la distancia mínima que despeja el casco según el rumbo. Los dos costados se escalan contra el mismo máximo, así que se pueden comparar.
+
+L13: Defecto propio hallado al mirar la captura, corregido: el panel de reparación (`#port-panel`) quedaba tapado por la rosa de los vientos, que ocupa el mismo centro inferior. Pasó a la izquierda, debajo del HUD del barco. El smoke no lo detectaba porque comprobaba visibilidad de DOM y no solapamiento; ahora además mide las tres zonas de barras (popa, babor, estribor) por separado.

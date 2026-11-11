@@ -119,12 +119,19 @@ const barPixels = (page, box) =>
   }, box);
 
 const viewport = { width: 1400, height: 900 };
-const playerBox = {
-  x: viewport.width / 2 - 80,
-  y: viewport.height / 2 - 120,
-  w: 160,
-  h: 80,
-};
+
+/**
+ * The bars now sit around the hull: condition astern and one block on each beam.
+ * The window covers a square around the ship so all three zones are measured.
+ */
+const around = (x, y, reach = 110) => ({
+  x: Math.round(x) - reach,
+  y: Math.round(y) - reach,
+  w: reach * 2,
+  h: reach * 2,
+});
+const centre = { x: viewport.width / 2, y: viewport.height / 2 };
+const playerBox = around(centre.x, centre.y);
 
 /* ---------------------------------------------------------------- 1: the player's bars */
 
@@ -132,6 +139,19 @@ const sound = build();
 let page = await newSea({ ship: sound, world: seaWorld(sound) });
 const paintedSound = await barPixels(page, playerBox);
 check(paintedSound > 800, `the player's bars are missing (${paintedSound} painted px)`);
+
+// the condition block sits astern of a hull that points east, not above her
+const asternBox = around(centre.x - 85, centre.y, 40);
+const paintedAstern = await barPixels(page, asternBox);
+check(paintedAstern > 200, `the condition bars are not astern (${paintedAstern} painted px)`);
+
+// and the two beams are on her sides, not in the same stack
+const portBox = around(centre.x, centre.y - 39, 40);
+const starboardBox = around(centre.x, centre.y + 39, 40);
+const paintedPort = await barPixels(page, portBox);
+const paintedStarboard = await barPixels(page, starboardBox);
+check(paintedPort > 200, `the port beam bars are missing (${paintedPort} painted px)`);
+check(paintedStarboard > 200, `the starboard beam bars are missing (${paintedStarboard} painted px)`);
 await page.close();
 
 /* ---------------------------------------------------------------- 2: an enemy in gunshot */
@@ -149,12 +169,7 @@ const enemyNear = {
 page = await newSea({ ship: sound, world: seaWorld(sound, [enemyNear]) });
 await page.waitForTimeout(500);
 
-const enemyScreen = {
-  x: viewport.width / 2 - 80,
-  y: viewport.height / 2 + 300 * 0.4 - 120,
-  w: 160,
-  h: 80,
-};
+const enemyScreen = around(centre.x, centre.y + 300 * 0.4);
 const paintedEnemy = await barPixels(page, enemyScreen);
 check(paintedEnemy > 800, `the enemy's bars are missing inside gunshot (${paintedEnemy} painted px)`);
 await page.close();
@@ -165,12 +180,7 @@ const enemyFar = { ...enemyNear, id: 902, x: 0, y: 1500 };
 page = await newSea({ ship: sound, world: seaWorld(sound, [enemyFar]) });
 await page.waitForTimeout(500);
 
-const farScreen = {
-  x: viewport.width / 2 - 80,
-  y: Math.round(viewport.height / 2 + 1500 * 0.4) - 120,
-  w: 160,
-  h: 80,
-};
+const farScreen = around(centre.x, viewport.height / 2 + 1500 * 0.4);
 const paintedFar = await barPixels(page, farScreen);
 check(paintedFar === 0, `a distant enemy showed its bars (${paintedFar} painted px)`);
 await page.close();
@@ -297,7 +307,13 @@ await page.close();
 await browser.close();
 
 if (errors.length) failures.push(`console errors: ${errors.join(" | ")}`);
-console.log(JSON.stringify({ paintedSound, paintedEnemy, paintedFar, failures }, null, 2));
+console.log(
+  JSON.stringify(
+    { paintedSound, paintedAstern, paintedPort, paintedStarboard, paintedEnemy, paintedFar, failures },
+    null,
+    2,
+  ),
+);
 if (failures.length) {
   console.error("SMOKE FAILED:");
   for (const failure of failures) console.error(`- ${failure}`);

@@ -385,12 +385,15 @@ function drawSea(ctx) {
 /* ---------------------------------------------------------------- floating bars (S21) */
 
 const BAR = {
+  /** Condition block, above the hull. */
   width: 108,
+  /** Per-beam blocks, one on each side of the hull. */
+  sideWidth: 54,
+  /** Screen px of clear water kept between a hull's centre and the nearest block edge. */
+  hullClear: 26,
   height: 6,
   gap: 3,
   padding: 5,
-  /** Screen px between the hull and the bottom of its bar block. */
-  lift: 44,
   hull: "#a13c2c",
   rigging: "#3d6fa8",
   crew: "#2f6b47",
@@ -414,60 +417,111 @@ function inGunshot(encounter) {
   return Math.hypot(encounter.x - world.ship.x, encounter.y - world.ship.y) <= COMBAT.engageRadiusM;
 }
 
-function drawBar(ctx, x, y, share, color, { backdrop = null } = {}) {
+function drawBar(ctx, x, y, share, color, { backdrop = null, width = BAR.width } = {}) {
   ctx.fillStyle = BAR.track;
-  ctx.fillRect(x, y, BAR.width, BAR.height);
+  ctx.fillRect(x, y, width, BAR.height);
   if (backdrop !== null && backdrop > 0) {
     // the part of the bar already earned, behind the part that is ready now
     ctx.fillStyle = BAR.dealt;
-    ctx.fillRect(x, y, BAR.width * Math.min(1, backdrop), BAR.height);
+    ctx.fillRect(x, y, width * Math.min(1, backdrop), BAR.height);
   }
   if (share > 0) {
     ctx.fillStyle = color;
-    ctx.fillRect(x, y, BAR.width * Math.min(1, share), BAR.height);
+    ctx.fillRect(x, y, width * Math.min(1, share), BAR.height);
   }
   ctx.strokeStyle = BAR.frame;
   ctx.lineWidth = 1;
-  ctx.strokeRect(x + 0.5, y + 0.5, BAR.width - 1, BAR.height - 1);
+  ctx.strokeRect(x + 0.5, y + 0.5, width - 1, BAR.height - 1);
+}
+
+/** Size in screen px of a block with `rowCount` rows and bars `width` wide. */
+function blockSize(rowCount, width) {
+  return {
+    w: width + BAR.padding * 2,
+    h: rowCount * (BAR.height + BAR.gap) + BAR.padding * 2 - BAR.gap,
+  };
 }
 
 /**
- * One block of bars over a hull: condition, then per beam the damage it deals
- * (ready now over what it has already dealt) and how much of it is reloaded.
+ * Where to centre a block so it sits on `angle` from the hull and just clears her:
+ * the shortest distance along that direction at which the rectangle no longer
+ * reaches `BAR.hullClear` px from the hull's centre, whatever the heading.
  */
-function drawBarsFor(ctx, combatant, x, y, distanceM) {
+function blockCentre(x, y, angle, size) {
+  const dx = Math.cos(angle);
+  const dy = Math.sin(angle);
+  const alongX = Math.abs(dx) > 1e-6 ? (size.w / 2 + BAR.hullClear) / Math.abs(dx) : Infinity;
+  const alongY = Math.abs(dy) > 1e-6 ? (size.h / 2 + BAR.hullClear) / Math.abs(dy) : Infinity;
+  const reach = Math.min(alongX, alongY);
+  return { x: x + dx * reach, y: y + dy * reach };
+}
+
+/** Frame and rows of one block, drawn at a rectangle whose centre is given. */
+function drawBlock(ctx, rows, centreX, centreY, width) {
+  const blockWidth = width + BAR.padding * 2;
+  const blockHeight = rows.length * (BAR.height + BAR.gap) + BAR.padding * 2 - BAR.gap;
+  const left = centreX - blockWidth / 2;
+  const top = centreY - blockHeight / 2;
+
+  ctx.fillStyle = "rgba(8,14,22,0.55)";
+  ctx.fillRect(left, top, blockWidth, blockHeight);
+  ctx.strokeStyle = BAR.frame;
+  ctx.lineWidth = 1;
+  ctx.strokeRect(left + 0.5, top + 0.5, blockWidth - 1, blockHeight - 1);
+
+  let cursor = top + BAR.padding;
+  for (const row of rows) {
+    drawBar(ctx, left + BAR.padding, cursor, row.share, row.color, {
+      backdrop: row.backdrop ?? null,
+      width,
+    });
+    cursor += BAR.height + BAR.gap;
+  }
+}
+
+/**
+ * The bars of one hull (S21): the condition astern along her keel, and each beam's
+ * damage and reload on its own side of her, so port and starboard are read where
+ * they are instead of as one stack. Every block turns with the hull, because a
+ * beam is a place on the ship, not a place on the screen. Condition sits on the
+ * keel and the beams on the perpendicular, so the three never overlap.
+ */
+function drawBarsFor(ctx, combatant, x, y, distanceM, heading) {
   if (!combatant) return;
-  const rows = [
+
+  const conditionRows = [
     { share: combatant.condition.hull / 100, color: BAR.hull },
     { share: combatant.condition.rigging / 100, color: BAR.rigging },
     { share: combatant.condition.crew / 100, color: BAR.crew },
   ];
+  const stern = blockCentre(x, y, heading + Math.PI, blockSize(conditionRows.length, BAR.width));
+  drawBlock(ctx, conditionRows, stern.x, stern.y, BAR.width);
 
+  // Both beams are scaled against the same pair of maxima, so the two sides stay
+  // comparable: the longer bar is the beam that hits harder, the fuller one the
+  // beam that is readier.
   const dealt = Math.max(damageDealt(combatant, "babor"), damageDealt(combatant, "estribor"), 1);
-  const ready = Math.max(readyDamage(combatant, "babor", distanceM), readyDamage(combatant, "estribor", distanceM), 1);
+  const ready = Math.max(
+    readyDamage(combatant, "babor", distanceM),
+    readyDamage(combatant, "estribor", distanceM),
+    1,
+  );
+
   for (const side of ["babor", "estribor"]) {
-    rows.push({
-      share: readyDamage(combatant, side, distanceM) / ready,
-      backdrop: damageDealt(combatant, side) / dealt,
-      color: BAR.ready,
-    });
-    rows.push({ share: loadedShare(combatant, side), color: BAR.reload });
-  }
-
-  const blockHeight = rows.length * (BAR.height + BAR.gap) + BAR.padding * 2 - BAR.gap;
-  const left = x - BAR.width / 2 - BAR.padding;
-  const top = y - blockHeight - BAR.lift;
-
-  ctx.fillStyle = "rgba(8,14,22,0.55)";
-  ctx.fillRect(left, top, BAR.width + BAR.padding * 2, blockHeight);
-  ctx.strokeStyle = BAR.frame;
-  ctx.lineWidth = 1;
-  ctx.strokeRect(left + 0.5, top + 0.5, BAR.width + BAR.padding * 2 - 1, blockHeight - 1);
-
-  let cursor = top + BAR.padding;
-  for (const row of rows) {
-    drawBar(ctx, x - BAR.width / 2, cursor, row.share, row.color, { backdrop: row.backdrop ?? null });
-    cursor += BAR.height + BAR.gap;
+    // Starboard bears at heading + 90°, port at heading - 90°, the same convention
+    // sideForBearing uses.
+    const sign = side === "estribor" ? 1 : -1;
+    const angle = heading + sign * (Math.PI / 2);
+    const rows = [
+      {
+        share: readyDamage(combatant, side, distanceM) / ready,
+        backdrop: damageDealt(combatant, side) / dealt,
+        color: BAR.ready,
+      },
+      { share: loadedShare(combatant, side), color: BAR.reload },
+    ];
+    const at = blockCentre(x, y, angle, blockSize(rows.length, BAR.sideWidth));
+    drawBlock(ctx, rows, at.x, at.y, BAR.sideWidth);
   }
 }
 
@@ -476,7 +530,7 @@ function drawShipBars(ctx) {
   if (!world) return;
 
   const player = toScreen(world.ship.x, world.ship.y);
-  drawBarsFor(ctx, playerCombat, player.x, player.y, 0);
+  drawBarsFor(ctx, playerCombat, player.x, player.y, 0, world.ship.heading ?? 0);
 
   for (const encounter of world.encounters) {
     if (encounter.type !== "enemy" || !encounter.combat) continue;
@@ -484,7 +538,7 @@ function drawShipBars(ctx) {
     if (!inGunshot(encounter)) continue;
     const at = toScreen(encounter.x, encounter.y);
     const distance = Math.hypot(encounter.x - world.ship.x, encounter.y - world.ship.y);
-    drawBarsFor(ctx, encounter.combat, at.x, at.y, distance);
+    drawBarsFor(ctx, encounter.combat, at.x, at.y, distance, encounter.heading ?? 0);
   }
 }
 

@@ -1132,11 +1132,11 @@ input[type="number"] {
 /* ---------- sea: repair at the home port ---------- */
 
 .hud-port {
-  bottom: 14px;
-  left: 50%;
-  transform: translateX(-50%);
-  max-width: 420px;
-  text-align: center;
+  /* under the ship HUD: the bottom centre belongs to the wind rose */
+  top: 196px;
+  left: 14px;
+  width: 200px;
+  box-sizing: border-box;
 }
 
 .port-hint {
