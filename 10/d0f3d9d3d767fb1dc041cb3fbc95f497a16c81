@@ -1,0 +1,30 @@
+test/repair.test.js
+  s_0615c265d5ef3b::t_2015b78da4fd1b 1-10,12-49,51-64,66-92,94-164
+  s_0615c265d5ef3b::t_d3052cd862db3e 11,50,65,93
+odd/tasks/estado-y-reparacion.md
+  s_0615c265d5ef3b::t_f8554fca0e48e5 1-45
+src/model/fleet.js
+  s_0615c265d5ef3b::t_cdc8c878d3ba91 60-95,109-111,114-116,118
+  s_0615c265d5ef3b::t_86666dfdf9bd43 59
+src/model/shipyard.js
+  s_0615c265d5ef3b::t_0261a64772d4f9 155-157
+src/model/repair.js
+  s_0615c265d5ef3b::t_e5cb84a5021770 1-87,94-107
+  s_0615c265d5ef3b::t_a73cebaf2f1223 88-93
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.6",
+  "base_commit_sha": "10d0f3d9d3d767fb1dc041cb3fbc95f497a16c81",
+  "prompts": {},
+  "sessions": {
+    "s_0615c265d5ef3b": {
+      "agent_id": {
+        "tool": "pi",
+        "id": "01a1cbe7-b77b-77ed-ba1b-220f1e39ae58",
+        "model": "deepseek-v4.1-flash_high"
+      },
+      "human_author": "Raul Ripoll <raulral@ext.inditex.com>"
+    }
+  }
+}
