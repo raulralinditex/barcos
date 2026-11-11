@@ -1,0 +1,27 @@
+src/model/ship-model.js
+  s_53bc4371ebd20f::t_138aa22e8c3fee 159-164,175-180,184,188,192-194,199-205,211-217,221-223,227,231,233,237,241,243-244
+  s_53bc4371ebd20f::t_1d250febc30b13 158
+test/ship-model.test.js
+  s_53bc4371ebd20f::t_817e9dd97f6c3e 153-156
+  s_53bc4371ebd20f::t_d8d1f778832502 185-186
+test/shipyard.test.js
+  s_53bc4371ebd20f::t_f665fedfd047ba 194-198
+src/model/shipyard.js
+  s_53bc4371ebd20f::t_0407a3c6d2d4e0 89-93
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.6",
+  "base_commit_sha": "db88f1fc2a2792bab1b641f1f30e67df4202bd50",
+  "prompts": {},
+  "sessions": {
+    "s_53bc4371ebd20f": {
+      "agent_id": {
+        "tool": "pi",
+        "id": "01a1cb5e-c63a-70e3-b958-abe976add528",
+        "model": "deepseek-v4.1-flash_high"
+      },
+      "human_author": "Raul Ripoll <raulral@ext.inditex.com>"
+    }
+  }
+}
