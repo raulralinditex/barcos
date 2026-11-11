@@ -1,0 +1,16 @@
+src/model/shipyard.js
+  h_8b9b8fe190c867 1-155
+test/shipyard.test.js
+  h_8b9b8fe190c867 1-244
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.6",
+  "base_commit_sha": "944886ed7f79013d3b50e313c2dc709c2c32173a",
+  "prompts": {},
+  "humans": {
+    "h_8b9b8fe190c867": {
+      "author": "Raul Ripoll <raulral@ext.inditex.com>"
+    }
+  }
+}
