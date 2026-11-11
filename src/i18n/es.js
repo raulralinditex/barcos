@@ -1,0 +1,280 @@
+/**
+ * Spanish catalogue. Values are the game's original wording; keys are English (S10).
+ *
+ * Placeholders use {braces} and are filled by interpolate() (S14). Each language
+ * owns its own word order, so no sentence is assembled from fragments.
+ */
+
+export const es = {
+  /* ---------------------------------------------------------------- app chrome */
+  "app.title": "Astillero — Juego de barcos",
+  "app.seaTitle": "En el mar — Juego de barcos",
+  "app.brand": "Astillero",
+  "app.brandSub": "Un barco a partir de un presupuesto",
+  "app.gold": "Doblones",
+  "app.language": "Idioma",
+
+  /* ---------------------------------------------------------------- fleet (S7) */
+  "fleet.title": "Tu flota",
+  "fleet.count.one": "1 nave",
+  "fleet.count.many": "{count} naves",
+  "fleet.count.none": "sin naves",
+  "fleet.empty": "Todavía no tenés naves. Construí la primera y botala.",
+  "fleet.captain": "capitana",
+  "fleet.promote": "Capitanea esta nave",
+  "fleet.isCaptain": "Capitana de la flota",
+  "fleet.sail": "⚓ Zarpar con {name}",
+
+  /* ---------------------------------------------------------------- shipyard: hulls */
+  "shipyard.hulls": "Casco",
+  "shipyard.hullsHint": "Arqueo histórico del modelo; el desplazamiento se deriva de él.",
+  "shipyard.hullMeta": "{country} · arqueo {min}-{max}",
+  "shipyard.hullPrice": "desde {price} doblones",
+
+  /* ---------------------------------------------------------------- shipyard: ship */
+  "shipyard.ship": "El buque",
+  "shipyard.name": "Nombre",
+  "shipyard.namePlaceholder": "Sin nombre",
+  "shipyard.babor": "Babor",
+  "shipyard.estribor": "Estribor",
+  "shipyard.pieces": "piezas",
+  "shipyard.massBalance": "Balance de masa",
+  "shipyard.draft": "Calado",
+  "shipyard.speed": "Velocidad",
+  "shipyard.loadFraction": "Fracción de carga",
+  "shipyard.cargoRoom": "Hueco para carga",
+  "shipyard.people": "Dotación",
+  "shipyard.upkeep": "Mantenimiento",
+
+  /* ---------------------------------------------------------------- shipyard: mass segments */
+  "mass.light": "Casco vacío",
+  "mass.crew": "Dotación",
+  "mass.ordnance": "Armas y munición",
+  "mass.provisions": "Provisiones",
+  "mass.cargo": "Mercancía",
+  "mass.ballast": "Lastre",
+  "mass.equipment": "Equipo",
+  "mass.over": "Exceso: {value}",
+  "mass.readout": "{real} de {max} de desplazamiento",
+  "mass.reserve": "Reserva",
+  /* ---------------------------------------------------------------- shipyard: rig */
+  "shipyard.rig": "Aparejo",
+  "shipyard.ordnance": "Artillería",
+  "shipyard.crew": "Dotación",
+  "shipyard.cargo": "Carga",
+  "shipyard.piece": "Pieza",
+  "shipyard.addBattery": "Añadir batería",
+  "shipyard.days": "Días de provisión",
+  "shipyard.supplies": "Provisiones",
+  "shipyard.equipment": "Equipo y recipientes",
+  "shipyard.ballast": "Lastre",
+  "shipyard.reserveCapacity": "Reserva de capacidad",
+  "shipyard.noGuns": "Sin artillería. Un barco sin piezas no puede luchar: solo huir.",
+  "shipyard.viable": "El barco es viable y está pagado. Podés botarlo.",
+  "shipyard.upkeepPerDay": "{value} al día",
+  "supply.daysNote": "{kg} kg por persona y día, con un 12 % de pérdidas.",
+  "supply.cargoNote": "Hueco real del casco: {room}.",
+  "supply.ballastNote": "Sin lastre un casco vacío no aguanta el velamen.",
+  "supply.equipmentNote": "Barriles, cables, cureñas de repuesto, herramientas.",
+  "supply.reserveNote": "Ocupa presupuesto de carga, pero no es masa embarcada.",
+
+  /* ---------------------------------------------------------------- shipyard: price */
+  "shipyard.total": "Coste total",
+  "shipyard.launch": "Botar el barco",
+  "shipyard.erase": "Borrar partida",
+
+  /* ---------------------------------------------------------------- launch dialog */
+  "sail.title": "Botadura",
+  "sail.back": "Volver al astillero",
+  "sail.go": "Zarpar",
+  "sail.hull": "Casco",
+  "sail.country": "País",
+  "sail.length": "Eslora",
+  "sail.displacement": "Desplazamiento",
+  "sail.realMass": "Masa embarcada",
+  "sail.draft": "Calado",
+  "sail.speed": "Velocidad",
+  "sail.people": "Dotación",
+  "sail.guns": "Artillería",
+  "sail.gunsDetail": "{total} piezas ({babor}/{estribor})",
+  "sail.provisions": "Provisiones",
+  "sail.cargo": "Mercancía",
+  "sail.cost": "Coste",
+  "sail.upkeep": "Mantenimiento",
+  "sail.purseLeft": "Resto de la bolsa",
+  "sail.knots": "{value} nudos",
+  "sail.peopleCount": "{value} personas",
+  "sail.days": "{days} días",
+  "sail.upkeepPerDay": "{value} al día",
+  "sail.doblones": "{value} doblones",
+  "sail.warnings": "Zarpa con {count} advertencia(s): {codes}.",
+  "sail.clean": "Sin advertencias. La nave está en condiciones.",
+
+  /* ---------------------------------------------------------------- erase dialog */
+  "erase.title": "Borrar partida",
+  "erase.body": "Se borra la flota entera, la bolsa, el barco que estás capitaneando y el mar que exploraste. No se puede deshacer.",
+  "erase.cancel": "Cancelar",
+  "erase.confirm": "Borrar todo",
+
+  /* ---------------------------------------------------------------- sea HUD */
+  "sea.back": "⚓ Volver al astillero",
+  "sea.gold": "Doblones",
+  "sea.zone": "Zona",
+  "sea.sail": "Velamen",
+  "sea.speed": "Velocidad",
+  "sea.heading": "Rumbo",
+  "sea.hull": "Casco",
+  "sea.rigging": "Aparejo",
+  "sea.crew": "Tripulación",
+  "sea.rounds": "Munición B/E",
+  "sea.help": "<strong>W / S</strong> velamen · <strong>A / D</strong> timón<br /><strong>Q</strong> andanada de babor · <strong>E</strong> andanada de estribor<br />Buscá los destellos de oro y batí las velas hostiles",
+
+  /* ---------------------------------------------------------------- sea banners */
+  "sea.banner.treasure": "+{gold} doblones · tesoro rescatado",
+  "sea.banner.depart": "Zarpa el {name}. Buen viento, capitán.",
+  "sea.banner.enemyNear": "¡Vela hostil a {distance} m! Q babor · E estribor",
+  "sea.banner.noTarget": "Sin blanco a {side}",
+  "sea.banner.reloading": "Recargando el costado de {side}…",
+  "sea.banner.sunk": "¡Enemigo hundido! Saquea el pecio",
+  "sea.banner.surrendered": "¡Se rindió! Saquea el pecio",
+
+  /* ---------------------------------------------------------------- sea: sinking */
+  "sea.gameOver.title": "El barco se hundió",
+  "sea.gameOver.sunk": "El {name} se hundió",
+  "sea.gameOver.surrendered": "El {name} se rindió",
+  "sea.gameOver.purse": "Bolsa: {gold} doblones. Necesitás un barco nuevo.",
+  "sea.gameOver.back": "Volver al astillero",
+  "sea.target.hostileSail": "Vela hostil",
+  "sea.sides.babor": "babor",
+  "sea.sides.estribor": "estribor",
+
+  /* ---------------------------------------------------------------- validation: ship model */
+  "issue.mass-exceeded": "La masa total ({mass} kg) supera el desplazamiento máximo ({max} kg). Quitá carga, piezas o gente.",
+  "issue.no-cargo-room": "La configuración ya no deja hueco para mercancía ({room} kg). El casco no admite más peso.",
+  "issue.deep-draft": "Calado estimado {draft} m: demasiado profundo para aguas costeras.",
+  "issue.crew-below-minimum": "Faltan marinos: {count} de {needed} necesarios para maniobrar.",
+  "issue.too-many-pieces": "Demasiadas piezas por costado (máximo {max}). Babor {babor}, estribor {estribor}.",
+  "issue.under-gunned-crew.one": "{pieces} pieza necesita al menos {needed} artillero; hay {have}. Las recargas serán más lentas.",
+  "issue.under-gunned-crew.many": "{pieces} piezas necesitan al menos {needed} artilleros; hay {have}. Las recargas serán más lentas.",
+  "issue.one-sided-battery.babor": "Sin piezas a babor: un enemigo por ese costado no recibirá respuesta.",
+  "issue.one-sided-battery.estribor": "Sin piezas a estribor: un enemigo por ese costado no recibirá respuesta.",
+  "issue.rowers-without-galley": "Este casco no lleva remos; los remeros solo ocupan masa y provisiones.",
+  "issue.no-provisions": "Sin días de provisión el barco no puede zarpar.",
+  "issue.short-provisions": "{days} días de provisión: no alcanza para cruzar a mar abierto.",
+  "issue.no-soldiers": "Sin soldados no podés abordar una presa ni defender la cubierta.",
+  "issue.unaffordable": "Faltan {missing} doblones: el barco cuesta {total} y tenés {gold}.",
+
+  /* ---------------------------------------------------------------- naval data: hulls */
+  "hull.patache.name": "Patache",
+  "hull.patache.type": "Patache de enlace",
+  "hull.patache.country": "España",
+  "hull.patache.note": "Rango de ejemplos; no desplazamiento métrico.",
+
+  "hull.carabela-latina.name": "Carabela latina",
+  "hull.carabela-latina.type": "Carabela de dos y tres mástiles",
+  "hull.carabela-latina.country": "Portugal",
+  "hull.carabela-latina.note": "Referencia de tipos; revisar unidades originales.",
+
+  "hull.jacht.name": "Jacht",
+  "hull.jacht.type": "Pequeña nave exploradora",
+  "hull.jacht.country": "Países Bajos",
+  "hull.jacht.note": "Duyfken; no mezclar con dimensiones de la réplica.",
+
+  "hull.zabra.name": "Zabra",
+  "hull.zabra.type": "Zabra o galeoncete",
+  "hull.zabra.country": "España",
+  "hull.zabra.note": "Augusta y Julia; valor atribuido a cada barco.",
+
+  "hull.galeon-pequeno.name": "Galeón pequeño",
+  "hull.galeon-pequeno.type": "Galeón corsario",
+  "hull.galeon-pequeno.country": "Inglaterra",
+  "hull.galeon-pequeno.note": "Golden Hind; R1 recogía estimaciones desde 100.",
+
+  "hull.fluyt.name": "Fluyt",
+  "hull.fluyt.type": "Mercante holandés",
+  "hull.fluyt.country": "Países Bajos",
+  "hull.fluyt.note": "Se publicó hasta 350 t de carga; no hay mínimo establecido.",
+
+  "hull.nao-armada.name": "Nao mercante armada",
+  "hull.nao-armada.type": "Transporte armado",
+  "hull.nao-armada.country": "España",
+  "hull.nao-armada.note": "Rango de muestra, no límites de toda la clase.",
+
+  "hull.galeon-guerra.name": "Galeón de guerra",
+  "hull.galeon-guerra.type": "Galeón de escuadra",
+  "hull.galeon-guerra.country": "Inglaterra",
+  "hull.galeon-guerra.note": "Dreadnought, Swiftsure, Revenge.",
+
+  "hull.gran-mercante.name": "Gran mercante",
+  "hull.gran-mercante.type": "Mercante oceánico",
+  "hull.gran-mercante.country": "Países Bajos",
+  "hull.gran-mercante.note": "Batavia, reconstrucción; no medición del original.",
+
+  "hull.galeaza.name": "Galeaza",
+  "hull.galeaza.type": "Galera artillada",
+  "hull.galeaza.country": "Nápoles / Felipe II",
+  "hull.galeaza.note": "Cuatro galeazas de 1588, 300 remeros cada una.",
+
+  "hull.gran-galeon.name": "Gran galeón",
+  "hull.gran-galeon.type": "Galeón de mando",
+  "hull.gran-galeon.country": "Portugal / Felipe II",
+  "hull.gran-galeon.note": "San Martín; R4 recoge portugueses hasta 1050.",
+
+  "hull.gran-buque-real.name": "Gran buque real",
+  "hull.gran-buque-real.type": "Buque insignia",
+  "hull.gran-buque-real.country": "Inglaterra",
+  "hull.gran-buque-real.note": "Triumph; R1 atribuyó 1100 y R4 lo clasifica aparte.",
+
+  /* ---------------------------------------------------------------- naval data: pieces */
+  "piece.canon-60.name": "Cañón de 60 libras",
+  "piece.canon-40.name": "Cañón de 40 libras",
+  "piece.medio-canon-32.name": "Medio cañón de 32 libras",
+  "piece.culebrina-18.name": "Culebrina de 18 libras",
+  "piece.media-culebrina-9.name": "Media culebrina de 9 libras",
+  "piece.sacre.name": "Sacre",
+  "piece.minion.name": "Minion de 4 libras",
+  "piece.falcon.name": "Falcón",
+  "piece.falconete.name": "Falconete",
+  "piece.pedrero.name": "Pedrero",
+  "piece.pedrero.note": "Pieza recuperada del San Diego; dispara piedra.",
+  "piece.verso.name": "Verso de hierro (giratoria)",
+  "piece.verso.note": "Pieza giratoria antipersonal; alcance eficaz de referencia 180 m.",
+
+  /* ---------------------------------------------------------------- naval data: ammunition */
+  "ammo.bala-hierro.name": "Bala de hierro",
+  "ammo.bala-piedra.name": "Bala de piedra",
+  "ammo.cadena.name": "Munición de cadena",
+  "ammo.metralla.name": "Metralla (hailshot)",
+
+  /* ---------------------------------------------------------------- naval data: zones */
+  "zone.costera.name": "Aguas costeras",
+  "zone.costera.description": "Rutas conocidas, poca profundidad y velas amigas.",
+  "zone.abierto.name": "Mar abierto",
+  "zone.abierto.description": "Rutas oceánicas, corsarios y mercantes ricos.",
+  "zone.abismo.name": "El abismo",
+  "zone.abismo.description": "Tormenta, arrecifes y escuadras de guerra.",
+
+  /* ---------------------------------------------------------------- naval data: crew roles */
+  "crew.marino.name": "Marino",
+  "crew.marino.description": "Personal naval; sin él el barco no maniobra.",
+  "crew.artillero.name": "Artillero",
+  "crew.artillero.description": "Sirve las piezas; el workbook lo cuenta aparte de los soldados.",
+  "crew.soldado.name": "Soldado",
+  "crew.soldado.description": "Infantería embarcada; no incluye a los artilleros.",
+  "crew.remero.name": "Remero",
+  "crew.remero.description": "Solo en galeazas y galeras; consume masa y provisiones.",
+
+  /* ---------------------------------------------------------------- default ship names */
+  "shipName.patache": "Avispa",
+  "shipName.carabela-latina": "Niña",
+  "shipName.jacht": "Duyfken",
+  "shipName.zabra": "Augusta",
+  "shipName.galeon-pequeno": "Golden Hind",
+  "shipName.fluyt": "Ruyter",
+  "shipName.nao-armada": "Rosario",
+  "shipName.galeon-guerra": "Revenge",
+  "shipName.gran-mercante": "Batavia",
+  "shipName.galeaza": "Galeaza",
+  "shipName.gran-galeon": "San Martín",
+  "shipName.gran-buque-real": "Triumph",
+};

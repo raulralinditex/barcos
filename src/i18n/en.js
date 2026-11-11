@@ -1,0 +1,283 @@
+/**
+ * English catalogue. Mirrors the keys in `es.js` exactly; the completeness test
+ * fails if the two drift apart.
+ *
+ * Historical ship names, hull classes and gun names are translated where an
+ * established English term exists (galleon, fluyt, culverin, falconet). Proper
+ * names of individual ships are kept as they are.
+ */
+
+export const en = {
+  /* ---------------------------------------------------------------- app chrome */
+  "app.title": "Shipyard — Boat game",
+  "app.seaTitle": "At sea — Boat game",
+  "app.brand": "Shipyard",
+  "app.brandSub": "One ship from a purse of gold",
+  "app.gold": "Doubloons",
+  "app.language": "Language",
+
+  /* ---------------------------------------------------------------- fleet (S7) */
+  "fleet.title": "Your fleet",
+  "fleet.count.one": "1 ship",
+  "fleet.count.many": "{count} ships",
+  "fleet.count.none": "no ships",
+  "fleet.empty": "You own no ships yet. Build the first one and launch it.",
+  "fleet.captain": "flagship",
+  "fleet.promote": "Sail this ship",
+  "fleet.isCaptain": "Fleet flagship",
+  "fleet.sail": "⚓ Sail with {name}",
+
+  /* ---------------------------------------------------------------- shipyard: hulls */
+  "shipyard.hulls": "Hull",
+  "shipyard.hullsHint": "Historical tonnage from the model; displacement is derived from it.",
+  "shipyard.hullMeta": "{country} · tonnage {min}-{max}",
+  "shipyard.hullPrice": "from {price} doubloons",
+
+  /* ---------------------------------------------------------------- shipyard: ship */
+  "shipyard.ship": "The ship",
+  "shipyard.name": "Name",
+  "shipyard.namePlaceholder": "Unnamed",
+  "shipyard.babor": "Port",
+  "shipyard.estribor": "Starboard",
+  "shipyard.pieces": "guns",
+  "shipyard.massBalance": "Mass balance",
+  "shipyard.draft": "Draft",
+  "shipyard.speed": "Speed",
+  "shipyard.loadFraction": "Load fraction",
+  "shipyard.cargoRoom": "Room for cargo",
+  "shipyard.people": "Crew",
+  "shipyard.upkeep": "Upkeep",
+
+  /* ---------------------------------------------------------------- shipyard: mass segments */
+  "mass.light": "Empty hull",
+  "mass.crew": "Crew",
+  "mass.ordnance": "Arms and powder",
+  "mass.provisions": "Provisions",
+  "mass.cargo": "Merchandise",
+  "mass.ballast": "Ballast",
+  "mass.equipment": "Equipment",
+  "mass.over": "Over: {value}",
+  "mass.readout": "{real} of {max} displacement",
+  "mass.reserve": "Reserve (weightless)",
+
+  /* ---------------------------------------------------------------- shipyard: rig */
+  "shipyard.rig": "Rig",
+  "shipyard.ordnance": "Ordnance",
+  "shipyard.crew": "Crew",
+  "shipyard.cargo": "Cargo",
+  "shipyard.piece": "Gun",
+  "shipyard.addBattery": "Add battery",
+  "shipyard.days": "Days of provisions",
+  "shipyard.supplies": "Provisions",
+  "shipyard.equipment": "Equipment and casks",
+  "shipyard.ballast": "Ballast",
+  "shipyard.reserveCapacity": "Capacity reserve",
+  "shipyard.noGuns": "No ordnance. A ship without guns cannot fight: it can only run.",
+  "shipyard.viable": "The ship is seaworthy and paid for. You can launch it.",
+  "shipyard.upkeepPerDay": "{value} per day",
+  "supply.daysNote": "{kg} kg per person per day, with 12 % spoilage.",
+  "supply.cargoNote": "Real room in the hull: {room}.",
+  "supply.ballastNote": "Without ballast an empty hull cannot stand up to the sails.",
+  "supply.equipmentNote": "Casks, cables, spare carriages, tools.",
+  "supply.reserveNote": "Uses cargo allowance but is not mass aboard.",
+
+  /* ---------------------------------------------------------------- shipyard: price */
+  "shipyard.total": "Total cost",
+  "shipyard.launch": "Launch the ship",
+  "shipyard.erase": "Erase game",
+
+  /* ---------------------------------------------------------------- launch dialog */
+  "sail.title": "Launch",
+  "sail.back": "Back to the shipyard",
+  "sail.go": "Set sail",
+  "sail.hull": "Hull",
+  "sail.country": "Country",
+  "sail.length": "Length",
+  "sail.displacement": "Displacement",
+  "sail.realMass": "Mass aboard",
+  "sail.draft": "Draft",
+  "sail.speed": "Speed",
+  "sail.people": "Crew",
+  "sail.guns": "Ordnance",
+  "sail.gunsDetail": "{total} guns ({babor}/{estribor})",
+  "sail.provisions": "Provisions",
+  "sail.cargo": "Merchandise",
+  "sail.cost": "Cost",
+  "sail.upkeep": "Upkeep",
+  "sail.purseLeft": "Purse left",
+  "sail.knots": "{value} knots",
+  "sail.peopleCount": "{value} people",
+  "sail.days": "{days} days",
+  "sail.upkeepPerDay": "{value} per day",
+  "sail.doblones": "{value} doubloons",
+  "sail.warnings": "Sailing with {count} warning(s): {codes}.",
+  "sail.clean": "No warnings. The ship is fit to sail.",
+
+  /* ---------------------------------------------------------------- erase dialog */
+  "erase.title": "Erase game",
+  "erase.body": "This erases the whole fleet, your purse, the ship you captain and the sea you explored. It cannot be undone.",
+  "erase.cancel": "Cancel",
+  "erase.confirm": "Erase everything",
+
+  /* ---------------------------------------------------------------- sea HUD */
+  "sea.back": "⚓ Back to the shipyard",
+  "sea.gold": "Doubloons",
+  "sea.zone": "Zone",
+  "sea.sail": "Sail",
+  "sea.speed": "Speed",
+  "sea.heading": "Heading",
+  "sea.hull": "Hull",
+  "sea.rigging": "Rig",
+  "sea.crew": "Crew",
+  "sea.rounds": "Rounds P/S",
+  "sea.help": "<strong>W / S</strong> sail · <strong>A / D</strong> helm<br /><strong>Q</strong> port broadside · <strong>E</strong> starboard broadside<br />Chase the glint of gold and fight the hostile sails",
+
+  /* ---------------------------------------------------------------- sea banners */
+  "sea.banner.treasure": "+{gold} doubloons · treasure recovered",
+  "sea.banner.depart": "The {name} sets sail. Fair winds, captain.",
+  "sea.banner.enemyNear": "Hostile sail at {distance} m! Q port · E starboard",
+  "sea.banner.noTarget": "No target to {side}",
+  "sea.banner.reloading": "Reloading the {side} battery…",
+  "sea.banner.sunk": "Enemy sunk! Loot the wreck",
+  "sea.banner.surrendered": "They struck their colours! Loot the wreck",
+
+  /* ---------------------------------------------------------------- sea: sinking */
+  "sea.gameOver.title": "The ship went down",
+  "sea.gameOver.sunk": "The {name} went down",
+  "sea.gameOver.surrendered": "The {name} struck its colours",
+  "sea.gameOver.purse": "Purse: {gold} doubloons. You need a new ship.",
+  "sea.gameOver.back": "Back to the shipyard",
+  "sea.target.hostileSail": "Hostile sail",
+  "sea.sides.babor": "port",
+  "sea.sides.estribor": "starboard",
+
+  /* ---------------------------------------------------------------- validation: ship model */
+  "issue.mass-exceeded": "Total mass ({mass} kg) exceeds maximum displacement ({max} kg). Drop cargo, guns or people.",
+  "issue.no-cargo-room": "This configuration leaves no room for cargo ({room} kg). The hull takes no more weight.",
+  "issue.deep-draft": "Estimated draft {draft} m: too deep for coastal waters.",
+  "issue.crew-below-minimum": "Short of sailors: {count} of {needed} needed to work the ship.",
+  "issue.too-many-pieces": "Too many guns per side (max {max}). Port {babor}, starboard {estribor}.",
+  "issue.under-gunned-crew.one": "{pieces} gun needs at least {needed} gunner; there is {have}. Reloads will be slower.",
+  "issue.under-gunned-crew.many": "{pieces} guns need at least {needed} gunners; there are {have}. Reloads will be slower.",
+  "issue.one-sided-battery.babor": "No guns to port: an enemy on that side will go unanswered.",
+  "issue.one-sided-battery.estribor": "No guns to starboard: an enemy on that side will go unanswered.",
+  "issue.rowers-without-galley": "This hull carries no oars; rowers are dead weight and extra rations.",
+  "issue.no-provisions": "With no days of provisions the ship cannot sail.",
+  "issue.short-provisions": "{days} days of provisions: not enough to cross to open sea.",
+  "issue.no-soldiers": "With no soldiers you cannot board a prize or defend the deck.",
+  "issue.unaffordable": "{missing} doubloons short: the ship costs {total} and you have {gold}.",
+
+  /* ---------------------------------------------------------------- naval data: hulls */
+  "hull.patache.name": "Patache",
+  "hull.patache.type": "Despatch patache",
+  "hull.patache.country": "Spain",
+  "hull.patache.note": "Example range; not a metric displacement.",
+
+  "hull.carabela-latina.name": "Lateen caravel",
+  "hull.carabela-latina.type": "Two- and three-masted caravel",
+  "hull.carabela-latina.country": "Portugal",
+  "hull.carabela-latina.note": "Type reference; original units need review.",
+
+  "hull.jacht.name": "Jacht",
+  "hull.jacht.type": "Small scouting vessel",
+  "hull.jacht.country": "Netherlands",
+  "hull.jacht.note": "Duyfken; do not mix with the replica's dimensions.",
+
+  "hull.zabra.name": "Zabra",
+  "hull.zabra.type": "Zabra or small galleon",
+  "hull.zabra.country": "Spain",
+  "hull.zabra.note": "Augusta and Julia; value attributed to each ship.",
+
+  "hull.galeon-pequeno.name": "Small galleon",
+  "hull.galeon-pequeno.type": "Corsair galleon",
+  "hull.galeon-pequeno.country": "England",
+  "hull.galeon-pequeno.note": "Golden Hind; R1 gathered estimates from 100 up.",
+
+  "hull.fluyt.name": "Fluyt",
+  "hull.fluyt.type": "Dutch merchantman",
+  "hull.fluyt.country": "Netherlands",
+  "hull.fluyt.note": "Up to 350 t of cargo was published; no minimum is established.",
+
+  "hull.nao-armada.name": "Armed merchant nao",
+  "hull.nao-armada.type": "Armed transport",
+  "hull.nao-armada.country": "Spain",
+  "hull.nao-armada.note": "Sample range, not the limits of the whole class.",
+
+  "hull.galeon-guerra.name": "War galleon",
+  "hull.galeon-guerra.type": "Squadron galleon",
+  "hull.galeon-guerra.country": "England",
+  "hull.galeon-guerra.note": "Dreadnought, Swiftsure, Revenge.",
+
+  "hull.gran-mercante.name": "Great merchantman",
+  "hull.gran-mercante.type": "Ocean-going merchantman",
+  "hull.gran-mercante.country": "Netherlands",
+  "hull.gran-mercante.note": "Batavia, a reconstruction; not a measurement of the original.",
+
+  "hull.galeaza.name": "Galleass",
+  "hull.galeaza.type": "Armed galley",
+  "hull.galeaza.country": "Naples / Philip II",
+  "hull.galeaza.note": "Four galleasses of 1588, 300 rowers each.",
+
+  "hull.gran-galeon.name": "Great galleon",
+  "hull.gran-galeon.type": "Command galleon",
+  "hull.gran-galeon.country": "Portugal / Philip II",
+  "hull.gran-galeon.note": "San Martín; R4 lists Portuguese ships up to 1050.",
+
+  "hull.gran-buque-real.name": "Great royal ship",
+  "hull.gran-buque-real.type": "Flagship",
+  "hull.gran-buque-real.country": "England",
+  "hull.gran-buque-real.note": "Triumph; R1 gave 1100 and R4 classifies it apart.",
+
+  /* ---------------------------------------------------------------- naval data: pieces */
+  "piece.canon-60.name": "60-pounder cannon",
+  "piece.canon-40.name": "40-pounder cannon",
+  "piece.medio-canon-32.name": "32-pounder demi-cannon",
+  "piece.culebrina-18.name": "18-pounder culverin",
+  "piece.media-culebrina-9.name": "9-pounder demi-culverin",
+  "piece.sacre.name": "Saker",
+  "piece.minion.name": "4-pounder minion",
+  "piece.falcon.name": "Falcon",
+  "piece.falconete.name": "Falconet",
+  "piece.pedrero.name": "Pedrero",
+  "piece.pedrero.note": "A piece recovered from the San Diego; it fires stone.",
+  "piece.verso.name": "Iron swivel gun",
+  "piece.verso.note": "Anti-personnel swivel gun; reference effective range 180 m.",
+
+  /* ---------------------------------------------------------------- naval data: ammunition */
+  "ammo.bala-hierro.name": "Iron shot",
+  "ammo.bala-piedra.name": "Stone shot",
+  "ammo.cadena.name": "Chain shot",
+  "ammo.metralla.name": "Grapeshot (hailshot)",
+
+  /* ---------------------------------------------------------------- naval data: zones */
+  "zone.costera.name": "Coastal waters",
+  "zone.costera.description": "Known routes, shallow water and friendly sails.",
+  "zone.abierto.name": "Open sea",
+  "zone.abierto.description": "Ocean routes, corsairs and rich merchantmen.",
+  "zone.abismo.name": "The abyss",
+  "zone.abismo.description": "Storm, reefs and squadrons of war.",
+
+  /* ---------------------------------------------------------------- naval data: crew roles */
+  "crew.marino.name": "Sailor",
+  "crew.marino.description": "Naval crew; without them the ship cannot manoeuvre.",
+  "crew.artillero.name": "Gunner",
+  "crew.artillero.description": "Works the guns; the workbook counts them apart from soldiers.",
+  "crew.soldado.name": "Soldier",
+  "crew.soldado.description": "Marines aboard; gunners are not included.",
+  "crew.remero.name": "Rower",
+  "crew.remero.description": "Only in galleasses and galleys; consumes mass and provisions.",
+
+  /* ---------------------------------------------------------------- default ship names */
+  "shipName.patache": "Wasp",
+  "shipName.carabela-latina": "Niña",
+  "shipName.jacht": "Duyfken",
+  "shipName.zabra": "Augusta",
+  "shipName.galeon-pequeno": "Golden Hind",
+  "shipName.fluyt": "Ruyter",
+  "shipName.nao-armada": "Rosario",
+  "shipName.galeon-guerra": "Revenge",
+  "shipName.gran-mercante": "Batavia",
+  "shipName.galeaza": "Galleass",
+  "shipName.gran-galeon": "San Martín",
+  "shipName.gran-buque-real": "Triumph",
+};
