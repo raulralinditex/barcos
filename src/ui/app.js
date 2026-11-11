@@ -36,6 +36,12 @@ import {
   serializeFleet,
   setCaptain,
 } from "../model/fleet.js";
+import {
+  damagedShips,
+  repairCost,
+  repairFleetShip,
+  repairReport,
+} from "../model/repair.js";
 import { buildShip, toRuntimeShip } from "../model/shipyard.js";
 
 const STORAGE_KEY = "barcos:config:v1";
@@ -160,6 +166,10 @@ const els = {
   eraseCancel: $("#erase-cancel"),
   eraseConfirm: $("#erase-confirm"),
   langSelect: $("#lang-select"),
+  dockDialog: $("#dock-dialog"),
+  dockList: $("#dock-list"),
+  dockNote: $("#dock-note"),
+  dockLater: $("#dock-later"),
   gunsSwivel: $("#guns-swivel"),
 };
 
@@ -917,6 +927,191 @@ els.fleetList.addEventListener("click", (event) => {
   renderFleet();
 });
 
+/* ---------------------------------------------------------------- dock dialog (S25) */
+
+/**
+ * The shipyard asks the same question as the port (S25), with the shop's purse. The
+ * captain is repaired through her fleet entry here because nobody sails in the
+ * shipyard, and the sea save is patched too: `barcos:game:v1` keeps the condition
+ * and crew of the last voyage, and the sea prefers it on boot (see `boot()`), so
+ * leaving it behind would undo the repair the next time the player puts to sea.
+ */
+const DOCK_SEGMENT_KEY = {
+  hull: "shipyard.dock.hull",
+  rigging: "shipyard.dock.rigging",
+  crew: "shipyard.dock.crew",
+  morale: "shipyard.dock.morale",
+};
+
+function damageSummary(damaged) {
+  if (damaged.length === 0) return t("shipyard.dock.sound");
+  return damaged.map((segment) => t(DOCK_SEGMENT_KEY[segment])).join(", ");
+}
+
+/** The purse the shipyard shows and the sea save that carries it, kept in step. */
+function savePurse(patchedCaptain = null) {
+  let game = null;
+  try {
+    game = JSON.parse(localStorage.getItem(GAME_KEY) ?? "null");
+  } catch {
+    game = null;
+  }
+  const record = game && typeof game === "object" ? game : {};
+  const combat = record.combat;
+  const player = combat?.player;
+  const patchedCombat =
+    patchedCaptain && player
+      ? {
+          ...combat,
+          player: {
+            ...player,
+            condition: { ...patchedCaptain.condition },
+            crew: { ...patchedCaptain.crewAlive },
+          },
+        }
+      : combat;
+  try {
+    localStorage.setItem(
+      GAME_KEY,
+      JSON.stringify({ ...record, gold: state.gold, ...(patchedCombat ? { combat: patchedCombat } : {}) }),
+    );
+  } catch {
+    /* the purse still lives in memory for this session */
+  }
+}
+
+let dockSignature = null;
+
+/** One row per damaged hull, rebuilt only when what it shows changes. */
+function renderDockList() {
+  const container = els.dockList;
+  if (!container) return;
+  const ships = damagedShips(fleet);
+  const signature = ships
+    .map((ship) => {
+      const report = repairReport(ship);
+      return [ship.id, ship.name, report.damaged.join(","), report.crewAlive, report.cost].join(":");
+    })
+    .join("|");
+  if (signature === dockSignature) {
+    for (const button of container.querySelectorAll("button[data-ship-id]")) {
+      const ship = ships.find((entry) => entry.id === button.dataset.shipId);
+      if (ship) button.classList.toggle("is-short", state.gold < repairCost(ship));
+    }
+    return;
+  }
+  dockSignature = signature;
+  container.textContent = "";
+
+  for (const ship of ships) {
+    const report = repairReport(ship);
+    const row = document.createElement("div");
+    row.className = "dock-ship";
+    row.dataset.shipId = ship.id;
+
+    const head = document.createElement("div");
+    head.className = "dock-ship-head";
+    const name = document.createElement("span");
+    name.className = "dock-ship-name";
+    name.textContent = ship.name ?? ship.hullId ?? ship.id;
+    const hull = document.createElement("span");
+    hull.className = "dock-ship-hull";
+    hull.textContent = t("shipyard.dock.hullPct", { hull: gold(report.hull) });
+    head.append(name, hull);
+
+    const detail = document.createElement("div");
+    detail.className = "dock-ship-detail";
+    const rigging = document.createElement("span");
+    rigging.textContent = t("shipyard.dock.riggingPct", { rigging: gold(report.rigging) });
+    const crew = document.createElement("span");
+    crew.textContent = t("shipyard.dock.crewMen", {
+      alive: gold(report.crewAlive),
+      bought: gold(report.crewBought),
+      crew: gold(report.crew),
+    });
+    detail.append(rigging, crew);
+
+    const needs = document.createElement("p");
+    needs.className = "dock-ship-needs";
+    needs.textContent = t("shipyard.dock.needs", { segments: damageSummary(report.damaged) });
+
+    const button = document.createElement("button");
+    button.type = "button";
+    button.className = "dock-ship-button";
+    button.dataset.shipId = ship.id;
+    button.textContent = t("shipyard.dock.button", { gold: gold(report.cost) });
+    button.classList.toggle("is-short", state.gold < report.cost);
+    button.addEventListener("click", () => repairFromDock(ship.id));
+
+    row.append(head, detail, needs, button);
+    container.append(row);
+  }
+}
+
+/** The missing gold for the cheapest damaged hull, or zero when the purse covers all. */
+function dockShortfall() {
+  const costs = damagedShips(fleet).map((ship) => repairCost(ship));
+  if (costs.length === 0) return 0;
+  return Math.max(0, Math.min(...costs) - state.gold);
+}
+
+function updateDockNote() {
+  if (!els.dockNote) return;
+  const missing = dockShortfall();
+  els.dockNote.textContent = missing > 0 ? t("shipyard.dock.missing", { gold: gold(missing) }) : "";
+  els.dockNote.classList.toggle("is-hidden", missing === 0);
+}
+
+function closeDockDialog() {
+  if (!els.dockDialog) return;
+  if (els.dockDialog.open) els.dockDialog.close();
+  els.dockDialog.classList.add("is-hidden");
+}
+
+/** Ask on opening the screen when the fleet has something to repair (S25). */
+function openDockDialog() {
+  if (!els.dockDialog) return;
+  if (damagedShips(fleet).length === 0) return;
+  dockSignature = null;
+  renderDockList();
+  updateDockNote();
+  els.dockDialog.classList.remove("is-hidden");
+  // Opened non-modally on purpose: it asks, it does not trap. The port panel and
+  // the S24 buttons behind it must keep taking clicks (S25: they coexist).
+  if (typeof els.dockDialog.show === "function" && !els.dockDialog.open) {
+    els.dockDialog.show();
+  }
+}
+
+/**
+ * Repair one hull with the shop's purse. Every hull, the captain included, goes
+ * through the fleet entry (S23); the captain's saved combat is patched as well, so
+ * the sea does not undo the repair on boot.
+ */
+function repairFromDock(shipId) {
+  const captain = captainShip(fleet);
+  const result = repairFleetShip(fleet, shipId, state.gold, { allowCaptain: true });
+  if (!result.repaired) {
+    updateDockNote();
+    renderDockList();
+    return;
+  }
+
+  fleet = result.fleet;
+  state.gold = result.gold;
+  saveFleet();
+  const repaired = fleet.ships.find((ship) => ship.id === shipId) ?? null;
+  savePurse(shipId === captain?.id ? repaired : null);
+
+  els.goldValue.textContent = gold(state.gold);
+  renderFleet();
+  renderDockList();
+  updateDockNote();
+  if (damagedShips(fleet).length === 0) closeDockDialog();
+}
+
+if (els.dockLater) els.dockLater.addEventListener("click", closeDockDialog);
+
 /* ---------------------------------------------------------------- erase save (S8) */
 
 els.eraseBtn.addEventListener("click", () => els.eraseDialog.showModal());
@@ -957,6 +1152,11 @@ function repaintForLanguage() {
   renderPieceSelect();
   renderFleet();
   render();
+  if (els.dockDialog && !els.dockDialog.classList.contains("is-hidden")) {
+    dockSignature = null;
+    renderDockList();
+    updateDockNote();
+  }
   if (lastShip) {
     els.launchBtn.disabled = !lastShip.feasible;
   }
@@ -982,3 +1182,4 @@ renderPieceSelect();
 if (state.shipName) els.shipName.value = state.shipName;
 render();
 offerExistingShip();
+openDockDialog();

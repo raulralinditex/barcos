@@ -29,6 +29,16 @@ S24. En el puerto base también se reparan las naves de la flota que no son la c
 
 S23. La condición de combate vive en la ficha de la nave de la flota, no sólo en el autoguardado del mar: sobrevive a cambiar de capitana, a volver al astillero y a zarpar de nuevo. La ficha guarda `condition` (porcentajes de casco, aparejo, tripulación y moral) y `crewAlive` (la dotación superviviente por rol, para poder reponerla). Una nave sin `crewAlive` usa su dotación comprada: los guardados anteriores siguen abriendo.
 
+S25. Al llegar a puerto se pregunta si se quiere arreglar el barco y se muestra qué hay que arreglar. Pedido (verbatim): "cuando se llega al astillero se pregunta si se quiere areglar el barco, mostramos la informacion de que hay que areglar"
+- Dónde: en los dos sitios (decisión del usuario: "En los dos sitios"): en el puerto base del mar, y en la pantalla del Astillero (`index.html`).
+- Mar: el diálogo sale al entrar en el radio del puerto viniendo de fuera, y al abrir el mar ya dentro del puerto con algo dañado. Astillero: sale al abrir la pantalla si hay naves dañadas.
+- Convive con lo anterior (decisión del usuario: "Conviven"): el panel de puerto, los botones de S24 y la tecla `R` siguen funcionando igual.
+- Contenido: por cada nave dañada (la capitana y las demás): nombre, casco %, aparejo %, tripulación (vivos de la dotación comprada y %), y el precio de reparar (tarifa plana de S22). Sólo se listan los segmentos dañados o la nave entera dañada; una nave sana no aparece.
+- Botones: "Reparar · {gold}" por nave y "Ahora no", que cierra. Sin oro suficiente el botón no repara, queda marcado y se dice cuánto falta. Reparar usa las mismas reglas de S22/S24 y se escribe en la ficha de la flota (S23).
+- Una vez por llegada: tras "Ahora no" o tras reparar no vuelve a salir mientras siga en el puerto; vuelve a salir si sale y entra otra vez. No sale si nada está dañado ni en la pantalla de hundimiento.
+- En el Astillero la reparación usa la bolsa del Astillero y actualiza la bolsa que se muestra; también puede reparar la capitana (ahí no navega).
+- El diálogo y todos sus textos salen en es y en en.
+
 ## Tasks
 
 - T27 — Tests primero de S22 y S23 (RED observado: el módulo `repair.js` no existía). `S22,S23` — inline — done — `10d0f3d`
@@ -38,6 +48,7 @@ S23. La condición de combate vive en la ficha de la nave de la flota, no sólo 
 - T31 — UI + i18n: barritas flotantes en espacio de pantalla, panel y tecla `R` de reparación en puerto, textos en es/en, ayuda en pantalla. `S21,S22,S11` — inline — done — `deadc8e`
 - T32 — Smoke de navegador (`scripts/smoke-state.mjs`), regresión de la suite y de los smokes, documentación. `S21,S22` — inline — done — `deadc8e`
 - T33 — Reparar naves de la flota que no son capitana: modelo, panel de puerto, i18n, smoke. `S24,S22,S23` — worker — done — (este commit)
+- T35 — Diálogo de reparación al llegar a puerto (mar y Astillero), con el detalle de lo dañado. `S25,S22,S23,S24` — worker — done — (este commit)
 - T34 — Arreglar el smoke de viento flaky (`scripts/smoke-wind.mjs`), con OK explícito del usuario. — inline — done — `efd1469`
 
 ## Log
@@ -95,3 +106,17 @@ L20: T34 — `scripts/smoke-wind.mjs` ya no es flaky: 10 de 10 corridas pasan (a
 L21: T33 — el worker `gentle-ai-worker` (tarea `mwcoxkyd-1-y69m`) terminó con error del asistente antes de devolver su informe, pero dejó el trabajo hecho en el árbol. No di por bueno su informe (no hubo): revisé el diff completo y lo verifiqué yo. Modelo `damagedFleetShips` y `repairFleetShip` en `repair.js` (reusan `repairShip`, escriben en la ficha de la nave con `withShipCondition`, no tocan a la capitana ni a las demás); 6 tests nuevos; lista en `#port-panel` con un botón por nave que sólo se reconstruye cuando cambia (si no, se pierde el clic); claves `sea.port.fleet*` en es y en; checks 9, 10 y 11 en `smoke-state` (reparar una nave de la flota, una nave sana no se ofrece, sin oro no cambia nada, y la reparación sobrevive a recargar). No observé el RED del worker: sus tests existen y pasan, y fallarían sin las funciones (import inexistente).
 
 L22: Evidencia — 212/212 tests; ocho smokes con exit 0: i18n, fleet, sea, combat, ui, swivel, state y wind.
+
+L23 (verbatim): "cuando se llega al astillero se pregunta si se quiere areglar el barco, mostramos la informacion de que hay que areglar"
+
+L24: Decisiones del usuario sobre L23: dónde = "En los dos sitios"; qué pasa con el panel y la tecla R = "Conviven". Se agrega S25 y T35.
+
+L25: T35 (S25). RED observado dos veces: primero en `node --test test/repair.test.js`, que falló con `SyntaxError: ... does not provide an export named 'damagedShips'` (217 tests escritos, 5 nuevos, ninguno podía correr); después en el navegador, con `scripts/smoke-dock.mjs` contra el código base servido en un directorio temporal aparte (`http://localhost:8766`): el smoke murió esperando `#dock-later`, porque el diálogo no existía. GREEN: `npm test` 217/217 y el mismo smoke en exit 0.
+
+L26: Modelo — `repairReport(ship)` devuelve `{hull, rigging, crew, morale, crewAlive, crewBought, damaged, cost}` con `conditionOf`/`crewAliveOf` (los vivos y la dotación comprada contados como hombres, no como porcentaje) y `damagedShips(fleet)` lista las dañadas incluyendo a la capitana; `damagedFleetShips` queda igual para el panel de S24. `repairFleetShip` toma un cuarto argumento `{ allowCaptain = false }`: el mar no lo pasa (S24 intacto, la capitana sigue yendo por `repairShip`), el Astillero sí.
+
+L27: Trampa del guardado, resuelta — `barcos:game:v1` puede traer `combat.player` del último viaje y el mar lo prefiere al abrir (`boot()`), así que reparar la capitana en el Astillero también reescribe `condition` y `crew` de ese registro, conservando `world`, `pieces` y `gold`. El smoke lo comprueba abriendo `sea.html` después y leyendo el HUD: casco 100 %.
+
+L28: Un detalle que sólo se veía en el navegador: el diálogo se abre con `show()` y no con `showModal()`. Modal de verdad, el `::backdrop` se come los clics del `#port-panel` y de los botones de S24 que quedan detrás, y el smoke existente `smoke-state` falló por eso (`<dialog ...> intercepts pointer events`). Con `show()` conviven, que es lo que pidió el usuario. Escape se maneja a mano porque un `dialog` no modal no se cierra solo; mientras está abierto el diálogo se queda con el teclado (WASD, Q/E) salvo `R`, y al cerrarlo el juego sigue andando.
+
+L29: Evidencia — `npm test` 217/217. `node --check src/ui/sea.js src/ui/app.js` sin errores. Smokes con exit 0, uno por vez y con `sleep 1` entre ellos: i18n, fleet, sea, combat, ui, swivel, state, wind y el nuevo dock. `smoke-combat` falló una vez en una corrida larga (la máquina se quedó sin procesos: `fork: Resource temporarily unavailable` en el bucle); corrido solo, exit 0 dos veces.

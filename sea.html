@@ -54,6 +54,16 @@
       <div class="port-fleet" id="port-fleet"></div>
     </div>
 
+    <dialog id="dock-dialog" class="dock-dialog">
+      <h2 data-i18n="sea.dock.title">¿Reparamos el barco?</h2>
+      <p class="dock-lead" data-i18n="sea.dock.lead">Esto es lo que hay que arreglar antes de volver a zarpar.</p>
+      <div class="dock-list" id="dock-list"></div>
+      <p class="dock-note is-hidden" id="dock-note"></p>
+      <div class="dock-actions">
+        <button id="dock-later" class="btn" type="button" data-i18n="sea.dock.later">Ahora no</button>
+      </div>
+    </dialog>
+
     <div class="hud hud-wind" id="wind-panel">
       <div class="wind-head">
         <span class="wind-title" data-i18n="sea.wind.title">Viento</span>

@@ -111,18 +111,60 @@ export function damagedFleetShips(fleet) {
 }
 
 /**
+ * The ships the dock dialog offers for repair (S25): every damaged hull, the
+ * captain included, because the dialog is the one place that shows them all side
+ * by side. Sound hulls never appear.
+ */
+export function damagedShips(fleet) {
+  return (fleet?.ships ?? []).filter((ship) => needsRepair(ship));
+}
+
+/** Men actually aboard across the combat roles. */
+function menAboard(crew) {
+  return ["marino", "artillero", "soldado", "remero"].reduce(
+    (sum, role) => sum + (Number(crew?.[role]) || 0),
+    0,
+  );
+}
+
+/**
+ * What the dock dialog tells the player about one hull (S25): the segments that
+ * are below full, the crew as men alive out of the complement bought, and the
+ * flat fee of S22. Pure: the dialog renders it and never recomputes a rule.
+ */
+export function repairReport(ship) {
+  const condition = conditionOf(ship);
+  const alive = menAboard(crewAliveOf(ship));
+  const bought = menAboard(ship?.crew ?? {});
+  return {
+    hull: condition.hull,
+    rigging: condition.rigging,
+    crew: condition.crew,
+    morale: condition.morale,
+    crewAlive: alive,
+    crewBought: bought,
+    damaged: SEGMENTS.filter((segment) => condition[segment] < REPAIR.restored),
+    cost: repairCost(ship),
+  };
+}
+
+/**
  * Repair one fleet ship with the shared purse (S24). Same flat fee and same
  * verdicts as `repairShip`, but the repaired hull is written back into its own
  * fleet entry (S23), so the fix survives a change of captain and a reload. The
  * captain, the other hulls and the fleet itself are left exactly as they were.
+ *
+ * `allowCaptain` is the shipyard's door (S25): nobody sails there, so the captain
+ * is repaired through her fleet entry like any other hull. The sea leaves it off,
+ * because there the captain has a live combatant and goes through `repairShip`.
  */
-export function repairFleetShip(fleet, shipId, gold) {
+export function repairFleetShip(fleet, shipId, gold, { allowCaptain = false } = {}) {
   const ships = fleet?.ships ?? [];
   const purse = Number.isFinite(gold) ? gold : 0;
   const ship = ships.find((entry) => entry.id === shipId);
 
   if (!ship) return { fleet, gold: purse, repaired: false, reason: "unknown-ship", spent: 0 };
-  if (ship.id === fleet?.captainId) {
+  if (ship.id === fleet?.captainId && !allowCaptain) {
     return { fleet, gold: purse, repaired: false, reason: "captain", spent: 0 };
   }
 

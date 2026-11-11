@@ -36,9 +36,11 @@ import {
 } from "../model/fleet.js";
 import {
   damagedFleetShips,
+  damagedShips,
   needsRepair,
   repairCost,
   repairFleetShip,
+  repairReport,
   repairShip,
 } from "../model/repair.js";
 import {
@@ -92,6 +94,10 @@ const els = {
   portPanel: $("#port-panel"),
   portCost: $("#port-cost"),
   portFleet: $("#port-fleet"),
+  dockDialog: $("#dock-dialog"),
+  dockList: $("#dock-list"),
+  dockNote: $("#dock-note"),
+  dockLater: $("#dock-later"),
   gameoverOverlay: $("#gameover-overlay"),
   gameoverTitle: $("#gameover-title"),
   gameoverGold: $("#gameover-gold"),
@@ -168,6 +174,12 @@ let gameOver = false;
 let gameOverAt = 0;
 let gameOverShown = false;
 const fx = [];
+/**
+ * The dock dialog asks once per arrival (S25): entering the port radius from
+ * outside, or opening the sea already inside it, offers the repair. "Ahora no" and
+ * a repair both spend the offer; sailing out and back arms it again.
+ */
+const dock = { wasInPort: false, offered: false, open: false };
 
 /* ---------------------------------------------------------------- persistence */
 
@@ -298,7 +310,245 @@ function repairFleetShipAtPort(shipId) {
   updateHud();
 }
 
+/* ---------------------------------------------------------------- dock dialog (S25) */
+
+/** The text of one damaged segment, in the catalogue's own words. */
+const SEGMENT_KEY = {
+  hull: "sea.dock.hull",
+  rigging: "sea.dock.rigging",
+  crew: "sea.dock.crew",
+  morale: "sea.dock.morale",
+};
+
+/** The segments below full, in the catalogue's words; a sound ship says so. */
+function damageSummary(damaged) {
+  if (damaged.length === 0) return t("sea.dock.sound");
+  return damaged.map((segment) => t(SEGMENT_KEY[segment])).join(", ");
+}
+
+/**
+ * Rebuild the list of damaged hulls with one repair button each (S25). Rebuilt only
+ * when what it shows changes, because a rebuild every frame would throw away the
+ * button the player is about to click.
+ */
+let dockSignature = null;
+
+function renderDockList() {
+  const container = els.dockList;
+  if (!container) return;
+  const ships = damagedShips(fleet);
+  const signature = ships
+    .map((ship) => {
+      const report = repairReport(ship);
+      return [ship.id, ship.name, report.damaged.join(","), report.crewAlive, report.cost].join(":");
+    })
+    .join("|");
+  if (signature === dockSignature) {
+    for (const button of container.querySelectorAll("button[data-ship-id]")) {
+      const ship = ships.find((entry) => entry.id === button.dataset.shipId);
+      if (ship) button.classList.toggle("is-short", gold < repairCost(ship));
+    }
+    return;
+  }
+  dockSignature = signature;
+  container.textContent = "";
+
+  for (const ship of ships) {
+    const report = repairReport(ship);
+    const row = document.createElement("div");
+    row.className = "dock-ship";
+    row.dataset.shipId = ship.id;
+
+    const head = document.createElement("div");
+    head.className = "dock-ship-head";
+    const name = document.createElement("span");
+    name.className = "dock-ship-name";
+    name.textContent = ship.name ?? ship.hullId ?? ship.id;
+    const hull = document.createElement("span");
+    hull.className = "dock-ship-hull";
+    hull.textContent = t("sea.dock.hullPct", { hull: fmtInt.format(report.hull) });
+    head.append(name, hull);
+
+    const detail = document.createElement("div");
+    detail.className = "dock-ship-detail";
+    const rigging = document.createElement("span");
+    rigging.textContent = t("sea.dock.riggingPct", { rigging: fmtInt.format(report.rigging) });
+    const crew = document.createElement("span");
+    crew.textContent = t("sea.dock.crewMen", {
+      alive: fmtInt.format(report.crewAlive),
+      bought: fmtInt.format(report.crewBought),
+      crew: fmtInt.format(report.crew),
+    });
+    detail.append(rigging, crew);
+
+    const needs = document.createElement("p");
+    needs.className = "dock-ship-needs";
+    needs.textContent = t("sea.dock.needs", { segments: damageSummary(report.damaged) });
+
+    const button = document.createElement("button");
+    button.type = "button";
+    button.className = "dock-ship-button";
+    button.dataset.shipId = ship.id;
+    button.textContent = t("sea.port.fleetButton", { gold: fmtInt.format(report.cost) });
+    button.classList.toggle("is-short", gold < report.cost);
+    button.addEventListener("click", () => repairFromDock(ship.id));
+
+    row.append(head, detail, needs, button);
+    container.append(row);
+  }
+}
+
+/** The missing gold for the cheapest damaged hull, or zero when the purse covers all. */
+function dockShortfall() {
+  const costs = damagedShips(fleet).map((ship) => repairCost(ship));
+  if (costs.length === 0) return 0;
+  return Math.max(0, Math.min(...costs) - gold);
+}
+
+/** Show or refresh the dialog. Nothing damaged, or a sinking, means no question. */
+function openDockDialog() {
+  if (!els.dockDialog || gameOver || !playerCombat) return;
+  if (damagedShips(fleet).length === 0) return;
+  dock.open = true;
+  dock.offered = true;
+  dockSignature = null;
+  renderDockList();
+  els.dockDialog.classList.remove("is-hidden");
+  // Opened non-modally on purpose: it asks, it does not trap. The port panel and
+  // the S24 buttons behind it must keep taking clicks (S25: they coexist).
+  if (typeof els.dockDialog.show === "function" && !els.dockDialog.open) {
+    els.dockDialog.show();
+  }
+  updateDockNote();
+}
+
+/** Say how much is missing when the purse cannot cover a hull; hide it otherwise. */
+function updateDockNote() {
+  if (!els.dockNote) return;
+  const missing = dockShortfall();
+  els.dockNote.textContent = missing > 0 ? t("sea.dock.missing", { gold: fmtInt.format(missing) }) : "";
+  els.dockNote.classList.toggle("is-hidden", missing === 0);
+}
+
+function closeDockDialog() {
+  if (!els.dockDialog) return;
+  dock.open = false;
+  // the offer is spent for this arrival, however it was spent
+  dock.offered = true;
+  if (els.dockDialog.open) els.dockDialog.close();
+  els.dockDialog.classList.add("is-hidden");
+}
+
+/**
+ * Repair one hull from the dialog (S25). The captain is the ship the player sails,
+ * so she goes through the same path as the R key (combatant, fleet entry and save
+ * all kept in step); every other hull goes through the fleet entry of S24.
+ */
+function repairFromDock(shipId) {
+  if (!world || gameOver || !playerCombat) return;
+  if (!inHomePort()) {
+    showBanner(t("sea.banner.repairAway"), "info", 2000);
+    return;
+  }
+
+  if (shipId === runtimeShip.id) {
+    const result = repairShip(runtimeShip, gold);
+    if (!result.repaired) {
+      showBanner(t("sea.port.repairShort", { gold: fmtInt.format(result.missing ?? 0) }), "danger", 2600);
+      updateDockNote();
+      return;
+    }
+    gold = result.gold;
+    Object.assign(runtimeShip, result.ship);
+    playerCombat.condition = { ...result.ship.condition };
+    playerCombat.crew = { ...result.ship.crewAlive };
+    playerCombat.crewDamagePool = 0;
+    fleet = withShipCondition(fleet, runtimeShip.id, {
+      condition: result.ship.condition,
+      crewAlive: result.ship.crewAlive,
+    });
+    saveGame();
+    showBanner(
+      t("sea.port.repairDone", { name: runtimeShip.name, gold: fmtInt.format(result.spent) }),
+      "gold",
+      3200,
+    );
+  } else {
+    const ship = (fleet?.ships ?? []).find((entry) => entry.id === shipId);
+    if (!ship) return;
+    const result = repairFleetShip(fleet, shipId, gold);
+    if (!result.repaired) {
+      showBanner(t("sea.port.repairShort", { gold: fmtInt.format(result.missing ?? 0) }), "danger", 2600);
+      updateDockNote();
+      return;
+    }
+    fleet = result.fleet;
+    gold = result.gold;
+    saveGame();
+    showBanner(
+      t("sea.port.fleetDone", { name: ship.name, gold: fmtInt.format(result.spent) }),
+      "gold",
+      3200,
+    );
+  }
+
+  updatePortPanel();
+  updateHud();
+  // nothing left to repair: the question is over
+  if (damagedShips(fleet).length === 0) {
+    closeDockDialog();
+    return;
+  }
+  dockSignature = null;
+  renderDockList();
+  updateDockNote();
+}
+
+/**
+ * The arrival rule (S25): ask when the hull enters the port radius from outside, and
+ * once at boot when the sea opens already inside it. The offer is spent on arrival,
+ * so it never reopens while the ship stays in port.
+ */
+function updateDockDialog() {
+  if (!els.dockDialog) return;
+  const inPort = inHomePort() && !gameOver && Boolean(playerCombat);
+  if (!inPort) {
+    dock.wasInPort = false;
+    dock.offered = false;
+    if (dock.open) closeDockDialog();
+    return;
+  }
+  if (!dock.wasInPort) {
+    dock.wasInPort = true;
+    if (!dock.offered) openDockDialog();
+  }
+  if (dock.open) {
+    renderDockList();
+    updateDockNote();
+  }
+}
+
+if (els.dockLater) els.dockLater.addEventListener("click", closeDockDialog);
+// Escape closes a native dialog on its own: keep the flag and the class in step.
+if (els.dockDialog) {
+  els.dockDialog.addEventListener("close", () => {
+    dock.open = false;
+    dock.offered = true;
+    els.dockDialog.classList.add("is-hidden");
+  });
+}
+
 window.addEventListener("keydown", (event) => {
+  // The dock dialog owns the keyboard while it is open (S25): its buttons, Tab and
+  // Escape, but not the helm. The R key keeps working as before (S22).
+  if (els.dockDialog?.open) {
+    if (event.key === "Escape") {
+      event.preventDefault();
+      closeDockDialog();
+      return;
+    }
+    if (event.key !== "r" && event.key !== "R") return;
+  }
   const key = event.key.toLowerCase();
   if (["arrowup", "arrowdown", "arrowleft", "arrowright", "w", "a", "s", "d"].includes(key)) {
     event.preventDefault();
@@ -1299,6 +1549,7 @@ function frame(now) {
   updateHud();
   updateTargetPanel();
   updatePortPanel();
+  updateDockDialog();
   hideBannerIfDue(now);
 
   requestAnimationFrame(frame);
@@ -1345,6 +1596,9 @@ function boot() {
   }
 
   applyStaticTranslations();
+  // Opening the sea already inside the port with something damaged asks at once (S25).
+  dock.wasInPort = inHomePort();
+  if (dock.wasInPort) openDockDialog();
   setInterval(saveGame, 3000);
   window.addEventListener("beforeunload", saveGame);
   window.addEventListener("resize", resizeCanvas);
