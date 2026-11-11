@@ -191,7 +191,11 @@ test("S2: an unaffordable but seaworthy ship reports only the price problem", ()
   assert.equal(ship.feasible, false);
   assert.equal(ship.errors.length, 1);
   assert.equal(ship.errors[0].code, "unaffordable");
-  assert.match(ship.errors[0].message, /Faltan \d+ doblones/);
+  // The wording lives in the catalogue (S11); the model reports the numbers (S15).
+  assert.equal(typeof ship.errors[0].params.missing, "number");
+  assert.ok(ship.errors[0].params.missing > 0);
+  assert.equal(typeof ship.errors[0].params.total, "number");
+  assert.equal(ship.errors[0].params.gold, 100);
 });
 
 test("S2: a seaworthy ship the player can afford is feasible with no errors", () => {

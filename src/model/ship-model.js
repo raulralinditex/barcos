@@ -156,6 +156,13 @@ const ERROR = "error";
 const WARN = "warn";
 
 /**
+ * Build one validation issue. The model reports a `code` plus the values it used;
+ * the text lives in the translation catalogue (S11/S15), so a new message never
+ * needs a change here beyond its code and params.
+ */
+const issue = (level, code, params = {}) => ({ level, code, params });
+
+/**
  * Validate a configuration. Errors make the ship impossible; warnings let the player
  * sail a compromised hull, which is the point of a game about a budget.
  */
@@ -165,111 +172,75 @@ export function validateShip(input, budget = computeBudget(input)) {
   const counts = crewCounts(crew);
 
   if (budget.realMassKg > hull.displacementKg) {
-    issues.push({
-      level: ERROR,
-      code: "mass-exceeded",
-      message:
-        `La masa total (${Math.round(budget.realMassKg)} kg) supera el desplazamiento máximo ` +
-        `(${hull.displacementKg} kg). Quitá carga, piezas o gente.`,
-    });
+    issues.push(
+      issue(ERROR, "mass-exceeded", {
+        mass: Math.round(budget.realMassKg),
+        max: hull.displacementKg,
+      }),
+    );
   }
 
   if (budget.cargoMaxKg < 0) {
-    issues.push({
-      level: ERROR,
-      code: "no-cargo-room",
-      message:
-        `La configuración ya no deja hueco para mercancía ` +
-        `(${Math.round(budget.cargoMaxKg)} kg). El casco no admite más peso.`,
-    });
+    issues.push(issue(ERROR, "no-cargo-room", { room: Math.round(budget.cargoMaxKg) }));
   }
 
   if (budget.draftM > hull.draftRefM + 0.9) {
-    issues.push({
-      level: WARN,
-      code: "deep-draft",
-      message:
-        `Calado estimado ${budget.draftM.toFixed(2)} m: demasiado profundo para aguas costeras.`,
-    });
+    issues.push(issue(WARN, "deep-draft", { draft: budget.draftM.toFixed(2) }));
   }
 
   if (counts.marino < hull.crewMin) {
-    issues.push({
-      level: ERROR,
-      code: "crew-below-minimum",
-      message: `Faltan marinos: ${counts.marino} de ${hull.crewMin} necesarios para maniobrar.`,
-    });
+    issues.push(
+      issue(ERROR, "crew-below-minimum", { count: counts.marino, needed: hull.crewMin }),
+    );
   }
 
   const sides = piecesBySide(batteries);
   if (sides.babor > hull.maxPiecesPerSide || sides.estribor > hull.maxPiecesPerSide) {
-    issues.push({
-      level: ERROR,
-      code: "too-many-pieces",
-      message:
-        `Demasiadas piezas por costado (máximo ${hull.maxPiecesPerSide}). ` +
-        `Babor ${sides.babor}, estribor ${sides.estribor}.`,
-    });
+    issues.push(
+      issue(ERROR, "too-many-pieces", {
+        max: hull.maxPiecesPerSide,
+        babor: sides.babor,
+        estribor: sides.estribor,
+      }),
+    );
   }
 
   const pieces = totalPieces(batteries);
   const neededGunners = Math.ceil(pieces / 2);
   if (pieces > 0 && counts.artillero < neededGunners) {
-    issues.push({
-      level: WARN,
-      code: "under-gunned-crew",
-      message:
-        `${pieces} ${pieces === 1 ? "pieza necesita" : "piezas necesitan"} al menos ` +
-        `${neededGunners} ${neededGunners === 1 ? "artillero" : "artilleros"}; ` +
-        `hay ${counts.artillero}. Las recargas serán más lentas.`,
-    });
+    issues.push(
+      issue(WARN, pieces === 1 ? "under-gunned-crew.one" : "under-gunned-crew.many", {
+        pieces,
+        needed: neededGunners,
+        have: counts.artillero,
+      }),
+    );
   }
 
   if (pieces > 0 && (sides.babor === 0 || sides.estribor === 0)) {
-    issues.push({
-      level: WARN,
-      code: "one-sided-battery",
-      message:
-        sides.babor === 0
-          ? "Sin piezas a babor: un enemigo por ese costado no recibirá respuesta."
-          : "Sin piezas a estribor: un enemigo por ese costado no recibirá respuesta.",
-    });
+    issues.push(
+      issue(WARN, sides.babor === 0 ? "one-sided-battery.babor" : "one-sided-battery.estribor"),
+    );
   }
 
   if (counts.remero > 0 && hull.id !== "galeaza") {
-    issues.push({
-      level: WARN,
-      code: "rowers-without-galley",
-      message: "Este casco no lleva remos; los remeros solo ocupan masa y provisiones.",
-    });
+    issues.push(issue(WARN, "rowers-without-galley"));
   }
 
   if (days <= 0) {
-    issues.push({
-      level: ERROR,
-      code: "no-provisions",
-      message: "Sin días de provisión el barco no puede zarpar.",
-    });
+    issues.push(issue(ERROR, "no-provisions"));
   } else if (days < 15) {
-    issues.push({
-      level: WARN,
-      code: "short-provisions",
-      message: `${days} días de provisión: no alcanza para cruzar a mar abierto.`,
-    });
+    issues.push(issue(WARN, "short-provisions", { days }));
   }
 
   if (counts.soldado === 0) {
-    issues.push({
-      level: WARN,
-      code: "no-soldiers",
-      message: "Sin soldados no podés abordar una presa ni defender la cubierta.",
-    });
+    issues.push(issue(WARN, "no-soldiers"));
   }
 
   return {
-    feasible: !issues.some((issue) => issue.level === ERROR),
+    feasible: !issues.some((entry) => entry.level === ERROR),
     issues,
-    errors: issues.filter((issue) => issue.level === ERROR),
-    warnings: issues.filter((issue) => issue.level === WARN),
+    errors: issues.filter((entry) => entry.level === ERROR),
+    warnings: issues.filter((entry) => entry.level === WARN),
   };
 }

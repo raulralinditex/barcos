@@ -86,9 +86,11 @@ export function buildShip(config, gold) {
     issues.unshift({
       level: "error",
       code: "unaffordable",
-      message:
-        `Faltan ${Math.ceil(price.total - gold)} doblones: el barco cuesta ` +
-        `${Math.round(price.total)} y tenés ${Math.round(gold)}.`,
+      params: {
+        missing: Math.ceil(price.total - gold),
+        total: Math.round(price.total),
+        gold: Math.round(gold),
+      },
     });
   }
 

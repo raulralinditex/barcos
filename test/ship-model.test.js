@@ -150,7 +150,10 @@ test("validate: exceeding displacement is an error naming both masses", () => {
   assert.equal(verdict.feasible, false);
   const issue = verdict.errors.find((e) => e.code === "mass-exceeded");
   assert.ok(issue, "mass-exceeded must be reported");
-  assert.match(issue.message, /desplazamiento máximo/);
+  // The text is translated (S11); the model reports the values it used (S15).
+  assert.equal(typeof issue.params.mass, "number");
+  assert.equal(typeof issue.params.max, "number");
+  assert.ok(issue.params.mass > issue.params.max);
 });
 
 test("validate: a hull without enough sailors cannot manoeuvre", () => {
@@ -179,7 +182,8 @@ test("validate: a one-sided battery is a warning, not a blocker", () => {
     batteries: [{ pieceId: "medio-canon-32", qty: 10, side: "babor", shotsPerPiece: 20 }],
   };
   const verdict = validateShip(ship);
-  assert.ok(verdict.warnings.some((w) => w.code === "one-sided-battery"));
+  // The code names the empty side, so the message can say which one it is (S11).
+  assert.ok(verdict.warnings.some((w) => w.code === "one-sided-battery.estribor"));
   assert.equal(verdict.feasible, true);
 });
 
