@@ -31,10 +31,14 @@ const runtime = toRuntimeShip(
   { name: "Golden Hind" },
 );
 
+// A seed whose wind is strong and steady over the first seconds of a voyage, so the
+// downwind and headwind runs differ by more than the noise of one short sail.
+const SEED = 99;
+
 const world = (ship) => ({
   v: 1,
-  seed: 424242,
-  rngState: 424242,
+  seed: SEED,
+  rngState: SEED,
   nextId: 900,
   gold: 0,
   timeS: 0,
@@ -106,55 +110,46 @@ check(before !== after, `the wind readout is frozen ("${before}" unchanged)`);
 
 /* ---------------------------------------------------------------- 3: downwind vs headwind */
 
+/**
+ * Sail straight on `heading` for `seconds` and report speed and distance.
+ *
+ * The heading is part of the saved world, so no helm is needed: the old version
+ * steered with the rudder while the clock (and the wind) kept running, so the course
+ * it had picked for the wind at t=2 s was not the wind it sailed in, and it read the
+ * final position from an autosave that is up to 3 s old. Here both runs start the
+ * same way, sail the same interval, and the end state is saved on demand before it
+ * is read.
+ */
 async function sailTo(heading, seconds) {
-  const page = await newSea("es");
-  const target = heading;
+  const start = world(runtime);
+  start.ship.heading = heading;
+  const page = await newSea("es", runtime, start);
 
-  // Steer with a proportional rudder: hold the helm until the bow is near the
-  // target, then release. The hold time follows how far off course we are, so a
-  // full turn and a small correction both converge without overshooting.
-  for (let i = 0; i < 40; i += 1) {
-    const current = await page.evaluate(() => {
-      const game = JSON.parse(localStorage.getItem("barcos:game:v1"));
-      return JSON.parse(game.world).ship.heading;
-    });
-    const diff = ((target - current + Math.PI * 3) % (Math.PI * 2)) - Math.PI;
-    if (Math.abs(diff) < 0.04) break;
-    const holdMs = Math.min(500, Math.max(80, Math.abs(diff) * 500));
-    await page.keyboard.down(diff > 0 ? "d" : "a");
-    await page.waitForTimeout(holdMs);
-    await page.keyboard.up(diff > 0 ? "d" : "a");
-    await page.waitForTimeout(120);
-  }
-
-  await page.keyboard.press("w");
-  await page.keyboard.press("w");
-  await page.keyboard.press("w");
-  await page.keyboard.press("w");
+  for (let i = 0; i < 4; i += 1) await page.keyboard.press("w");
   await page.waitForTimeout(seconds * 1000);
+
   const speed = await page.locator("#hud-speed").textContent();
-  const distance = await page.evaluate(() => {
+  const end = await page.evaluate(() => {
+    // the same save the page makes when it is closed, so the read is not stale
+    window.dispatchEvent(new Event("beforeunload"));
     const game = JSON.parse(localStorage.getItem("barcos:game:v1"));
-    const s = JSON.parse(game.world).ship;
-    return Math.hypot(s.x, s.y);
-  });
-  const finalHeading = await page.evaluate(() => {
-    const game = JSON.parse(localStorage.getItem("barcos:game:v1"));
-    return JSON.parse(game.world).ship.heading;
+    const ship = JSON.parse(game.world).ship;
+    return { x: ship.x, y: ship.y, heading: ship.heading };
   });
   await page.close();
   return {
     speed: Number.parseFloat(String(speed).replace(",", ".")),
-    distance,
-    finalHeading,
+    distance: Math.hypot(end.x, end.y),
+    finalHeading: end.heading,
   };
 }
 
-// The seeded wind at t≈0 blows from the east (it blows towards west/south-west).
-// Read the actual direction from the world model the UI is using.
-const seed = 424242;
+// Read the wind from the same world model the UI uses, so the expected course is
+// whatever the seed really blows, not an assumption about it.
+const seed = SEED;
 const { windAt } = await import("../src/model/wind.js");
-const actual = windAt(seed, 2);
+// the sail runs from about t=1.5 s to t=5.5 s of the voyage: aim for its middle
+const actual = windAt(seed, 3.5);
 const downwindHeading = actual.direction; // sailing where the wind blows
 const headwindHeading = actual.direction + Math.PI;
 
