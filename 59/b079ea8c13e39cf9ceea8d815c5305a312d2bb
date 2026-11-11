@@ -1,0 +1,19 @@
+odd/tasks/juego-barcos.md
+  s_53bc4371ebd20f::t_57597ac48405a0 43,56-68
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.6",
+  "base_commit_sha": "59b079ea8c13e39cf9ceea8d815c5305a312d2bb",
+  "prompts": {},
+  "sessions": {
+    "s_53bc4371ebd20f": {
+      "agent_id": {
+        "tool": "pi",
+        "id": "01a1cb5e-c63a-70e3-b958-abe976add528",
+        "model": "deepseek-v4.1-flash_high"
+      },
+      "human_author": "Raul Ripoll <raulral@ext.inditex.com>"
+    }
+  }
+}
