@@ -1,0 +1,14 @@
+odd/tasks/juego-barcos.md
+  h_8b9b8fe190c867 42,54-55
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.6",
+  "base_commit_sha": "5dff2ad9640f245c1661d9416ed262294d9be41a",
+  "prompts": {},
+  "humans": {
+    "h_8b9b8fe190c867": {
+      "author": "Raul Ripoll <raulral@ext.inditex.com>"
+    }
+  }
+}
