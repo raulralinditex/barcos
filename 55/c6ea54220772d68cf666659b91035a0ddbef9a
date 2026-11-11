@@ -1,0 +1,23 @@
+odd/tasks/pendientes.md
+  s_53bc4371ebd20f::t_bfaee714db5b21 1-50
+odd/tasks/giratoria.md
+  s_53bc4371ebd20f::t_bfaee714db5b21 1-32
+scripts/smoke-swivel.mjs
+  s_53bc4371ebd20f::t_f66dfc7c30c920 1-196
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.6",
+  "base_commit_sha": "55c6ea54220772d68cf666659b91035a0ddbef9a",
+  "prompts": {},
+  "sessions": {
+    "s_53bc4371ebd20f": {
+      "agent_id": {
+        "tool": "pi",
+        "id": "01a1cb5e-c63a-70e3-b958-abe976add528",
+        "model": "claude-sonnet-5.5"
+      },
+      "human_author": "Raul Ripoll <raulral@ext.inditex.com>"
+    }
+  }
+}
