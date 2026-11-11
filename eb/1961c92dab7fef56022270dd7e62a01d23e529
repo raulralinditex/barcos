@@ -1,0 +1,25 @@
+scripts/smoke-combat.mjs
+  s_53bc4371ebd20f::t_25878ca588cd00 125-126,128-131
+  s_53bc4371ebd20f::t_974e7a0aae1482 74-79
+scripts/smoke-fleet.mjs
+  s_53bc4371ebd20f::t_68fda54caf970a 29-37
+  s_53bc4371ebd20f::t_6a134a6208b791 1-28,38-162
+scripts/smoke-ui.mjs
+  s_53bc4371ebd20f::t_4e75221be1003f 57,59-61
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.6",
+  "base_commit_sha": "eb1961c92dab7fef56022270dd7e62a01d23e529",
+  "prompts": {},
+  "sessions": {
+    "s_53bc4371ebd20f": {
+      "agent_id": {
+        "tool": "pi",
+        "id": "01a1cb5e-c63a-70e3-b958-abe976add528",
+        "model": "deepseek-v4.1-flash_high"
+      },
+      "human_author": "Raul Ripoll <raulral@ext.inditex.com>"
+    }
+  }
+}
