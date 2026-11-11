@@ -1,0 +1,19 @@
+package.json
+  s_44e6e81547cad2::t_118906cb2f022a 1-13
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.6",
+  "base_commit_sha": "e2645b6a78ea78464707961be6b8e71c3b104a71",
+  "prompts": {},
+  "sessions": {
+    "s_44e6e81547cad2": {
+      "agent_id": {
+        "tool": "pi",
+        "id": "01a1cae8-d665-73ff-ba6d-0de2dda160a1",
+        "model": "deepseek-v4.1-flash_high"
+      },
+      "human_author": "Raul Ripoll <raulral@ext.inditex.com>"
+    }
+  }
+}
