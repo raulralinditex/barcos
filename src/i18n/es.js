@@ -130,6 +130,14 @@ export const es = {
   "sea.help": "<strong>W / S</strong> velamen · <strong>A / D</strong> timón<br /><strong>Q</strong> andanada de babor · <strong>E</strong> andanada de estribor<br />Buscá los destellos de oro y batí las velas hostiles",
 
   /* ---------------------------------------------------------------- sea banners */
+  "sea.wind.title": "Viento",
+  "sea.wind.now": "Ahora",
+  "sea.wind.forecast": "En 10 s",
+  "sea.wind.aria": "Rosa de los vientos con el viento actual y el previsto",
+  "sea.wind.summary": "{compass} · {knots} kn",
+  "sea.wind.compass.E": "E", "sea.wind.compass.SE": "SE", "sea.wind.compass.S": "S",
+  "sea.wind.compass.SO": "SO", "sea.wind.compass.O": "O", "sea.wind.compass.NO": "NO",
+  "sea.wind.compass.N": "N", "sea.wind.compass.NE": "NE",
   "sea.banner.treasure": "+{gold} doblones · tesoro rescatado",
   "sea.banner.depart": "Zarpa el {name}. Buen viento, capitán.",
   "sea.banner.enemyNear": "¡Vela hostil a {distance} m! Q babor · E estribor",

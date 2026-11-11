@@ -8,6 +8,7 @@
 import { hullById, pieceById } from "../data/naval-data.js";
 import { createAppTranslator } from "../i18n/index.js";
 import { localisedHull, localisedZone } from "../i18n/terms.js";
+import { compassPoint, windAt, windForecast } from "../model/wind.js";
 import {
   COMBAT,
   aiStep,
@@ -57,6 +58,8 @@ const $ = (selector) => document.querySelector(selector);
 const els = {
   canvas: $("#sea-canvas"),
   minimap: $("#minimap"),
+  windCanvas: $("#wind-canvas"),
+  windNow: $("#wind-now"),
   name: $("#hud-ship-name"),
   gold: $("#hud-gold"),
   zone: $("#hud-zone"),
@@ -716,6 +719,115 @@ function updateTargetPanel() {
   els.targetCrew.style.width = `${best.combat.condition.crew}%`;
 }
 
+
+/* ---------------------------------------------------------------- wind rose (S18) */
+
+/**
+ * Draw the compass rose with two arrows: the wind now, and the wind 10 s ahead.
+ * The arrow points where the wind blows towards; its length is the strength.
+ */
+function drawWindRose(now) {
+  const canvas = els.windCanvas;
+  if (!canvas) return;
+  const ctx = canvas.getContext("2d");
+  const size = canvas.width;
+  const cx = size / 2;
+  const cy = size / 2;
+  const radius = size / 2 - 12;
+
+  ctx.clearRect(0, 0, size, size);
+
+  // dial
+  ctx.beginPath();
+  ctx.arc(cx, cy, radius, 0, Math.PI * 2);
+  ctx.fillStyle = "rgba(16,28,42,0.5)";
+  ctx.fill();
+  ctx.strokeStyle = "rgba(201,189,164,0.45)";
+  ctx.lineWidth = 1.5;
+  ctx.stroke();
+
+  // ticks every 45 degrees, longer on the axes
+  for (let i = 0; i < 8; i += 1) {
+    const angle = (i * Math.PI) / 4;
+    const inner = i % 2 === 0 ? radius - 10 : radius - 6;
+    ctx.beginPath();
+    ctx.moveTo(cx + Math.cos(angle) * inner, cy + Math.sin(angle) * inner);
+    ctx.lineTo(cx + Math.cos(angle) * (radius - 2), cy + Math.sin(angle) * (radius - 2));
+    ctx.strokeStyle = "rgba(201,189,164,0.5)";
+    ctx.lineWidth = i % 2 === 0 ? 2 : 1;
+    ctx.stroke();
+  }
+
+  const timeS = world?.timeS ?? 0;
+  const seed = world?.seed ?? 0;
+  const current = windAt(seed, timeS);
+  const forecast = windForecast(seed, timeS);
+
+  // The forecast is drawn with an open ring at its tip, so it reads as "later"
+  // even when it sits right on top of the current wind.
+  drawWindArrow(ctx, cx, cy, current, radius, "#e0a815", 1);
+  drawWindArrow(ctx, cx, cy, forecast, radius, "#9fc7e8", 0.82, true);
+
+  // the hull, so the player can read the wind against their own heading
+  if (world?.ship) {
+    ctx.save();
+    ctx.translate(cx, cy);
+    ctx.rotate(world.ship.heading ?? 0);
+    ctx.beginPath();
+    ctx.moveTo(11, 0);
+    ctx.lineTo(-7, -6);
+    ctx.lineTo(-7, 6);
+    ctx.closePath();
+    ctx.fillStyle = "rgba(255,255,255,0.9)";
+    ctx.fill();
+    ctx.restore();
+  }
+
+  // numeric readout
+  if (els.windNow) {
+    const compass = t(`sea.wind.compass.${compassPoint(current.direction)}`);
+    els.windNow.textContent = t("sea.wind.summary", {
+      compass,
+      knots: fmtOne.format(current.strengthKn),
+    });
+  }
+}
+
+/** One arrow: direction is where it blows towards, length follows strength. */
+function drawWindArrow(ctx, cx, cy, wind, radius, color, scale, ring = false) {
+  const length = (radius - 22) * (0.35 + 0.65 * wind.strength) * scale;
+  const angle = wind.direction;
+  const tipX = cx + Math.cos(angle) * length;
+  const tipY = cy + Math.sin(angle) * length;
+
+  ctx.save();
+  ctx.strokeStyle = color;
+  ctx.fillStyle = color;
+  ctx.lineWidth = ring ? 2.5 : 3;
+  ctx.lineCap = "round";
+
+  ctx.beginPath();
+  ctx.moveTo(cx, cy);
+  ctx.lineTo(tipX, tipY);
+  ctx.stroke();
+
+  if (ring) {
+    // The forecast ends in an open ring instead of a solid head.
+    ctx.beginPath();
+    ctx.arc(tipX, tipY, 5, 0, Math.PI * 2);
+    ctx.stroke();
+  } else {
+    const head = 9;
+    ctx.beginPath();
+    ctx.moveTo(tipX, tipY);
+    ctx.lineTo(tipX - Math.cos(angle - 0.45) * head, tipY - Math.sin(angle - 0.45) * head);
+    ctx.lineTo(tipX - Math.cos(angle + 0.45) * head, tipY - Math.sin(angle + 0.45) * head);
+    ctx.closePath();
+    ctx.fill();
+  }
+  ctx.restore();
+}
+
 /* ---------------------------------------------------------------- HUD */
 
 function updateHud() {
@@ -795,6 +907,7 @@ function frame(now) {
   const ctx = els.canvas.getContext("2d");
   drawSea(ctx);
   drawMinimap();
+  drawWindRose(now);
   updateHud();
   updateTargetPanel();
   hideBannerIfDue(now);

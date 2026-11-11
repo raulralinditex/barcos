@@ -133,6 +133,14 @@ export const en = {
   "sea.help": "<strong>W / S</strong> sail · <strong>A / D</strong> helm<br /><strong>Q</strong> port broadside · <strong>E</strong> starboard broadside<br />Chase the glint of gold and fight the hostile sails",
 
   /* ---------------------------------------------------------------- sea banners */
+  "sea.wind.title": "Wind",
+  "sea.wind.now": "Now",
+  "sea.wind.forecast": "In 10 s",
+  "sea.wind.aria": "Compass rose with the current and forecast wind",
+  "sea.wind.summary": "{compass} · {knots} kn",
+  "sea.wind.compass.E": "E", "sea.wind.compass.SE": "SE", "sea.wind.compass.S": "S",
+  "sea.wind.compass.SO": "SW", "sea.wind.compass.O": "W", "sea.wind.compass.NO": "NW",
+  "sea.wind.compass.N": "N", "sea.wind.compass.NE": "NE",
   "sea.banner.treasure": "+{gold} doubloons · treasure recovered",
   "sea.banner.depart": "The {name} sets sail. Fair winds, captain.",
   "sea.banner.enemyNear": "Hostile sail at {distance} m! Q port · E starboard",

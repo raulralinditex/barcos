@@ -47,6 +47,19 @@
       <div class="hud-help" data-i18n-html="sea.help"></div>
     </div>
 
+    <div class="hud hud-wind" id="wind-panel">
+      <div class="wind-head">
+        <span class="wind-title" data-i18n="sea.wind.title">Viento</span>
+        <span class="wind-now" id="wind-now">—</span>
+      </div>
+      <canvas id="wind-canvas" width="240" height="240"
+        data-i18n-aria="sea.wind.aria" aria-label="Rosa de los vientos"></canvas>
+      <div class="wind-legend">
+        <span class="wind-key"><i class="wind-dot wind-dot-now"></i><span data-i18n="sea.wind.now">Ahora</span></span>
+        <span class="wind-key"><i class="wind-dot wind-dot-next"></i><span data-i18n="sea.wind.forecast">En 10 s</span></span>
+      </div>
+    </div>
+
     <canvas id="minimap" width="170" height="170"></canvas>
 
     <div id="banner" class="sea-banner" aria-live="polite"></div>
