@@ -1129,6 +1129,34 @@ input[type="number"] {
   background: #2f6b47;
 }
 
+/* ---------- sea: repair at the home port ---------- */
+
+.hud-port {
+  bottom: 14px;
+  left: 50%;
+  transform: translateX(-50%);
+  max-width: 420px;
+  text-align: center;
+}
+
+.port-hint {
+  margin: 0 0 4px;
+  font-size: 12px;
+  color: rgba(244, 239, 228, 0.72);
+}
+
+.port-cost {
+  margin: 0;
+  font-size: 13px;
+  font-weight: 600;
+  color: #e0a815;
+  font-variant-numeric: tabular-nums;
+}
+
+.port-cost.is-short {
+  color: #e07a4a;
+}
+
 /* ---------- combat: game over ---------- */
 
 .gameover-overlay {

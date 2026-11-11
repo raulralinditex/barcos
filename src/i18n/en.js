@@ -157,7 +157,7 @@ export const en = {
   "sea.rigging": "Rig",
   "sea.crew": "Crew",
   "sea.rounds": "Rounds P/S",
-  "sea.help": "<strong>W / S</strong> sail · <strong>A / D</strong> helm<br /><strong>Q</strong> port broadside · <strong>E</strong> starboard broadside<br />Chase the glint of gold and fight the hostile sails",
+  "sea.help": "<strong>W / S</strong> sail · <strong>A / D</strong> helm<br /><strong>Q</strong> port broadside · <strong>E</strong> starboard broadside · <strong>R</strong> repair in port<br />Chase the glint of gold and fight the hostile sails",
 
   /* ---------------------------------------------------------------- sea banners */
   "sea.wind.title": "Wind",
@@ -186,6 +186,17 @@ export const en = {
   "sea.target.hostileSail": "Hostile sail",
   "sea.sides.babor": "port",
   "sea.sides.estribor": "starboard",
+  "sea.bars.damage": "Damage",
+  "sea.bars.reload": "Reload",
+  "sea.bars.ready": "ready",
+  "sea.bars.dealt": "dealt",
+  "sea.port.repair": "Repair in port",
+  "sea.port.repairHint": "You are in port. R repairs the hull, the rigging and the crew",
+  "sea.port.repairCost": "Repair: {gold} doubloons",
+  "sea.port.repairDone": "Repaired: the {name} is in fighting order again ({gold} doubloons)",
+  "sea.port.repairNoDamage": "Nothing to repair: the {name} is sound",
+  "sea.port.repairShort": "{gold} doubloons short of a repair",
+  "sea.banner.repairAway": "Repairs are done at the home port: sail back to the island you left from",
 
   /* ---------------------------------------------------------------- validation: ship model */
   "issue.mass-exceeded": "Total mass ({mass} kg) exceeds maximum displacement ({max} kg). Drop cargo, guns or people.",

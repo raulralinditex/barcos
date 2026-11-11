@@ -16,8 +16,11 @@ import {
   bearingTo,
   createEnemyCombatant,
   createPlayerCombatant,
+  damageDealt,
   fireBroadside,
+  loadedShare,
   maneuverFactor,
+  readyDamage,
   sideForBearing,
   speedFactor,
   tickCombatant,
@@ -28,7 +31,9 @@ import {
   deserializeFleet,
   removeShip,
   serializeFleet,
+  withShipCondition,
 } from "../model/fleet.js";
+import { needsRepair, repairCost, repairShip } from "../model/repair.js";
 import {
   WORLD,
   ZONE_BANDS,
@@ -77,6 +82,8 @@ const els = {
   targetHull: $("#target-hull"),
   targetRigging: $("#target-rigging"),
   targetCrew: $("#target-crew"),
+  portPanel: $("#port-panel"),
+  portCost: $("#port-cost"),
   gameoverOverlay: $("#gameover-overlay"),
   gameoverTitle: $("#gameover-title"),
   gameoverGold: $("#gameover-gold"),
@@ -130,7 +137,10 @@ function loadSavedGame() {
   return null;
 }
 
-const { fleet, legacyShip } = loadFleet();
+const loaded = loadFleet();
+// `fleet` is reassigned whenever the condition of a hull changes (S22, S23).
+let fleet = loaded.fleet;
+const { legacyShip } = loaded;
 const runtimeShip = captainShip(fleet);
 
 const ui = {
@@ -174,6 +184,14 @@ function saveGame() {
         : undefined,
     };
     localStorage.setItem(GAME_KEY, JSON.stringify(payload));
+    // The damage also lives on the hull itself, so it survives the way back to the
+    // shipyard and a change of captain (S23).
+    if (playerCombat && runtimeShip) {
+      fleet = withShipCondition(fleet, runtimeShip.id, {
+        condition: playerCombat.condition,
+        crewAlive: playerCombat.crew,
+      });
+    }
     localStorage.setItem(FLEET_KEY, serializeFleet(fleet));
   } catch {
     /* storage disabled: the voyage continues in memory */
@@ -183,6 +201,60 @@ function saveGame() {
 /* ---------------------------------------------------------------- input */
 
 const THROTTLE_STEP = 0.25;
+
+/** The home port: the island at the origin, same radius the sea draws (S22). */
+const PORT_RADIUS_M = 110;
+
+function inHomePort() {
+  return world ? Math.hypot(world.ship.x, world.ship.y) <= PORT_RADIUS_M : false;
+}
+
+/**
+ * Repair the captain's hull at the home port (S22). The condition lives on the
+ * fleet entry, so the fix has to be written back there and not only in memory.
+ */
+function repairAtPort() {
+  if (!world || gameOver || !playerCombat) return;
+  if (!inHomePort()) {
+    showBanner(t("sea.banner.repairAway"), "info", 2000);
+    return;
+  }
+
+  const result = repairShip(runtimeShip, gold);
+  if (!result.repaired) {
+    showBanner(
+      result.reason === "no-damage"
+        ? t("sea.port.repairNoDamage", { name: runtimeShip.name })
+        : t("sea.port.repairShort", { gold: fmtInt.format(result.missing ?? 0) }),
+      result.reason === "no-damage" ? "info" : "danger",
+      2600,
+    );
+    return;
+  }
+
+  gold = result.gold;
+  // The repaired sheet is the new truth: keep the same hull in the fleet, with
+  // its condition and its full complement written into its own entry (S23).
+  Object.assign(runtimeShip, result.ship);
+  playerCombat.condition = { ...result.ship.condition };
+  playerCombat.crew = { ...result.ship.crewAlive };
+  playerCombat.crewDamagePool = 0;
+  fleet = withShipCondition(fleet, runtimeShip.id, {
+    condition: result.ship.condition,
+    crewAlive: result.ship.crewAlive,
+  });
+
+  saveGame();
+  showBanner(
+    t("sea.port.repairDone", {
+      name: runtimeShip.name,
+      gold: fmtInt.format(result.spent),
+    }),
+    "gold",
+    3200,
+  );
+  updateHud();
+}
 
 window.addEventListener("keydown", (event) => {
   const key = event.key.toLowerCase();
@@ -196,6 +268,9 @@ window.addEventListener("keydown", (event) => {
   } else if (key === "q" || key === "e") {
     event.preventDefault();
     firePlayerBroadside(key === "q" ? "babor" : "estribor");
+  } else if (key === "r") {
+    event.preventDefault();
+    repairAtPort();
   }
   ui.keys.add(key);
 });
@@ -301,6 +376,116 @@ function drawSea(ctx) {
   drawFx(ctx);
 
   ctx.restore();
+
+  // The floating bars are drawn in screen space, so a bar stays readable at any
+  // camera scale instead of shrinking with the hull it belongs to (S21).
+  drawShipBars(ctx);
+}
+
+/* ---------------------------------------------------------------- floating bars (S21) */
+
+const BAR = {
+  width: 108,
+  height: 6,
+  gap: 3,
+  padding: 5,
+  /** Screen px between the hull and the bottom of its bar block. */
+  lift: 44,
+  hull: "#a13c2c",
+  rigging: "#3d6fa8",
+  crew: "#2f6b47",
+  ready: "#e0a815",
+  dealt: "rgba(224,168,21,0.28)",
+  reload: "#9fc7e8",
+  track: "rgba(10,18,28,0.62)",
+  frame: "rgba(244,239,228,0.22)",
+};
+
+/** World metres to screen pixels, without the camera translation. */
+function toScreen(x, y) {
+  return {
+    x: window.innerWidth / 2 + (x - world.ship.x) * PX_PER_M,
+    y: window.innerHeight / 2 + (y - world.ship.y) * PX_PER_M,
+  };
+}
+
+/** True when the enemy is close enough to be fought, which is what "a tiro" means (S21). */
+function inGunshot(encounter) {
+  return Math.hypot(encounter.x - world.ship.x, encounter.y - world.ship.y) <= COMBAT.engageRadiusM;
+}
+
+function drawBar(ctx, x, y, share, color, { backdrop = null } = {}) {
+  ctx.fillStyle = BAR.track;
+  ctx.fillRect(x, y, BAR.width, BAR.height);
+  if (backdrop !== null && backdrop > 0) {
+    // the part of the bar already earned, behind the part that is ready now
+    ctx.fillStyle = BAR.dealt;
+    ctx.fillRect(x, y, BAR.width * Math.min(1, backdrop), BAR.height);
+  }
+  if (share > 0) {
+    ctx.fillStyle = color;
+    ctx.fillRect(x, y, BAR.width * Math.min(1, share), BAR.height);
+  }
+  ctx.strokeStyle = BAR.frame;
+  ctx.lineWidth = 1;
+  ctx.strokeRect(x + 0.5, y + 0.5, BAR.width - 1, BAR.height - 1);
+}
+
+/**
+ * One block of bars over a hull: condition, then per beam the damage it deals
+ * (ready now over what it has already dealt) and how much of it is reloaded.
+ */
+function drawBarsFor(ctx, combatant, x, y, distanceM) {
+  if (!combatant) return;
+  const rows = [
+    { share: combatant.condition.hull / 100, color: BAR.hull },
+    { share: combatant.condition.rigging / 100, color: BAR.rigging },
+    { share: combatant.condition.crew / 100, color: BAR.crew },
+  ];
+
+  const dealt = Math.max(damageDealt(combatant, "babor"), damageDealt(combatant, "estribor"), 1);
+  const ready = Math.max(readyDamage(combatant, "babor", distanceM), readyDamage(combatant, "estribor", distanceM), 1);
+  for (const side of ["babor", "estribor"]) {
+    rows.push({
+      share: readyDamage(combatant, side, distanceM) / ready,
+      backdrop: damageDealt(combatant, side) / dealt,
+      color: BAR.ready,
+    });
+    rows.push({ share: loadedShare(combatant, side), color: BAR.reload });
+  }
+
+  const blockHeight = rows.length * (BAR.height + BAR.gap) + BAR.padding * 2 - BAR.gap;
+  const left = x - BAR.width / 2 - BAR.padding;
+  const top = y - blockHeight - BAR.lift;
+
+  ctx.fillStyle = "rgba(8,14,22,0.55)";
+  ctx.fillRect(left, top, BAR.width + BAR.padding * 2, blockHeight);
+  ctx.strokeStyle = BAR.frame;
+  ctx.lineWidth = 1;
+  ctx.strokeRect(left + 0.5, top + 0.5, BAR.width + BAR.padding * 2 - 1, blockHeight - 1);
+
+  let cursor = top + BAR.padding;
+  for (const row of rows) {
+    drawBar(ctx, x - BAR.width / 2, cursor, row.share, row.color, { backdrop: row.backdrop ?? null });
+    cursor += BAR.height + BAR.gap;
+  }
+}
+
+/** Bars over the player's hull always, and over an enemy only once it is a target. */
+function drawShipBars(ctx) {
+  if (!world) return;
+
+  const player = toScreen(world.ship.x, world.ship.y);
+  drawBarsFor(ctx, playerCombat, player.x, player.y, 0);
+
+  for (const encounter of world.encounters) {
+    if (encounter.type !== "enemy" || !encounter.combat) continue;
+    if (encounter.combat.status !== "fighting") continue;
+    if (!inGunshot(encounter)) continue;
+    const at = toScreen(encounter.x, encounter.y);
+    const distance = Math.hypot(encounter.x - world.ship.x, encounter.y - world.ship.y);
+    drawBarsFor(ctx, encounter.combat, at.x, at.y, distance);
+  }
 }
 
 function drawEncounters(ctx) {
@@ -720,6 +905,20 @@ function updateTargetPanel() {
 }
 
 
+/** The repair offer only exists while the hull is inside the home port (S22). */
+function updatePortPanel() {
+  if (!els.portPanel) return;
+  const docked = inHomePort() && !gameOver && playerCombat;
+  els.portPanel.classList.toggle("is-hidden", !docked);
+  if (!docked) return;
+  const cost = repairCost(runtimeShip);
+  els.portCost.textContent =
+    cost === 0
+      ? t("sea.port.repairNoDamage", { name: runtimeShip.name })
+      : t("sea.port.repairCost", { gold: fmtInt.format(cost) });
+  els.portCost.classList.toggle("is-short", cost > 0 && gold < cost);
+}
+
 /* ---------------------------------------------------------------- wind rose (S18) */
 
 /**
@@ -852,6 +1051,14 @@ function updateHud() {
     (swivelRounds > 0 ? ` · ${t("sea.roundsSwivel", { count: fmtInt.format(swivelRounds) })}` : "");
 }
 
+/** Men actually aboard, across the combat roles. */
+function totalAboard(crew) {
+  return ["marino", "artillero", "soldado", "remero"].reduce(
+    (sum, role) => sum + (Number(crew?.[role]) || 0),
+    0,
+  );
+}
+
 /** Rounds still in the racks of one side. */
 function roundsLeft(side) {
   if (!playerCombat) return 0;
@@ -913,6 +1120,7 @@ function frame(now) {
   drawWindRose(now);
   updateHud();
   updateTargetPanel();
+  updatePortPanel();
   hideBannerIfDue(now);
 
   requestAnimationFrame(frame);
@@ -935,6 +1143,8 @@ function boot() {
   playerCombat = createPlayerCombatant(runtimeShip);
   const savedCombat = savedGame?.combat?.player;
   if (savedCombat && Array.isArray(savedCombat.pieces)) {
+    // The sea save is the fresher of the two, because the fleet sheet is written
+    // every three seconds and the sea save right after combat (S23).
     playerCombat.condition = { ...playerCombat.condition, ...savedCombat.condition };
     playerCombat.crew = { ...playerCombat.crew, ...savedCombat.crew };
     playerCombat.pieces = playerCombat.pieces.map((piece, index) => {
@@ -944,6 +1154,11 @@ function boot() {
         : piece;
     });
   }
+  // Recompute the crew share from the men actually aboard, whatever source won.
+  playerCombat.condition.crew = Math.min(
+    100,
+    Math.round((100 * totalAboard(playerCombat.crew)) / playerCombat.initialCrew),
+  );
   if (playerCombat.condition.hull <= 0 || playerCombat.condition.crew <= COMBAT.surrenderCrewPct) {
     // The saved voyage ended in a sinking: show the same verdict instead of sailing on.
     playerCombat.status = playerCombat.condition.hull <= 0 ? "sunk" : "surrendered";

@@ -154,7 +154,7 @@ export const es = {
   "sea.rigging": "Aparejo",
   "sea.crew": "Tripulación",
   "sea.rounds": "Munición B/E",
-  "sea.help": "<strong>W / S</strong> velamen · <strong>A / D</strong> timón<br /><strong>Q</strong> andanada de babor · <strong>E</strong> andanada de estribor<br />Buscá los destellos de oro y batí las velas hostiles",
+  "sea.help": "<strong>W / S</strong> velamen · <strong>A / D</strong> timón<br /><strong>Q</strong> andanada de babor · <strong>E</strong> andanada de estribor · <strong>R</strong> reparar en puerto<br />Buscá los destellos de oro y batí las velas hostiles",
 
   /* ---------------------------------------------------------------- sea banners */
   "sea.wind.title": "Viento",
@@ -183,6 +183,17 @@ export const es = {
   "sea.target.hostileSail": "Vela hostil",
   "sea.sides.babor": "babor",
   "sea.sides.estribor": "estribor",
+  "sea.bars.damage": "Daño",
+  "sea.bars.reload": "Recarga",
+  "sea.bars.ready": "listo",
+  "sea.bars.dealt": "causado",
+  "sea.port.repair": "Reparar en puerto",
+  "sea.port.repairHint": "Estás en puerto. R repara el casco, el aparejo y la tripulación",
+  "sea.port.repairCost": "Reparación: {gold} doblones",
+  "sea.port.repairDone": "Reparada: {name} vuelve a estar en condiciones ({gold} doblones)",
+  "sea.port.repairNoDamage": "No hay nada que reparar: {name} está entera",
+  "sea.port.repairShort": "Faltan {gold} doblones para reparar",
+  "sea.banner.repairAway": "Sólo se repara en el puerto base: volvé a la isla del origen",
 
   /* ---------------------------------------------------------------- validation: ship model */
   "issue.mass-exceeded": "La masa total ({mass} kg) supera el desplazamiento máximo ({max} kg). Quitá carga, piezas o gente.",

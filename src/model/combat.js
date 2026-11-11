@@ -117,17 +117,27 @@ export function createPlayerCombatant(runtimeShip) {
       });
     }
   }
-  const crew = { ...(runtimeShip.crew ?? {}) };
+  const crew = { ...(runtimeShip.crewAlive ?? runtimeShip.crew ?? {}) };
+  const bought = { ...(runtimeShip.crew ?? {}) };
+  const initialCrew = Math.max(1, totalPeople(Object.keys(bought).length ? bought : crew));
+  const crewShare = clamp(Math.round((100 * totalPeople(crew)) / initialCrew), 0, 100);
+  const stored = runtimeShip.condition ?? {};
   return {
     kind: "player",
     name: runtimeShip.name,
     pieces,
     crew,
-    initialCrew: Math.max(1, totalPeople(crew)),
+    initialCrew,
     crewMin: hull?.crewMin ?? 1,
     maxSpeedKn: runtimeShip.speedKn,
     hullToughness: hullToughness(hull),
-    condition: { hull: 100, rigging: 100, crew: 100, morale: 100 },
+    // A hull that comes back from the last voyage damaged sails damaged (S23).
+    condition: {
+      hull: Number.isFinite(stored.hull) ? clamp(stored.hull, 0, 100) : 100,
+      rigging: Number.isFinite(stored.rigging) ? clamp(stored.rigging, 0, 100) : 100,
+      crew: crewShare,
+      morale: Number.isFinite(stored.morale) ? clamp(stored.morale, 0, 100) : 100,
+    },
     crewDamagePool: 0,
     // What each beam has already put into the enemy, for the floating bars (S21).
     damageDealt: { babor: 0, estribor: 0 },
