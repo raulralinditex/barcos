@@ -91,6 +91,7 @@ const els = {
   targetHull: $("#target-hull"),
   targetRigging: $("#target-rigging"),
   targetCrew: $("#target-crew"),
+  timeBadge: $("#time-badge"),
   portPanel: $("#port-panel"),
   portCost: $("#port-cost"),
   portFleet: $("#port-fleet"),
@@ -158,6 +159,8 @@ const { legacyShip } = loaded;
 const runtimeShip = captainShip(fleet);
 
 const ui = {
+  /** Simulation steps per frame: 1 is real time, 2 is the time-warp key (S31). */
+  timeScale: 1,
   throttle: 0,
   rudder: 0,
   keys: new Set(),
@@ -538,6 +541,19 @@ if (els.dockDialog) {
   });
 }
 
+/**
+ * Time warp (S31): the key doubles the simulation so the long stretch between two
+ * objectives does not have to be waited out. The world is advanced in the same
+ * small steps as real time, twice per frame, instead of one step twice as long, so
+ * reloads, drift and pick-up radii behave exactly as they do at normal speed.
+ */
+function toggleTimeWarp() {
+  ui.timeScale = ui.timeScale === 1 ? 2 : 1;
+  const fast = ui.timeScale === 2;
+  els.timeBadge?.classList.toggle("is-hidden", !fast);
+  showBanner(t(fast ? "sea.banner.timeFast" : "sea.banner.timeNormal"), "info", 1500);
+}
+
 window.addEventListener("keydown", (event) => {
   // The dock dialog owns the keyboard while it is open (S25): its buttons, Tab and
   // Escape, but not the helm. The R key keeps working as before (S22).
@@ -560,6 +576,9 @@ window.addEventListener("keydown", (event) => {
   } else if (key === "q" || key === "e") {
     event.preventDefault();
     firePlayerBroadside(key === "q" ? "babor" : "estribor");
+  } else if (key === "t") {
+    event.preventDefault();
+    if (!event.repeat) toggleTimeWarp();
   } else if (key === "r") {
     event.preventDefault();
     repairAtPort();
@@ -1506,15 +1525,16 @@ function frame(now) {
   lastTime = now;
 
   const before = goldEarned;
-  world = updateWorld(world, gameOver ? {} : readInput(), dt);
+  for (let step = 0; step < ui.timeScale; step += 1) {
+    world = updateWorld(world, gameOver ? {} : readInput(), dt);
+    processCombat(dt, now);
+    tickFx(dt);
+  }
   goldEarned = world.gold;
   if (goldEarned > before) {
     gold += goldEarned - before;
     showBanner(t("sea.banner.treasure", { gold: fmtInt.format(goldEarned - before) }), "gold");
   }
-
-  processCombat(dt, now);
-  tickFx(dt);
 
   // wake trail, thinned to keep it cheap
   if (world.ship.currentSpeedKn > 0.3) {

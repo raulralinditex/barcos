@@ -1129,6 +1129,20 @@ input[type="number"] {
   background: #2f6b47;
 }
 
+/* ---------- sea: time warp (S31) ---------- */
+
+.hud-time {
+  top: 64px;
+  left: 50%;
+  transform: translateX(-50%);
+  padding: 4px 12px;
+  font-size: 13px;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  color: #e0a815;
+  border: 1px solid rgba(224, 168, 21, 0.5);
+}
+
 /* ---------- sea: repair at the home port ---------- */
 
 .hud-port {

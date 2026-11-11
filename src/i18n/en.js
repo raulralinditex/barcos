@@ -157,7 +157,7 @@ export const en = {
   "sea.rigging": "Rig",
   "sea.crew": "Crew",
   "sea.rounds": "Rounds P/S",
-  "sea.help": "<strong>W / S</strong> sail · <strong>A / D</strong> helm<br /><strong>Q</strong> port broadside · <strong>E</strong> starboard broadside · <strong>R</strong> repair in port<br />Chase the glint of gold and fight the hostile sails",
+  "sea.help": "<strong>W / S</strong> sail · <strong>A / D</strong> helm<br /><strong>Q</strong> port broadside · <strong>E</strong> starboard broadside · <strong>R</strong> repair in port · <strong>T</strong> time ×2<br />Chase the glint of gold and fight the hostile sails",
 
   /* ---------------------------------------------------------------- sea banners */
   "sea.wind.title": "Wind",
@@ -169,6 +169,9 @@ export const en = {
   "sea.wind.compass.SO": "SW", "sea.wind.compass.O": "W", "sea.wind.compass.NO": "NW",
   "sea.wind.compass.N": "N", "sea.wind.compass.NE": "NE",
   "sea.roundsSwivel": "S {count}",
+  "sea.time.badge": "×2",
+  "sea.banner.timeFast": "Time ×2: the sea runs at double speed",
+  "sea.banner.timeNormal": "Normal time",
   "sea.banner.treasure": "+{gold} doubloons · treasure recovered",
   "sea.banner.depart": "The {name} sets sail. Fair winds, captain.",
   "sea.banner.enemyNear": "Hostile sail at {distance} m! Q port · E starboard",

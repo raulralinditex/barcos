@@ -154,7 +154,7 @@ export const es = {
   "sea.rigging": "Aparejo",
   "sea.crew": "Tripulación",
   "sea.rounds": "Munición B/E",
-  "sea.help": "<strong>W / S</strong> velamen · <strong>A / D</strong> timón<br /><strong>Q</strong> andanada de babor · <strong>E</strong> andanada de estribor · <strong>R</strong> reparar en puerto<br />Buscá los destellos de oro y batí las velas hostiles",
+  "sea.help": "<strong>W / S</strong> velamen · <strong>A / D</strong> timón<br /><strong>Q</strong> andanada de babor · <strong>E</strong> andanada de estribor · <strong>R</strong> reparar en puerto · <strong>T</strong> tiempo ×2<br />Buscá los destellos de oro y batí las velas hostiles",
 
   /* ---------------------------------------------------------------- sea banners */
   "sea.wind.title": "Viento",
@@ -166,6 +166,9 @@ export const es = {
   "sea.wind.compass.SO": "SO", "sea.wind.compass.O": "O", "sea.wind.compass.NO": "NO",
   "sea.wind.compass.N": "N", "sea.wind.compass.NE": "NE",
   "sea.roundsSwivel": "G {count}",
+  "sea.time.badge": "×2",
+  "sea.banner.timeFast": "Tiempo ×2: el mar corre al doble de velocidad",
+  "sea.banner.timeNormal": "Tiempo normal",
   "sea.banner.treasure": "+{gold} doblones · tesoro rescatado",
   "sea.banner.depart": "Zarpa el {name}. Buen viento, capitán.",
   "sea.banner.enemyNear": "¡Vela hostil a {distance} m! Q babor · E estribor",
