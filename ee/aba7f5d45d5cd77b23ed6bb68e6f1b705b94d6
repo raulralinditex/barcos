@@ -1,0 +1,14 @@
+src/model/economy.js
+  h_8b9b8fe190c867 1-130
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.6",
+  "base_commit_sha": "eeaba7f5d45d5cd77b23ed6bb68e6f1b705b94d6",
+  "prompts": {},
+  "humans": {
+    "h_8b9b8fe190c867": {
+      "author": "Raul Ripoll <raulral@ext.inditex.com>"
+    }
+  }
+}
