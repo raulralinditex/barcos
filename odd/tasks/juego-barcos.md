@@ -34,12 +34,12 @@ S10. Idioma: código, comentarios e identificadores en inglés; toda la interfaz
 
 ## Tasks
 
-- T1 — Datos navales y calibración del juego, extraídos del xlsx. `S1,S2,S3` — inline — `feat(naval): datos`
-- T2 — Modelo de masa, calado y velocidad (funciones puras) + tests. `S3` — inline — `feat(model): masa`
-- T3 — Economía: precios de casco, piezas, dotación, provisiones y munición. `S1,S2` — inline — `feat(economy)`
-- T4 — Constructor naval: validación, fábrica de barcos y veredicto. `S2,S3` — inline — `feat(shipyard)`
-- T5 — UI del astillero con previsualización del casco y puertos de cañón. `S1,S2,S10` — inline — `feat(ui): astillero`
-- T6 — Mundo por zonas, movimiento y encuentros. `S6,S9` — pendiente
+- T1 — Datos navales y calibración del juego, extraídos del xlsx. `S1,S2,S3` — inline — done — `e2645b6`
+- T2 — Modelo de masa, calado y velocidad (funciones puras) + tests. `S3` — inline — done — `d656173`
+- T3 — Economía: precios de casco, piezas, dotación, provisiones y munición. `S1,S2` — inline — done — `eeaba7f`
+- T4 — Constructor naval: validación, fábrica de barcos y veredicto. `S2,S3` — inline — done — `944886e`
+- T5 — UI del astillero con previsualización del casco y puertos de cañón. `S1,S2,S10` — inline — done — `fd3f68d`
+- T6 — Mundo por zonas, movimiento y encuentros. `S6,S9` — en curso
 - T7 — Combate en tiempo real por costados con municiones. `S4,S5` — pendiente
 - T8 — Flota y progresión. `S7` — pendiente
 - T9 — Autoguardado en localStorage. `S8` — pendiente
@@ -49,3 +49,5 @@ S10. Idioma: código, comentarios e identificadores en inglés; toda la interfaz
 L1 (verbatim): "vamos a crear un juego de barcos, la idea es crear una flota o un barco a partir de un valor monetario, la informacion sobre el barco esta en: @modelo_naval.xlsx y @crear_modelo_naval.py , una vez creado el barco lo moveremos y nos encontraremos con tesoros, otros barcos que lucharemos con los cañones a cada lado del barco, con las distintas municiones, etc, empecemos por aqui y vete preguntandome segun te aparezcan duduas"
 
 L2: Decisiones de producto — plataforma web HTML+JS en un solo archivo; escala un barco que crece a flota; combate en tiempo real con babor/estribor, distancia y munición que reparte daño entre nave y tripulación; constructor híbrido de tramos con validación de masa; mundo por zonas de dificultad; autoguardado en localStorage; código en inglés y UI en español.
+
+L3: Milestone 1 cerrado y verificado — 42/42 tests node en verde y smoke Playwright sin errores de consola: arranca con un galeón pequeño viable de 8.126 doblones (10 piezas, 70 hombres), el casco insignia se bloquea por precio (18.926), el diálogo de botadura persiste el barco en localStorage. Evidencia: commits e2645b6, d656173, eeaba7f, 944886e, fd3f68d.
