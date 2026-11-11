@@ -1,0 +1,32 @@
+test/side-state.test.js
+  s_0615c265d5ef3b::t_be95025bc3b389 7,13,163-208
+src/ui/sea.js
+  s_0615c265d5ef3b::t_3a6e18438e26dc 24,395-399,495,506-508,517-518,528-532,536,541-572
+src/model/combat.js
+  s_0615c265d5ef3b::t_c7bb9f49a11162 356-357,359,370-394
+  s_0615c265d5ef3b::t_9918d8ab35be34 395
+scripts/smoke-state.mjs
+  s_0615c265d5ef3b::t_9fe5b15afb14b8 4,123-148,206-214,221,224-225,228
+  s_0615c265d5ef3b::t_361c675294ac20 93-101,106,121,198-205,220,226,229,367
+  s_0615c265d5ef3b::t_7fa4f1dff69ba2 222-223
+  s_0615c265d5ef3b::t_3b109853787b56 227
+  s_0615c265d5ef3b::t_e4323c6ba9bf68 122
+odd/tasks/estado-y-reparacion.md
+  s_0615c265d5ef3b::t_ca25a32693756e 69-79
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.6",
+  "base_commit_sha": "ce192e9406a693235ee554e8c116e27d72c3aa6f",
+  "prompts": {},
+  "sessions": {
+    "s_0615c265d5ef3b": {
+      "agent_id": {
+        "tool": "pi",
+        "id": "01a1cbe7-b77b-77ed-ba1b-220f1e39ae58",
+        "model": "claude-sonnet-5.5"
+      },
+      "human_author": "Raul Ripoll <raulral@ext.inditex.com>"
+    }
+  }
+}
