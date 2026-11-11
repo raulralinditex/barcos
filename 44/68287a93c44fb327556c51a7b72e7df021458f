@@ -1,0 +1,24 @@
+test/side-state.test.js
+  s_0615c265d5ef3b::t_357707b5eeb5f7 1-68,72-155,157-160
+  s_0615c265d5ef3b::t_4ef217f89d7a92 69-71,156
+src/model/combat.js
+  s_0615c265d5ef3b::t_fb475422cf1a63 299,307-308,314,318-320,324-368
+  s_0615c265d5ef3b::t_3a9a8dbedcffd3 132-133,221
+  s_0615c265d5ef3b::t_d226a505b0acf4 369
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.6",
+  "base_commit_sha": "4468287a93c44fb327556c51a7b72e7df021458f",
+  "prompts": {},
+  "sessions": {
+    "s_0615c265d5ef3b": {
+      "agent_id": {
+        "tool": "pi",
+        "id": "01a1cbe7-b77b-77ed-ba1b-220f1e39ae58",
+        "model": "deepseek-v4.1-flash_high"
+      },
+      "human_author": "Raul Ripoll <raulral@ext.inditex.com>"
+    }
+  }
+}
