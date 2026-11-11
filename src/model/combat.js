@@ -129,6 +129,8 @@ export function createPlayerCombatant(runtimeShip) {
     hullToughness: hullToughness(hull),
     condition: { hull: 100, rigging: 100, crew: 100, morale: 100 },
     crewDamagePool: 0,
+    // What each beam has already put into the enemy, for the floating bars (S21).
+    damageDealt: { babor: 0, estribor: 0 },
     status: "fighting",
   };
 }
@@ -216,6 +218,7 @@ export function createEnemyCombatant(encounter, zone, worldSeed) {
     hullToughness: hullToughness(hull),
     condition: { hull: 100, rigging: 100, crew: 100, morale: 100 },
     crewDamagePool: 0,
+    damageDealt: { babor: 0, estribor: 0 },
     status: "fighting",
   };
 }
@@ -293,6 +296,7 @@ export function fireBroadside(combatant, side, distanceM, rnd) {
 
   const factor = reloadFactor(combatant);
   const accuracy = accuracyModifier(combatant);
+  let landed = 0;
   for (const p of pieces) {
     const piece = pieceById(p.pieceId);
     p.reloadTimer = (piece.reloadS * factor) / COMBAT.timeScale;
@@ -300,16 +304,67 @@ export function fireBroadside(combatant, side, distanceM, rnd) {
 
     const hit = rnd() < hitProbability(piece, distanceM, accuracy);
     const falloff = 1 - 0.5 * (distanceM / piece.rangeM);
+    const damage = hit ? damageRoll(piece, ammoById(p.ammoId), falloff) : null;
+    if (damage) landed += damage.hull + damage.rigging + damage.crew;
     volley.push({
       pieceId: p.pieceId,
       side,
       ammoId: p.ammoId,
       hit,
-      damage: hit ? damageRoll(piece, ammoById(p.ammoId), falloff) : null,
+      damage,
       distanceM,
     });
   }
+  // The floating bars read what each beam has actually put into the enemy (S21).
+  if (!combatant.damageDealt) combatant.damageDealt = { babor: 0, estribor: 0 };
+  combatant.damageDealt[side] = (combatant.damageDealt[side] ?? 0) + landed;
   return { combatant, volley };
+}
+
+/* ---------------------------------------------------------------- side state (S21) */
+
+/**
+ * The guns of one beam: its own fixed pieces plus the swivels, which are not
+ * bolted to a side and answer for whichever beam fires them (S20).
+ */
+export function sidePieces(combatant, side) {
+  return combatant.pieces.filter((p) => p.side === side || p.side === "swivel");
+}
+
+/**
+ * Share of a beam's guns that are loaded and still have rounds, 0 to 1. This is
+ * the reload bar: it fills as the battery comes back, so a partly reloaded beam
+ * reads as partly ready instead of frozen at zero (S21).
+ */
+export function loadedShare(combatant, side) {
+  const guns = sidePieces(combatant, side);
+  if (guns.length === 0) return 0;
+  const loaded = guns.filter((p) => p.reloadTimer <= 0 && p.shotsLeft > 0).length;
+  return loaded / guns.length;
+}
+
+/**
+ * Expected damage of the beam's next broadside at `distanceM`: what every loaded
+ * gun in range would average, hit probability included. Expected value, not a
+ * lucky roll, so the bar does not flicker (S21).
+ */
+export function readyDamage(combatant, side, distanceM) {
+  if (!Number.isFinite(reloadFactor(combatant))) return 0;
+  const accuracy = accuracyModifier(combatant);
+  return firingPieces(combatant, side, distanceM).reduce((sum, p) => {
+    const piece = pieceById(p.pieceId);
+    const ammo = ammoById(p.ammoId);
+    if (!ammo) return sum;
+    const falloff = 1 - 0.5 * (distanceM / piece.rangeM);
+    const damage = damageRoll(piece, ammo, falloff);
+    const expected = hitProbability(piece, distanceM, accuracy);
+    return sum + expected * (damage.hull + damage.rigging + damage.crew);
+  }, 0);
+}
+
+/** Damage this beam has already landed on the enemy, in damage points (S21). */
+export function damageDealt(combatant, side) {
+  return combatant.damageDealt?.[side] ?? 0;
 }
 
 /* ---------------------------------------------------------------- damage */
