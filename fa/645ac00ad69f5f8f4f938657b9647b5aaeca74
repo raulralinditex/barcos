@@ -1,0 +1,50 @@
+sea.html
+  s_fdc25d98318a6f::t_059ce5be94cb99 54
+odd/tasks/estado-y-reparacion.md
+  s_0615c265d5ef3b::t_5899bae69aa0d9 22-28,40-41,88-91
+  s_0615c265d5ef3b::t_7ea7b8e313cfcc 92-94
+src/model/repair.js
+  s_fdc25d98318a6f::t_c0a7968a78a00a 11,103-150,152
+  s_fdc25d98318a6f::t_117366bd1b106a 151
+  s_fdc25d98318a6f::t_a47f62c283cc09 153
+src/i18n/es.js
+  s_fdc25d98318a6f::t_2aef5388bf9183 196-198
+src/ui/styles.css
+  s_fdc25d98318a6f::t_c6d26afdc3ca9a 1160-1215
+test/repair.test.js
+  s_fdc25d98318a6f::t_88d97ea340a3b2 13-21,173-282
+scripts/smoke-state.mjs
+  s_fdc25d98318a6f::t_0e6125fa75dfd5 407-411,427-432
+  s_fdc25d98318a6f::t_25262a9b7b36fe 362-385,387-406,412-426,433-516
+  s_0615c265d5ef3b::t_c728a08f3e56b8 386
+src/ui/sea.js
+  s_fdc25d98318a6f::t_2cc68691657566 38-43,94,267-300,1034-1045,1054-1085,1097
+  s_fdc25d98318a6f::t_c956e8bc796417 1046-1053
+  s_fdc25d98318a6f::t_2498e6106ccb0b 37
+src/i18n/en.js
+  s_fdc25d98318a6f::t_a6274cad9cdd5f 199-201
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.6",
+  "base_commit_sha": "fa645ac00ad69f5f8f4f938657b9647b5aaeca74",
+  "prompts": {},
+  "sessions": {
+    "s_0615c265d5ef3b": {
+      "agent_id": {
+        "tool": "pi",
+        "id": "01a1cbe7-b77b-77ed-ba1b-220f1e39ae58",
+        "model": "claude-sonnet-5.5"
+      },
+      "human_author": "Raul Ripoll <raulral@ext.inditex.com>"
+    },
+    "s_fdc25d98318a6f": {
+      "agent_id": {
+        "tool": "pi",
+        "id": "01a1ccba-3116-75b5-936b-51ad53671eeb",
+        "model": "deepseek-v4.1-flash"
+      },
+      "human_author": "Raul Ripoll <raulral@ext.inditex.com>"
+    }
+  }
+}
