@@ -1,0 +1,35 @@
+src/ui/app.js
+  s_53bc4371ebd20f::t_dbeb71da045d43 754-755,758-771,775-776,783
+  s_53bc4371ebd20f::t_14a5cde52f68e8 79-86
+  s_53bc4371ebd20f::t_864310b25ae03e 18-28,91-114,119
+  s_53bc4371ebd20f::t_c789e6f4a2a6d9 248-249,268,280,386,390,394,398,402,406,410,414,418,422,484,493,497,503,517,535
+  s_53bc4371ebd20f::t_34f3cab648fa6c 115-118
+  s_53bc4371ebd20f::t_995003556c96b1 247,717-718
+  s_53bc4371ebd20f::t_683f7462b80404 544,853-857,861,872,877,913
+  s_53bc4371ebd20f::t_5400281ad30ad8 161,921-943,946-947
+  s_53bc4371ebd20f::t_97123ca8002b44 120
+src/ui/sea.js
+  s_53bc4371ebd20f::t_34f3cab648fa6c 95-105,725,838
+  s_53bc4371ebd20f::t_87b04fd6780104 9-10,86-94,547,555,617,636-640,711-712,763,787,844
+index.html
+  s_53bc4371ebd20f::t_5b8d0608208556 30-36,51
+  s_53bc4371ebd20f::t_a218ab66a6e776 6,14-15,19,25-26,41-42,48,50,59,65,68,76,84-89,94,97-99,105,108,129,132-133,138,141-142,147-148,153-154
+sea.html
+  s_53bc4371ebd20f::t_51f6a5f6c3a63d 6,15-23,31-33,39,41,46-47
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.6",
+  "base_commit_sha": "9c37a695beae3bd81cde60d06567893b22e08aef",
+  "prompts": {},
+  "sessions": {
+    "s_53bc4371ebd20f": {
+      "agent_id": {
+        "tool": "pi",
+        "id": "01a1cb5e-c63a-70e3-b958-abe976add528",
+        "model": "deepseek-v4.1-flash_high"
+      },
+      "human_author": "Raul Ripoll <raulral@ext.inditex.com>"
+    }
+  }
+}
