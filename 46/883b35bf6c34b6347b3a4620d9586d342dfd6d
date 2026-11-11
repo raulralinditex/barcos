@@ -1,0 +1,19 @@
+.gitignore
+  s_44e6e81547cad2::t_af1ef11c18deb5 1-2
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.6",
+  "base_commit_sha": "46883b35bf6c34b6347b3a4620d9586d342dfd6d",
+  "prompts": {},
+  "sessions": {
+    "s_44e6e81547cad2": {
+      "agent_id": {
+        "tool": "pi",
+        "id": "01a1cae8-d665-73ff-ba6d-0de2dda160a1",
+        "model": "kimi-k3"
+      },
+      "human_author": "Raul Ripoll <raulral@ext.inditex.com>"
+    }
+  }
+}
