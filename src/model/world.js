@@ -11,6 +11,7 @@
 
 import { ZONES, HULLS } from "../data/naval-data.js";
 import { referenceSpeedKn } from "./ship-model.js";
+import { windAt, windEffect } from "./wind.js";
 
 export const KN_TO_MS = 1852 / 3600;
 
@@ -75,13 +76,18 @@ export function zoneAtRadius(radiusM) {
 
 /**
  * Advance the ship one tick. `input.turn` is helm (-1 port .. +1 starboard),
- * `input.throttle` is sail (0 .. 1). Speed eases; it never teleports.
+ * `input.throttle` is sail (0 .. 1), `input.wind` is the wind it feels. Speed
+ * eases; it never teleports. The wind trims the speed and pushes the hull
+ * sideways (S17).
  */
 export function stepShip(ship, input = {}, dt = 0) {
   const turn = clamp(input.turn ?? 0, -1, 1);
   const throttle = clamp(input.throttle ?? 0, 0, 1);
+  const wind = input.wind ?? null;
 
-  const targetSpeed = ship.speedKn * throttle;
+  // A following wind lets the ship make more way; a head wind holds it back.
+  const speedFactor = wind ? windEffect(wind, ship.heading ?? 0).speedFactor : 1;
+  const targetSpeed = ship.speedKn * throttle * speedFactor;
   const currentSpeedKn = moveToward(
     ship.currentSpeedKn ?? 0,
     targetSpeed,
@@ -93,6 +99,16 @@ export function stepShip(ship, input = {}, dt = 0) {
 
   let x = ship.x + Math.cos(heading) * distanceM;
   let y = ship.y + Math.sin(heading) * distanceM;
+
+  // The wind pushes the hull sideways, perpendicular to where the bow points.
+  if (wind) {
+    const { driftFactor } = windEffect(wind, heading);
+    const driftM = distanceM * driftFactor;
+    const beam = heading + Math.PI / 2;
+    const side = Math.cos(wind.direction - beam) >= 0 ? 1 : -1;
+    x += Math.cos(beam) * driftM * side;
+    y += Math.sin(beam) * driftM * side;
+  }
 
   const radius = Math.hypot(x, y);
   if (radius > WORLD.radiusM) {
@@ -149,6 +165,8 @@ export function createWorld(seed, ship, gold = 0) {
     rngState: seed >>> 0,
     nextId: 1,
     gold,
+    /** Seconds of voyage elapsed; the wind is a function of this (S16). */
+    timeS: 0,
     ship: {
       // just outside the home-port island, bow pointed to open water
       x: 210,
@@ -168,7 +186,10 @@ export function createWorld(seed, ship, gold = 0) {
  * zone the ship is sailing in.
  */
 export function updateWorld(world, input = {}, dt = 0) {
-  const ship = stepShip(world.ship, input, dt);
+  const timeS = (world.timeS ?? 0) + dt;
+  // The wind the ship feels right now; the caller may override it (tests, replay).
+  const wind = input.wind ?? windAt(world.seed, timeS);
+  const ship = stepShip(world.ship, { ...input, wind }, dt);
   let rngState = world.rngState;
   let nextId = world.nextId;
   const rnd = () => {
@@ -233,7 +254,7 @@ export function updateWorld(world, input = {}, dt = 0) {
     nextId += 1;
   }
 
-  return { ...world, ship, gold, encounters, rngState, nextId, collected };
+  return { ...world, ship, gold, encounters, rngState, nextId, collected, timeS };
 }
 
 /** Nearest encounter of a type, for HUD warnings and minimap blips. */
@@ -259,6 +280,7 @@ export function serializeWorld(world) {
     rngState: world.rngState,
     nextId: world.nextId,
     gold: world.gold,
+    timeS: world.timeS ?? 0,
     ship: world.ship,
     encounters: world.encounters,
   });
@@ -276,6 +298,8 @@ export function deserializeWorld(json) {
       rngState: data.rngState | 0,
       nextId: Number.isFinite(data.nextId) ? data.nextId : data.encounters.length + 1,
       gold: data.gold,
+      // A save from before the wind existed starts its clock at zero.
+      timeS: Number.isFinite(data.timeS) ? data.timeS : 0,
       ship: {
         x: data.ship.x,
         y: data.ship.y,
