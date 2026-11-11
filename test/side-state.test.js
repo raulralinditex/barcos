@@ -4,11 +4,13 @@ import assert from "node:assert/strict";
 import { ammoById, pieceById } from "../src/data/naval-data.js";
 import {
   COMBAT,
+  createEnemyCombatant,
   createPlayerCombatant,
   damageDealt,
   fireBroadside,
   loadedShare,
   readyDamage,
+  sideCapacity,
   tickCombatant,
 } from "../src/model/combat.js";
 import { buildShip, toRuntimeShip } from "../src/model/shipyard.js";
@@ -157,4 +159,50 @@ test("S21: a swivel answers for the side that fires it, so its damage lands ther
   assert.equal(volley.length, 2);
   assert.ok(damageDealt(combatant, "estribor") > 0);
   assert.equal(damageDealt(combatant, "babor"), 0);
+});
+
+/* ---------------------------------------------------------------- one scale for every hull */
+
+test("S21: capacity is the damage the whole battery could deal, whether or not it is reloaded", () => {
+  const combatant = createPlayerCombatant(runtimeShip());
+  const fresh = readyDamage(combatant, "babor", 200);
+  assert.ok(fresh > 0);
+  assert.ok(Math.abs(sideCapacity(combatant, "babor", 200) - fresh) < 1e-9);
+
+  // after the broadside the guns are empty of ready damage but the battery is the same
+  fireBroadside(combatant, "babor", 200, seededRnd(1));
+  assert.equal(readyDamage(combatant, "babor", 200), 0);
+  assert.ok(Math.abs(sideCapacity(combatant, "babor", 200) - fresh) < 1e-9);
+});
+
+test("S21: capacity leaves out the guns that cannot reach the target", () => {
+  const combatant = createPlayerCombatant(runtimeShip());
+  const near = sideCapacity(combatant, "babor", 200);
+  const far = sideCapacity(combatant, "babor", 335);
+  assert.ok(far > 0);
+  assert.ok(far < near, "at 335 m the falcons fall out of range");
+});
+
+test("S21: a battery out of rounds has no capacity left", () => {
+  const combatant = createPlayerCombatant(runtimeShip());
+  for (const p of combatant.pieces) {
+    if (p.side === "babor") p.shotsLeft = 0;
+  }
+  assert.equal(sideCapacity(combatant, "babor", 200), 0);
+});
+
+test("S21: a bigger ship has more capacity than a smaller one, so their bars can be compared", () => {
+  const zone = { id: "abierto", danger: 2 };
+  const small = createEnemyCombatant({ id: 3, hullId: "patache", type: "enemy" }, zone, 11);
+  const big = createEnemyCombatant({ id: 3, hullId: "galeon-guerra", type: "enemy" }, zone, 11);
+  const smallCap = Math.max(sideCapacity(small, "babor", 200), sideCapacity(small, "estribor", 200));
+  const bigCap = Math.max(sideCapacity(big, "babor", 200), sideCapacity(big, "estribor", 200));
+  assert.ok(smallCap > 0);
+  assert.ok(bigCap > smallCap, `galeon (${bigCap}) should out-gun the patache (${smallCap})`);
+});
+
+test("S21: a gunless crew has no capacity, matching its silent guns", () => {
+  const combatant = createPlayerCombatant(runtimeShip());
+  combatant.crew.artillero = 0;
+  assert.equal(sideCapacity(combatant, "babor", 200), 0);
 });

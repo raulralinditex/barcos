@@ -353,15 +353,10 @@ export function loadedShare(combatant, side) {
   return loaded / guns.length;
 }
 
-/**
- * Expected damage of the beam's next broadside at `distanceM`: what every loaded
- * gun in range would average, hit probability included. Expected value, not a
- * lucky roll, so the bar does not flicker (S21).
- */
-export function readyDamage(combatant, side, distanceM) {
-  if (!Number.isFinite(reloadFactor(combatant))) return 0;
+/** Expected damage of a set of guns at `distanceM`, hit probability included. */
+function expectedVolley(combatant, guns, distanceM) {
   const accuracy = accuracyModifier(combatant);
-  return firingPieces(combatant, side, distanceM).reduce((sum, p) => {
+  return guns.reduce((sum, p) => {
     const piece = pieceById(p.pieceId);
     const ammo = ammoById(p.ammoId);
     if (!ammo) return sum;
@@ -370,6 +365,32 @@ export function readyDamage(combatant, side, distanceM) {
     const expected = hitProbability(piece, distanceM, accuracy);
     return sum + expected * (damage.hull + damage.rigging + damage.crew);
   }, 0);
+}
+
+/**
+ * Expected damage of the beam's next broadside at `distanceM`: what every loaded
+ * gun in range would average, hit probability included. Expected value, not a
+ * lucky roll, so the bar does not flicker (S21).
+ */
+export function readyDamage(combatant, side, distanceM) {
+  if (!Number.isFinite(reloadFactor(combatant))) return 0;
+  return expectedVolley(combatant, firingPieces(combatant, side, distanceM), distanceM);
+}
+
+/**
+ * Expected damage of the whole beam at `distanceM`, loaded or not: the guns that
+ * still have rounds and reach the target. It is the unit every ship's damage bar is
+ * measured in, so a patache and a galleon share one scale (S21), and unlike
+ * `readyDamage` it does not drop to zero while the guns reload, so a bar that is
+ * scaled against another ship's battery does not jump when that ship fires.
+ */
+export function sideCapacity(combatant, side, distanceM) {
+  if (combatant.status !== "fighting") return 0;
+  if (!Number.isFinite(reloadFactor(combatant))) return 0;
+  const guns = sidePieces(combatant, side).filter(
+    (p) => p.shotsLeft > 0 && pieceById(p.pieceId).rangeM >= distanceM,
+  );
+  return expectedVolley(combatant, guns, distanceM);
 }
 
 /** Damage this beam has already landed on the enemy, in damage points (S21). */

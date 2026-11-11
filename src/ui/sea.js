@@ -21,6 +21,7 @@ import {
   loadedShare,
   maneuverFactor,
   readyDamage,
+  sideCapacity,
   sideForBearing,
   speedFactor,
   tickCombatant,
@@ -391,6 +392,11 @@ const BAR = {
   sideWidth: 54,
   /** Screen px of clear water kept between a hull's centre and the nearest block edge. */
   hullClear: 26,
+  /**
+   * The "already dealt" backdrop is read in full broadsides of the scale: four of
+   * them is what COMBAT.damageScale is calibrated to sink a reference hull with.
+   */
+  dealtVolleys: 4,
   height: 6,
   gap: 3,
   padding: 5,
@@ -486,7 +492,7 @@ function drawBlock(ctx, rows, centreX, centreY, width) {
  * beam is a place on the ship, not a place on the screen. Condition sits on the
  * keel and the beams on the perpendicular, so the three never overlap.
  */
-function drawBarsFor(ctx, combatant, x, y, distanceM, heading) {
+function drawBarsFor(ctx, combatant, x, y, distanceM, heading, scale) {
   if (!combatant) return;
 
   const conditionRows = [
@@ -497,15 +503,9 @@ function drawBarsFor(ctx, combatant, x, y, distanceM, heading) {
   const stern = blockCentre(x, y, heading + Math.PI, blockSize(conditionRows.length, BAR.width));
   drawBlock(ctx, conditionRows, stern.x, stern.y, BAR.width);
 
-  // Both beams are scaled against the same pair of maxima, so the two sides stay
-  // comparable: the longer bar is the beam that hits harder, the fuller one the
-  // beam that is readier.
-  const dealt = Math.max(damageDealt(combatant, "babor"), damageDealt(combatant, "estribor"), 1);
-  const ready = Math.max(
-    readyDamage(combatant, "babor", distanceM),
-    readyDamage(combatant, "estribor", distanceM),
-    1,
-  );
+  // One scale for every hull on screen (`scale`, in `sideCapacity` units): a bar is a
+  // share of the strongest beam in view, not of its own ship, so a patache's
+  // broadside reads as small next to a galleon's and the two can be compared.
 
   for (const side of ["babor", "estribor"]) {
     // Starboard bears at heading + 90°, port at heading - 90°, the same convention
@@ -514,8 +514,8 @@ function drawBarsFor(ctx, combatant, x, y, distanceM, heading) {
     const angle = heading + sign * (Math.PI / 2);
     const rows = [
       {
-        share: readyDamage(combatant, side, distanceM) / ready,
-        backdrop: damageDealt(combatant, side) / dealt,
+        share: readyDamage(combatant, side, distanceM) / scale,
+        backdrop: damageDealt(combatant, side) / (scale * BAR.dealtVolleys),
         color: BAR.ready,
       },
       { share: loadedShare(combatant, side), color: BAR.reload },
@@ -525,20 +525,51 @@ function drawBarsFor(ctx, combatant, x, y, distanceM, heading) {
   }
 }
 
-/** Bars over the player's hull always, and over an enemy only once it is a target. */
+/**
+ * Bars over the player's hull always, and over an enemy only once it is a target.
+ * Every ship is measured against the same scale, and the player's guns are read at
+ * the range of the nearest target, so both sides of a duel are on the same footing.
+ */
 function drawShipBars(ctx) {
   if (!world) return;
 
-  const player = toScreen(world.ship.x, world.ship.y);
-  drawBarsFor(ctx, playerCombat, player.x, player.y, 0, world.ship.heading ?? 0);
-
+  const targets = [];
   for (const encounter of world.encounters) {
     if (encounter.type !== "enemy" || !encounter.combat) continue;
     if (encounter.combat.status !== "fighting") continue;
     if (!inGunshot(encounter)) continue;
-    const at = toScreen(encounter.x, encounter.y);
-    const distance = Math.hypot(encounter.x - world.ship.x, encounter.y - world.ship.y);
-    drawBarsFor(ctx, encounter.combat, at.x, at.y, distance, encounter.heading ?? 0);
+    targets.push({
+      combatant: encounter.combat,
+      at: toScreen(encounter.x, encounter.y),
+      distance: Math.hypot(encounter.x - world.ship.x, encounter.y - world.ship.y),
+      heading: encounter.heading ?? 0,
+    });
+  }
+
+  const nearest = targets.reduce((best, t) => Math.min(best, t.distance), Infinity);
+  const ships = [
+    ...(playerCombat
+      ? [
+          {
+            combatant: playerCombat,
+            at: toScreen(world.ship.x, world.ship.y),
+            distance: Number.isFinite(nearest) ? nearest : 0,
+            heading: world.ship.heading ?? 0,
+          },
+        ]
+      : []),
+    ...targets,
+  ];
+
+  let scale = 1;
+  for (const ship of ships) {
+    for (const side of ["babor", "estribor"]) {
+      scale = Math.max(scale, sideCapacity(ship.combatant, side, ship.distance));
+    }
+  }
+
+  for (const ship of ships) {
+    drawBarsFor(ctx, ship.combatant, ship.at.x, ship.at.y, ship.distance, ship.heading, scale);
   }
 }
 

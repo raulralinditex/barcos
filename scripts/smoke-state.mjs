@@ -1,6 +1,7 @@
 import { chromium } from "playwright";
 import { buildShip, toRuntimeShip } from "../src/model/shipyard.js";
 import { REPAIR } from "../src/model/repair.js";
+import { createEnemyCombatant } from "../src/model/combat.js";
 
 /**
  * Browser smoke for the floating state bars (S21) and the repair at the home port
@@ -89,19 +90,20 @@ async function newSea({ ship, world, gold = 5000, locale = "es" } = {}) {
  * so counting alpha would count everything: the bars are recognised by their own
  * colours (condition, ready, reload).
  */
-const barPixels = (page, box) =>
-  page.evaluate(({ x, y, w, h }) => {
+const PALETTE = {
+  hull: [161, 60, 44],
+  rigging: [61, 111, 168],
+  crew: [47, 107, 71],
+  ready: [224, 168, 21],
+  reload: [159, 199, 232],
+};
+const barPixels = (page, box, only = Object.keys(PALETTE)) =>
+  page.evaluate(({ x, y, w, h, colors }) => {
     const canvas = document.querySelector("#sea-canvas");
     const ctx = canvas.getContext("2d");
     const dpr = window.devicePixelRatio || 1;
     const data = ctx.getImageData(x * dpr, y * dpr, w * dpr, h * dpr).data;
-    const palette = [
-      [161, 60, 44], // hull
-      [61, 111, 168], // rigging
-      [47, 107, 71], // crew
-      [224, 168, 21], // damage ready
-      [159, 199, 232], // reload
-    ];
+    const palette = colors;
     let painted = 0;
     for (let i = 0; i < data.length; i += 4) {
       for (const [r, g, b] of palette) {
@@ -116,7 +118,34 @@ const barPixels = (page, box) =>
       }
     }
     return painted;
-  }, box);
+  }, { ...box, colors: only.map((name) => PALETTE[name]) });
+
+/**
+ * Length in px of the longest horizontal run of one bar colour. A bar is a long
+ * flat rectangle, while the same yellow also paints tracers and gold glints as
+ * thin lines, so counting pixels would count the shooting as well.
+ */
+const barRun = (page, box, name) =>
+  page.evaluate(({ x, y, w, h, color }) => {
+    const canvas = document.querySelector("#sea-canvas");
+    const ctx = canvas.getContext("2d");
+    const dpr = window.devicePixelRatio || 1;
+    const width = Math.round(w * dpr);
+    const data = ctx.getImageData(x * dpr, y * dpr, width, Math.round(h * dpr)).data;
+    const near = (i) =>
+      Math.abs(data[i] - color[0]) < 12 &&
+      Math.abs(data[i + 1] - color[1]) < 12 &&
+      Math.abs(data[i + 2] - color[2]) < 12;
+    let best = 0;
+    for (let row = 0; row < data.length / 4 / width; row += 1) {
+      let run = 0;
+      for (let col = 0; col < width; col += 1) {
+        run = near((row * width + col) * 4) ? run + 1 : 0;
+        if (run > best) best = run;
+      }
+    }
+    return best / dpr;
+  }, { ...box, color: PALETTE[name] });
 
 const viewport = { width: 1400, height: 900 };
 
@@ -166,12 +195,38 @@ const enemyNear = {
   zoneId: "costera",
   drift: { heading: 0, speedKn: 2 },
 };
-page = await newSea({ ship: sound, world: seaWorld(sound, [enemyNear]) });
+// A player with heavy guns against a coastal patache: the damage bars share one
+// scale, so the patache's bar must be a fraction of the player's, not equally full.
+const strong = build({
+  batteries: [
+    { pieceId: "media-culebrina-9", qty: 3, side: "babor", shotsPerPiece: 25, ammoId: "bala-hierro" },
+    { pieceId: "media-culebrina-9", qty: 3, side: "estribor", shotsPerPiece: 25, ammoId: "bala-hierro" },
+  ],
+});
+// The enemy arrives with every gun loaded, so the check does not depend on when its
+// random reload clocks happen to run out.
+const loadedEnemy = {
+  ...enemyNear,
+  heading: 0,
+  combat: createEnemyCombatant(enemyNear, { id: "costera" }, 424242),
+};
+for (const piece of loadedEnemy.combat.pieces) piece.reloadTimer = 0;
+page = await newSea({ ship: strong, world: seaWorld(strong, [loadedEnemy]) });
 await page.waitForTimeout(500);
 
 const enemyScreen = around(centre.x, centre.y + 300 * 0.4);
 const paintedEnemy = await barPixels(page, enemyScreen);
 check(paintedEnemy > 800, `the enemy's bars are missing inside gunshot (${paintedEnemy} painted px)`);
+
+const readyPlayer = await barRun(page, playerBox, "ready");
+// a tight window: the player's own full bar is only ~120 px away and must not be read
+const readyEnemy = await barRun(page, around(centre.x, centre.y + 300 * 0.4, 60), "ready");
+check(readyPlayer >= 40, `the heavy player's damage bar is not full (${readyPlayer} px)`);
+check(readyEnemy >= 4, `the enemy's damage bar is empty (${readyEnemy} px)`);
+check(
+  readyEnemy < readyPlayer * 0.25,
+  `the damage bars do not share a scale: a weak patache fills as much as a heavy player (player=${readyPlayer} enemy=${readyEnemy} px)`,
+);
 await page.close();
 
 /* ---------------------------------------------------------------- 3: an enemy out of gunshot */
@@ -309,7 +364,7 @@ await browser.close();
 if (errors.length) failures.push(`console errors: ${errors.join(" | ")}`);
 console.log(
   JSON.stringify(
-    { paintedSound, paintedAstern, paintedPort, paintedStarboard, paintedEnemy, paintedFar, failures },
+    { paintedSound, readyPlayer, readyEnemy, paintedAstern, paintedPort, paintedStarboard, paintedEnemy, paintedFar, failures },
     null,
     2,
   ),
