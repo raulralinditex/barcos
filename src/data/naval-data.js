@@ -408,6 +408,8 @@ export const PIECES = [
     priceGold: 45,
     provenance: "R6 / S4",
     note: "Pieza giratoria antipersonal; alcance eficaz de referencia 180 m.",
+    /** Not bolted to a broadside: it answers for whichever side fires (S20). */
+    swivel: true,
     ammo: ["metralla", "bala-hierro"],
   },
 ];

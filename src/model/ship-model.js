@@ -45,13 +45,26 @@ export function totalPieces(batteries) {
   return batteries.reduce((total, entry) => total + entry.qty, 0);
 }
 
+/**
+ * Guns per broadside, plus the swivels apart (S20). A swivel rides on a rail, not
+ * in a gun port, so it never uses up the per-side limit of the hull.
+ */
 export function piecesBySide(batteries) {
-  const sides = { babor: 0, estribor: 0 };
+  const sides = { babor: 0, estribor: 0, swivel: 0 };
   for (const entry of batteries) {
     if (entry.side === "babor") sides.babor += entry.qty;
     if (entry.side === "estribor") sides.estribor += entry.qty;
+    if (entry.side === "swivel") sides.swivel += entry.qty;
   }
   return sides;
+}
+
+/**
+ * How many swivels a hull can carry. Game convention: half the gun ports of the
+ * hull, rounded up, because every rail position costs a hand and a pivot post.
+ */
+export function maxSwivels(hull) {
+  return Math.ceil((hull?.maxPiecesPerSide ?? 0) / 2);
 }
 
 /** Crew head count by role. */
@@ -205,6 +218,12 @@ export function validateShip(input, budget = computeBudget(input)) {
     );
   }
 
+  if (sides.swivel > maxSwivels(hull)) {
+    issues.push(
+      issue(ERROR, "too-many-swivels", { count: sides.swivel, max: maxSwivels(hull) }),
+    );
+  }
+
   const pieces = totalPieces(batteries);
   const neededGunners = Math.ceil(pieces / 2);
   if (pieces > 0 && counts.artillero < neededGunners) {
@@ -217,9 +236,12 @@ export function validateShip(input, budget = computeBudget(input)) {
     );
   }
 
-  if (pieces > 0 && (sides.babor === 0 || sides.estribor === 0)) {
+  // A swivel answers for either side, so it covers a side with no broadside (S20).
+  const coverBabor = sides.babor + sides.swivel;
+  const coverEstribor = sides.estribor + sides.swivel;
+  if (pieces > 0 && (coverBabor === 0 || coverEstribor === 0)) {
     issues.push(
-      issue(WARN, sides.babor === 0 ? "one-sided-battery.babor" : "one-sided-battery.estribor"),
+      issue(WARN, coverBabor === 0 ? "one-sided-battery.babor" : "one-sided-battery.estribor"),
     );
   }
 

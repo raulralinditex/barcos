@@ -134,7 +134,7 @@ test("S3: reference speed is a displacement-hull relation on waterline length", 
 
 test("S4: batteries are counted per side", () => {
   const sides = piecesBySide(fittingShip().batteries);
-  assert.deepEqual(sides, { babor: 12, estribor: 12 });
+  assert.deepEqual(sides, { babor: 12, estribor: 12, swivel: 0 });
 });
 
 test("validate: a fitting ship sails with no errors", () => {

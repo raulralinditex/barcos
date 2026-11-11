@@ -263,14 +263,18 @@ export function damageRoll(piece, ammo, falloff) {
   };
 }
 
-/** Guns of one side that can fire right now at a target `distanceM` away (S4). */
+/**
+ * Guns that can fire right now for one side at a target `distanceM` away (S4).
+ * The side's own guns answer for it, and so do the swivels, which are not bolted
+ * to a broadside (S20); each gun keeps its own reload clock and its own range.
+ */
 export function firingPieces(combatant, side, distanceM) {
   if (combatant.status !== "fighting") return [];
   if (!Number.isFinite(reloadFactor(combatant))) return [];
   return combatant.pieces.filter((p) => {
     const piece = pieceById(p.pieceId);
     return (
-      p.side === side &&
+      (p.side === side || p.side === "swivel") &&
       p.reloadTimer <= 0 &&
       p.shotsLeft > 0 &&
       piece.rangeM >= distanceM

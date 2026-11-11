@@ -65,3 +65,17 @@ export function issueMessage(issue, t) {
   if (!issue || !issue.code) return "";
   return t(`issue.${issue.code}`, issue.params ?? {});
 }
+
+/**
+ * Translated gun family ("cañón" -> "cannon"). The key is the family stripped of
+ * accents and spaces, so the dataset keeps its raw Spanish text as the fallback.
+ */
+export function familyLabel(family, t) {
+  const slug = String(family)
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .replace(/\s+/g, "-");
+  const key = `shipyard.family.${slug}`;
+  const translated = t(key);
+  return translated === key ? family : translated;
+}

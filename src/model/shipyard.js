@@ -31,7 +31,8 @@ export function normaliseConfig(config) {
       return {
         pieceId: piece.id,
         qty: Math.max(0, Math.floor(Number(entry.qty) || 0)),
-        side: entry.side === "estribor" ? "estribor" : "babor",
+        // A swivel is always a swivel; a fixed gun is port or starboard, never both (S20).
+        side: piece.swivel ? "swivel" : entry.side === "estribor" ? "estribor" : "babor",
         shotsPerPiece: Math.max(0, Math.floor(Number(entry.shotsPerPiece) || 0)),
         ammoId,
       };

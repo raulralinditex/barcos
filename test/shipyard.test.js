@@ -215,7 +215,7 @@ test("S2: a ship that does not fit is not feasible even when it is affordable", 
 test("S2: the verdict exposes gun counts per side and the shot stock", () => {
   const ship = buildShip(midConfig());
   assert.equal(ship.guns.total, 24);
-  assert.deepEqual(ship.guns.sides, { babor: 12, estribor: 12 });
+  assert.deepEqual(ship.guns.sides, { babor: 12, estribor: 12, swivel: 0 });
   assert.equal(ship.shotStock.length, 4);
   const totalRounds = ship.shotStock.reduce((sum, s) => sum + s.rounds, 0);
   assert.equal(totalRounds, 8 * 20 * 2 + 4 * 30 * 2);
