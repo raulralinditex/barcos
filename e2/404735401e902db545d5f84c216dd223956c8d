@@ -1,0 +1,21 @@
+test/fleet.test.js
+  s_53bc4371ebd20f::t_cc6df2b0fc7b4c 1-143
+src/model/fleet.js
+  s_53bc4371ebd20f::t_8dc8048e82eb3a 1-92
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.6",
+  "base_commit_sha": "e2404735401e902db545d5f84c216dd223956c8d",
+  "prompts": {},
+  "sessions": {
+    "s_53bc4371ebd20f": {
+      "agent_id": {
+        "tool": "pi",
+        "id": "01a1cb5e-c63a-70e3-b958-abe976add528",
+        "model": "deepseek-v4.1-flash_high"
+      },
+      "human_author": "Raul Ripoll <raulral@ext.inditex.com>"
+    }
+  }
+}
