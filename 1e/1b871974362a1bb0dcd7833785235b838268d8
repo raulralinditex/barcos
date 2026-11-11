@@ -1,0 +1,22 @@
+odd/tasks/estado-y-reparacion.md
+  s_0615c265d5ef3b::t_913e25d430b7fb 3
+  s_0615c265d5ef3b::t_b40d870bba1730 28-33,46-62
+odd/tasks/pendientes.md
+  s_0615c265d5ef3b::t_23ae9a0e25812e 1,3,5,7,9,11,13,15,17,19,22
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.6",
+  "base_commit_sha": "1e1b871974362a1bb0dcd7833785235b838268d8",
+  "prompts": {},
+  "sessions": {
+    "s_0615c265d5ef3b": {
+      "agent_id": {
+        "tool": "pi",
+        "id": "01a1cbe7-b77b-77ed-ba1b-220f1e39ae58",
+        "model": "deepseek-v4.1-flash_high"
+      },
+      "human_author": "Raul Ripoll <raulral@ext.inditex.com>"
+    }
+  }
+}
