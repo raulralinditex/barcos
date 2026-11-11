@@ -950,3 +950,101 @@ input[type="number"] {
   background: rgba(23, 54, 93, 0.92);
   color: #eaf1fa;
 }
+
+.is-hidden {
+  display: none !important;
+}
+
+/* ---------- combat: target panel ---------- */
+
+.hud-target {
+  bottom: 14px;
+  left: 14px;
+  min-width: 210px;
+}
+
+.target-distance {
+  font-size: 12px;
+  color: rgba(244, 239, 228, 0.75);
+  margin-bottom: 8px;
+  font-variant-numeric: tabular-nums;
+}
+
+.target-bars {
+  display: grid;
+  gap: 5px;
+}
+
+.tbar {
+  display: grid;
+  grid-template-columns: 66px 1fr;
+  align-items: center;
+  gap: 7px;
+}
+
+.tbar span {
+  font-size: 10px;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: rgba(244, 239, 228, 0.62);
+}
+
+.tbar-track {
+  height: 9px;
+  border-radius: 4px;
+  background: rgba(244, 239, 228, 0.14);
+  overflow: hidden;
+}
+
+.tbar-fill {
+  height: 100%;
+  width: 100%;
+  border-radius: 4px;
+  transition: width 0.25s ease;
+}
+
+.tbar-hull {
+  background: #a13c2c;
+}
+
+.tbar-rigging {
+  background: #3d6fa8;
+}
+
+.tbar-crew {
+  background: #2f6b47;
+}
+
+/* ---------- combat: game over ---------- */
+
+.gameover-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 20;
+  display: grid;
+  place-items: center;
+  background: rgba(10, 15, 22, 0.72);
+  backdrop-filter: blur(4px);
+}
+
+.gameover-card {
+  width: min(460px, 90vw);
+  padding: 26px;
+  text-align: center;
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  background: #fffdf8;
+  color: var(--ink);
+  box-shadow: 0 24px 60px rgba(0, 0, 0, 0.4);
+}
+
+.gameover-card h2 {
+  font-size: 20px;
+  color: var(--red);
+  margin-bottom: 8px;
+}
+
+.gameover-card p {
+  margin: 0 0 16px;
+  font-size: 13.5px;
+}

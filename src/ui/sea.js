@@ -5,7 +5,21 @@
  * keyboard and autosaves. Spanish labels (S10), English identifiers (S10).
  */
 
-import { hullById } from "../data/naval-data.js";
+import { hullById, pieceById } from "../data/naval-data.js";
+import {
+  COMBAT,
+  aiStep,
+  applyDamage,
+  bearingTo,
+  createEnemyCombatant,
+  createPlayerCombatant,
+  fireBroadside,
+  maneuverFactor,
+  sideForBearing,
+  speedFactor,
+  tickCombatant,
+  wreckPrize,
+} from "../model/combat.js";
 import {
   WORLD,
   ZONE_BANDS,
@@ -41,7 +55,20 @@ const els = {
   speed: $("#hud-speed"),
   heading: $("#hud-heading"),
   hull: $("#hud-hull"),
+  rigging: $("#hud-rigging"),
+  crew: $("#hud-crew"),
+  rounds: $("#hud-rounds"),
   banner: $("#banner"),
+  targetPanel: $("#target-panel"),
+  targetName: $("#target-name"),
+  targetDistance: $("#target-distance"),
+  targetHull: $("#target-hull"),
+  targetRigging: $("#target-rigging"),
+  targetCrew: $("#target-crew"),
+  gameoverOverlay: $("#gameover-overlay"),
+  gameoverTitle: $("#gameover-title"),
+  gameoverGold: $("#gameover-gold"),
+  gameoverBack: $("#gameover-back"),
 };
 
 const fmtInt = new Intl.NumberFormat("es-ES", { maximumFractionDigits: 0 });
@@ -83,6 +110,11 @@ const ui = {
 let world = null;
 let gold = 0;
 let goldEarned = 0;
+let playerCombat = null;
+let gameOver = false;
+let gameOverAt = 0;
+let gameOverShown = false;
+const fx = [];
 
 /* ---------------------------------------------------------------- persistence */
 
@@ -90,10 +122,23 @@ function saveGame() {
   if (!world) return;
   try {
     world = { ...world, gold: goldEarned };
-    localStorage.setItem(
-      GAME_KEY,
-      JSON.stringify({ gold, world: serializeWorld(world) }),
-    );
+    const payload = {
+      gold,
+      world: serializeWorld(world),
+      combat: playerCombat
+        ? {
+            player: {
+              condition: playerCombat.condition,
+              crew: playerCombat.crew,
+              pieces: playerCombat.pieces.map((p) => ({
+                shotsLeft: p.shotsLeft,
+                reloadTimer: p.reloadTimer,
+              })),
+            },
+          }
+        : undefined,
+    };
+    localStorage.setItem(GAME_KEY, JSON.stringify(payload));
   } catch {
     /* storage disabled: the voyage continues in memory */
   }
@@ -112,6 +157,9 @@ window.addEventListener("keydown", (event) => {
     ui.throttle = Math.min(1, ui.throttle + THROTTLE_STEP);
   } else if (key === "arrowdown" || key === "s") {
     ui.throttle = Math.max(0, ui.throttle - THROTTLE_STEP);
+  } else if (key === "q" || key === "e") {
+    event.preventDefault();
+    firePlayerBroadside(key === "q" ? "babor" : "estribor");
   }
   ui.keys.add(key);
 });
@@ -123,9 +171,12 @@ window.addEventListener("keyup", (event) => {
 function readInput() {
   const left = ui.keys.has("arrowleft") || ui.keys.has("a");
   const right = ui.keys.has("arrowright") || ui.keys.has("d");
+  // A shredded rig or a skeleton crew must be felt at the helm, not just in the HUD.
+  const sailFactor = playerCombat ? speedFactor(playerCombat) : 1;
+  const helmFactor = playerCombat ? maneuverFactor(playerCombat) : 1;
   return {
-    turn: (right ? 1 : 0) - (left ? 1 : 0),
-    throttle: ui.throttle,
+    turn: ((right ? 1 : 0) - (left ? 1 : 0)) * helmFactor,
+    throttle: ui.throttle * sailFactor,
   };
 }
 
@@ -211,6 +262,7 @@ function drawSea(ctx) {
   drawEncounters(ctx);
   drawWake(ctx);
   drawPlayerShip(ctx);
+  drawFx(ctx);
 
   ctx.restore();
 }
@@ -232,16 +284,44 @@ function drawEncounters(ctx) {
       ctx.arc(encounter.x - 3, encounter.y - 4, pulse * 0.35, 0, Math.PI * 2);
       ctx.fillStyle = "#fff3c4";
       ctx.fill();
+    } else if (encounter.type === "wreck") {
+      drawWreck(ctx, encounter);
     } else {
       drawEnemySail(ctx, encounter);
     }
   }
 }
 
+/** A defeated enemy: a broken hull with its gold still aboard. */
+function drawWreck(ctx, encounter) {
+  const now = performance.now();
+  const pulse = 20 + Math.sin(now / 300 + encounter.id) * 4;
+  ctx.save();
+  ctx.translate(encounter.x, encounter.y);
+  ctx.rotate((encounter.heading ?? 0) + 0.6);
+  ctx.beginPath();
+  ctx.moveTo(30, 0);
+  ctx.lineTo(2, -14);
+  ctx.lineTo(-26, -4);
+  ctx.lineTo(-18, 12);
+  ctx.closePath();
+  ctx.fillStyle = "#2b2118";
+  ctx.fill();
+  ctx.strokeStyle = "rgba(120,90,60,0.9)";
+  ctx.lineWidth = 3;
+  ctx.stroke();
+  ctx.restore();
+
+  ctx.beginPath();
+  ctx.arc(encounter.x, encounter.y, pulse, 0, Math.PI * 2);
+  ctx.fillStyle = "rgba(224,168,21,0.22)";
+  ctx.fill();
+}
+
 function drawEnemySail(ctx, encounter) {
   ctx.save();
   ctx.translate(encounter.x, encounter.y);
-  ctx.rotate(encounter.drift.heading);
+  ctx.rotate(encounter.heading ?? encounter.drift.heading);
 
   ctx.beginPath();
   ctx.moveTo(46, 0);
@@ -364,7 +444,8 @@ function drawMinimap() {
   for (const encounter of world.encounters) {
     ctx.beginPath();
     ctx.arc(encounter.x, encounter.y, 90, 0, Math.PI * 2);
-    ctx.fillStyle = encounter.type === "treasure" ? "#e0a815" : "#d0503c";
+    ctx.fillStyle =
+      encounter.type === "enemy" ? "#d0503c" : "#e0a815";
     ctx.fill();
   }
 
@@ -384,6 +465,218 @@ function drawMinimap() {
   ctx.restore();
 }
 
+/* ---------------------------------------------------------------- combat */
+
+const rnd = () => Math.random();
+
+function currentZone() {
+  return zoneAtRadius(Math.hypot(world.ship.x, world.ship.y));
+}
+
+/** Lazily build an enemy's combat entity; keeps its own heading separate from drift. */
+function ensureEnemyCombat(encounter) {
+  if (!encounter.combat) {
+    encounter.combat = createEnemyCombatant(encounter, currentZone(), world.seed);
+    encounter.heading = encounter.heading ?? encounter.drift?.heading ?? 0;
+    encounter.currentSpeedKn = 0;
+    // from now on the combat AI owns this hull's movement, not the drift step
+    encounter.engaged = true;
+  }
+  return encounter.combat;
+}
+
+function pushFx(type, x, y, x2, y2, ttl) {
+  fx.push({ type, x, y, x2, y2, ttl, ttl0: ttl });
+}
+
+function playerMaxRangeM() {
+  return Math.max(0, ...playerCombat.pieces.map((p) => pieceById(p.pieceId).rangeM));
+}
+
+/** Fire one side's guns at the nearest enemy that side bears on. */
+function firePlayerBroadside(side) {
+  if (!playerCombat || gameOver || playerCombat.status !== "fighting") return;
+
+  const maxRange = playerMaxRangeM();
+  let target = null;
+  let targetDistance = Infinity;
+  for (const encounter of world.encounters) {
+    if (encounter.type !== "enemy") continue;
+    if (encounter.combat && encounter.combat.status !== "fighting") continue;
+    const distance = Math.hypot(encounter.x - world.ship.x, encounter.y - world.ship.y);
+    if (distance > maxRange || distance >= targetDistance) continue;
+    if (sideForBearing(world.ship.heading, bearingTo(world.ship, encounter)) !== side) continue;
+    target = encounter;
+    targetDistance = distance;
+  }
+
+  if (!target) {
+    showBanner(`Sin blanco a ${side}`, "info", 1500);
+    return;
+  }
+
+  const targetCombat = ensureEnemyCombat(target);
+  if (!targetCombat) return;
+  const { volley } = fireBroadside(playerCombat, side, targetDistance, rnd);
+  if (volley.length === 0) {
+    showBanner(`Recargando el costado de ${side}…`, "info", 1200);
+    return;
+  }
+
+  for (const shot of volley) {
+    pushFx("tracer", world.ship.x, world.ship.y, target.x, target.y, 0.3);
+    if (shot.hit) {
+      applyDamage(targetCombat, shot.damage);
+      pushFx("hit", target.x, target.y, target.x, target.y, 0.5);
+    } else {
+      pushFx("splash", target.x + (rnd() - 0.5) * 70, target.y + (rnd() - 0.5) * 70, 0, 0, 0.6);
+    }
+  }
+}
+
+/** Enemies inside the engage radius think, move and shoot. */
+function processCombat(dt, now) {
+  if (!playerCombat || gameOver) return;
+  tickCombatant(playerCombat, dt);
+
+  for (const encounter of world.encounters) {
+    if (encounter.type !== "enemy") continue;
+    const distance = Math.hypot(encounter.x - world.ship.x, encounter.y - world.ship.y);
+    if (distance > COMBAT.engageRadiusM && !encounter.combat) continue;
+    const combat = ensureEnemyCombat(encounter);
+    if (!combat || combat.status !== "fighting") continue;
+
+    tickCombatant(combat, dt);
+    const result = aiStep(encounter, world.ship, dt, rnd);
+    encounter.x = result.enemy.x;
+    encounter.y = result.enemy.y;
+    encounter.heading = result.enemy.heading;
+    encounter.currentSpeedKn = result.enemy.currentSpeedKn;
+
+    for (const shot of result.volley) {
+      pushFx("tracer", encounter.x, encounter.y, world.ship.x, world.ship.y, 0.3);
+      if (shot.hit) {
+        applyDamage(playerCombat, shot.damage);
+        pushFx("hit", world.ship.x, world.ship.y, world.ship.x, world.ship.y, 0.5);
+      } else {
+        pushFx("splash", world.ship.x + (rnd() - 0.5) * 70, world.ship.y + (rnd() - 0.5) * 70, 0, 0, 0.6);
+      }
+    }
+  }
+
+  resolveDefeatedEnemies();
+
+  if (playerCombat.status !== "fighting" && !gameOver) {
+    gameOver = true;
+    gameOverAt = now;
+    ui.throttle = 0;
+  }
+}
+
+/** A sunk or surrendered enemy becomes a wreck whose gold the world model pays out. */
+function resolveDefeatedEnemies() {
+  const zone = currentZone();
+  world.encounters = world.encounters.map((encounter) => {
+    if (encounter.type !== "enemy" || !encounter.combat) return encounter;
+    const status = encounter.combat.status;
+    if (status !== "sunk" && status !== "surrendered") return encounter;
+    showBanner(
+      status === "sunk" ? "¡Enemigo hundido! Saquea el pecio" : "¡Se rindió! Saquea el pecio",
+      "gold",
+      3500,
+    );
+    return {
+      id: encounter.id,
+      type: "wreck",
+      x: encounter.x,
+      y: encounter.y,
+      heading: encounter.heading ?? 0,
+      gold: wreckPrize(encounter, zone),
+      zoneId: zone.id,
+    };
+  });
+}
+
+function showGameOver() {
+  if (gameOverShown) return;
+  gameOverShown = true;
+  const verb = playerCombat.status === "sunk" ? "se hundió" : "se rindió";
+  els.gameoverTitle.textContent = `El ${runtimeShip.name} ${verb}`;
+  els.gameoverGold.textContent = `Bolsa: ${fmtInt.format(gold)} doblones. Necesitás un barco nuevo.`;
+  els.gameoverOverlay.classList.remove("is-hidden");
+}
+
+els.gameoverBack.addEventListener("click", () => {
+  try {
+    localStorage.removeItem(SHIP_KEY);
+  } catch {
+    /* nothing to remove */
+  }
+  saveGame();
+  window.location.href = "./index.html";
+});
+
+function drawFx(ctx) {
+  for (const event of fx) {
+    const life = Math.max(0, event.ttl / event.ttl0);
+    if (event.type === "tracer") {
+      ctx.strokeStyle = `rgba(224,168,21,${life})`;
+      ctx.lineWidth = 2 / PX_PER_M;
+      ctx.beginPath();
+      ctx.moveTo(event.x, event.y);
+      ctx.lineTo(event.x2, event.y2);
+      ctx.stroke();
+    } else if (event.type === "splash") {
+      ctx.strokeStyle = `rgba(255,255,255,${life})`;
+      ctx.lineWidth = 3 / PX_PER_M;
+      ctx.beginPath();
+      ctx.arc(event.x, event.y, 10 + (1 - life) * 50, 0, Math.PI * 2);
+      ctx.stroke();
+    } else {
+      const radius = 12 + (1 - life) * 46;
+      ctx.fillStyle = `rgba(224,96,32,${life * 0.85})`;
+      ctx.beginPath();
+      ctx.arc(event.x, event.y, radius, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.fillStyle = `rgba(255,220,120,${life})`;
+      ctx.beginPath();
+      ctx.arc(event.x, event.y, radius * 0.45, 0, Math.PI * 2);
+      ctx.fill();
+    }
+  }
+}
+
+function tickFx(dt) {
+  for (const event of fx) event.ttl -= dt;
+  for (let i = fx.length - 1; i >= 0; i -= 1) {
+    if (fx[i].ttl <= 0) fx.splice(i, 1);
+  }
+}
+
+function updateTargetPanel() {
+  let best = null;
+  let bestDistance = Infinity;
+  for (const encounter of world.encounters) {
+    if (encounter.type !== "enemy" || !encounter.combat) continue;
+    if (encounter.combat.status !== "fighting") continue;
+    const distance = Math.hypot(encounter.x - world.ship.x, encounter.y - world.ship.y);
+    if (distance > COMBAT.engageRadiusM || distance >= bestDistance) continue;
+    best = encounter;
+    bestDistance = distance;
+  }
+
+  if (!best) {
+    els.targetPanel.classList.add("is-hidden");
+    return;
+  }
+  els.targetPanel.classList.remove("is-hidden");
+  els.targetName.textContent = hullById(best.hullId)?.name ?? "Vela hostil";
+  els.targetDistance.textContent = `${fmtInt.format(bestDistance)} m`;
+  els.targetHull.style.width = `${best.combat.condition.hull}%`;
+  els.targetRigging.style.width = `${best.combat.condition.rigging}%`;
+  els.targetCrew.style.width = `${best.combat.condition.crew}%`;
+}
+
 /* ---------------------------------------------------------------- HUD */
 
 function updateHud() {
@@ -396,7 +689,22 @@ function updateHud() {
   els.speed.textContent = `${fmtOne.format(world.ship.currentSpeedKn)} kn`;
   const degrees = ((world.ship.heading * 180) / Math.PI + 360) % 360;
   els.heading.textContent = `${String(Math.round(degrees)).padStart(3, "0")}°`;
-  els.hull.textContent = `${fmtInt.format(runtimeShip.condition?.hull ?? 100)} %`;
+
+  if (!playerCombat) return;
+  const { condition } = playerCombat;
+  els.hull.textContent = `${fmtInt.format(condition.hull)} %`;
+  els.rigging.textContent = `${fmtInt.format(condition.rigging)} %`;
+  els.crew.textContent = `${fmtInt.format(condition.crew)} %`;
+  els.rounds.textContent = `${fmtInt.format(roundsLeft("babor"))}/${fmtInt.format(roundsLeft("estribor"))}`;
+}
+
+/** Rounds still in the racks of one side. */
+function roundsLeft(side) {
+  if (!playerCombat) return 0;
+  return playerCombat.pieces.reduce(
+    (sum, piece) => (piece.side === side ? sum + piece.shotsLeft : sum),
+    0,
+  );
 }
 
 /* ---------------------------------------------------------------- main loop */
@@ -409,12 +717,15 @@ function frame(now) {
   lastTime = now;
 
   const before = goldEarned;
-  world = updateWorld(world, readInput(), dt);
+  world = updateWorld(world, gameOver ? {} : readInput(), dt);
   goldEarned = world.gold;
   if (goldEarned > before) {
     gold += goldEarned - before;
     showBanner(`+${fmtInt.format(goldEarned - before)} doblones · tesoro rescatado`, "gold");
   }
+
+  processCombat(dt, now);
+  tickFx(dt);
 
   // wake trail, thinned to keep it cheap
   if (world.ship.currentSpeedKn > 0.3) {
@@ -431,19 +742,22 @@ function frame(now) {
 
   // enemy proximity warning, at most every 6 s
   const nearest = nearestEncounter(world, "enemy");
-  if (nearest && nearest.distance < 380 && now - ui.lastEnemyWarning > 6000) {
+  if (nearest && nearest.distance < COMBAT.engageRadiusM && now - ui.lastEnemyWarning > 6000) {
     ui.lastEnemyWarning = now;
     showBanner(
-      `Vela hostil a ${fmtInt.format(Math.round(nearest.distance))} m — el combate llega en la próxima etapa`,
+      `¡Vela hostil a ${fmtInt.format(Math.round(nearest.distance))} m! Q babor · E estribor`,
       "danger",
-      2600,
+      3000,
     );
   }
+
+  if (gameOver && !gameOverShown && now - gameOverAt > 1400) showGameOver();
 
   const ctx = els.canvas.getContext("2d");
   drawSea(ctx);
   drawMinimap();
   updateHud();
+  updateTargetPanel();
   hideBannerIfDue(now);
 
   requestAnimationFrame(frame);
@@ -461,6 +775,26 @@ function boot() {
 
   gold = savedGame?.gold ?? 0;
   goldEarned = world.gold;
+
+  // Restore the guns from the autosave, or rig the ship out of the shipyard sheet.
+  playerCombat = createPlayerCombatant(runtimeShip);
+  const savedCombat = savedGame?.combat?.player;
+  if (savedCombat && Array.isArray(savedCombat.pieces)) {
+    playerCombat.condition = { ...playerCombat.condition, ...savedCombat.condition };
+    playerCombat.crew = { ...playerCombat.crew, ...savedCombat.crew };
+    playerCombat.pieces = playerCombat.pieces.map((piece, index) => {
+      const saved = savedCombat.pieces[index];
+      return saved
+        ? { ...piece, shotsLeft: saved.shotsLeft ?? piece.shotsLeft, reloadTimer: saved.reloadTimer ?? 0 }
+        : piece;
+    });
+  }
+  if (playerCombat.condition.hull <= 0 || playerCombat.condition.crew <= COMBAT.surrenderCrewPct) {
+    // The saved voyage ended in a sinking: show the same verdict instead of sailing on.
+    playerCombat.status = playerCombat.condition.hull <= 0 ? "sunk" : "surrendered";
+    gameOver = true;
+    gameOverAt = 0;
+  }
 
   setInterval(saveGame, 3000);
   window.addEventListener("beforeunload", saveGame);
