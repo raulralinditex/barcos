@@ -152,6 +152,9 @@ export function toRuntimeShip(ship, { name = "Sin nombre" } = {}) {
     guns: { total: ship.guns.total, sides: clone(ship.guns.sides) },
     shotStock: clone(ship.shotStock),
     condition: { hull: 100, rigging: 100, crew: 100, morale: 100 },
+    // The crew that is actually aboard. It starts as the bought complement and
+    // shrinks with casualties; the repair party brings it back (S22, S23).
+    crewAlive: clone(config.crew),
     upkeep: ship.upkeep,
     paidGold: ship.price.total,
   };

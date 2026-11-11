@@ -57,6 +57,43 @@ export function isEmptyFleet(fleet) {
 }
 
 /**
+ * Write the condition of one hull back into its own fleet entry (S23). Damage has
+ * to live on the ship, not on the sea screen: it survives changing captain, going
+ * back to the shipyard and sailing out again.
+ */
+export function withShipCondition(fleet, shipId, { condition, crewAlive } = {}) {
+  const ships = fleet?.ships ?? [];
+  if (!ships.some((ship) => ship.id === shipId)) return { ...fleet, ships };
+  return {
+    ...fleet,
+    ships: ships.map((ship) =>
+      ship.id === shipId
+        ? {
+            ...ship,
+            ...(condition ? { condition: { ...ship.condition, ...condition } } : {}),
+            ...(crewAlive ? { crewAlive: { ...crewAlive } } : {}),
+          }
+        : ship,
+    ),
+  };
+}
+
+const CONDITION_SEGMENTS = ["hull", "rigging", "crew", "morale"];
+
+/** A stored ship keeps a usable condition and crew even if the save predates them. */
+function normaliseShip(ship) {
+  const source = ship.condition && typeof ship.condition === "object" ? ship.condition : {};
+  const condition = {};
+  for (const segment of CONDITION_SEGMENTS) {
+    const value = Number(source[segment]);
+    condition[segment] = Number.isFinite(value) ? Math.min(100, Math.max(0, value)) : 100;
+  }
+  const crewAlive =
+    ship.crewAlive && typeof ship.crewAlive === "object" ? { ...ship.crewAlive } : { ...(ship.crew ?? {}) };
+  return { ...ship, condition, crewAlive };
+}
+
+/**
  * Read a stored fleet, tolerating the single-ship save written before fleets
  * existed: an old `barcos:current-ship` value becomes a one-ship fleet.
  */
@@ -69,14 +106,16 @@ export function deserializeFleet(json, legacyShip = null) {
   }
 
   if (!data || !Array.isArray(data.ships)) {
-    return legacyShip ? { ships: [legacyShip], captainId: legacyShip.id } : { ships: [], captainId: null };
+    return legacyShip
+      ? { ships: [normaliseShip(legacyShip)], captainId: legacyShip.id }
+      : { ships: [], captainId: null };
   }
 
-  const ships = data.ships.filter(
-    (ship) => ship && typeof ship.id === "string" && Number.isFinite(ship.speedKn),
-  );
+  const ships = data.ships
+    .filter((ship) => ship && typeof ship.id === "string" && Number.isFinite(ship.speedKn))
+    .map(normaliseShip);
   if (ships.length === 0) {
-    return legacyShip ? { ships: [legacyShip], captainId: legacyShip.id } : { ships: [], captainId: null };
+    return legacyShip ? { ships: [normaliseShip(legacyShip)], captainId: legacyShip.id } : { ships: [], captainId: null };
   }
   const captainId = ships.some((s) => s.id === data.captainId) ? data.captainId : ships[0].id;
   return { ships, captainId };
