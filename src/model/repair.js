@@ -8,6 +8,7 @@
  */
 
 import { hullById } from "../data/naval-data.js";
+import { withShipCondition } from "./fleet.js";
 
 export const REPAIR = {
   /**
@@ -96,6 +97,57 @@ export function repairShip(ship, gold) {
     spent: cost,
     gold: purse - cost,
     cost,
+  };
+}
+
+/**
+ * The ships the port list offers for repair (S24): the damaged hulls that are not
+ * the captain. The captain is repaired with the R key, not from the fleet list, so
+ * she is never listed twice.
+ */
+export function damagedFleetShips(fleet) {
+  const ships = fleet?.ships ?? [];
+  return ships.filter((ship) => ship.id !== fleet?.captainId && needsRepair(ship));
+}
+
+/**
+ * Repair one fleet ship with the shared purse (S24). Same flat fee and same
+ * verdicts as `repairShip`, but the repaired hull is written back into its own
+ * fleet entry (S23), so the fix survives a change of captain and a reload. The
+ * captain, the other hulls and the fleet itself are left exactly as they were.
+ */
+export function repairFleetShip(fleet, shipId, gold) {
+  const ships = fleet?.ships ?? [];
+  const purse = Number.isFinite(gold) ? gold : 0;
+  const ship = ships.find((entry) => entry.id === shipId);
+
+  if (!ship) return { fleet, gold: purse, repaired: false, reason: "unknown-ship", spent: 0 };
+  if (ship.id === fleet?.captainId) {
+    return { fleet, gold: purse, repaired: false, reason: "captain", spent: 0 };
+  }
+
+  const result = repairShip(ship, purse);
+  if (!result.repaired) {
+    return {
+      fleet,
+      gold: purse,
+      repaired: false,
+      reason: result.reason,
+      spent: 0,
+      ...(result.missing === undefined ? {} : { missing: result.missing }),
+      cost: result.cost,
+    };
+  }
+
+  return {
+    fleet: withShipCondition(fleet, shipId, {
+      condition: result.ship.condition,
+      crewAlive: result.ship.crewAlive,
+    }),
+    gold: result.gold,
+    repaired: true,
+    reason: result.reason,
+    spent: result.spent,
   };
 }
 

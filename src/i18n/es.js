@@ -193,6 +193,9 @@ export const es = {
   "sea.port.repairDone": "Reparada: {name} vuelve a estar en condiciones ({gold} doblones)",
   "sea.port.repairNoDamage": "No hay nada que reparar: {name} está entera",
   "sea.port.repairShort": "Faltan {gold} doblones para reparar",
+  "sea.port.fleetButton": "Reparar · {gold}",
+  "sea.port.fleetHull": "Casco {hull}%",
+  "sea.port.fleetDone": "Reparada: {name} vuelve a estar en condiciones ({gold} doblones)",
   "sea.banner.repairAway": "Sólo se repara en el puerto base: volvé a la isla del origen",
 
   /* ---------------------------------------------------------------- validation: ship model */

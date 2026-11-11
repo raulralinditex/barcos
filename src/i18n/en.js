@@ -196,6 +196,9 @@ export const en = {
   "sea.port.repairDone": "Repaired: the {name} is in fighting order again ({gold} doubloons)",
   "sea.port.repairNoDamage": "Nothing to repair: the {name} is sound",
   "sea.port.repairShort": "{gold} doubloons short of a repair",
+  "sea.port.fleetButton": "Repair · {gold}",
+  "sea.port.fleetHull": "Hull {hull}%",
+  "sea.port.fleetDone": "Repaired: the {name} is in fighting order again ({gold} doubloons)",
   "sea.banner.repairAway": "Repairs are done at the home port: sail back to the island you left from",
 
   /* ---------------------------------------------------------------- validation: ship model */

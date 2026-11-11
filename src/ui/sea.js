@@ -34,7 +34,13 @@ import {
   serializeFleet,
   withShipCondition,
 } from "../model/fleet.js";
-import { needsRepair, repairCost, repairShip } from "../model/repair.js";
+import {
+  damagedFleetShips,
+  needsRepair,
+  repairCost,
+  repairFleetShip,
+  repairShip,
+} from "../model/repair.js";
 import {
   WORLD,
   ZONE_BANDS,
@@ -85,6 +91,7 @@ const els = {
   targetCrew: $("#target-crew"),
   portPanel: $("#port-panel"),
   portCost: $("#port-cost"),
+  portFleet: $("#port-fleet"),
   gameoverOverlay: $("#gameover-overlay"),
   gameoverTitle: $("#gameover-title"),
   gameoverGold: $("#gameover-gold"),
@@ -254,6 +261,40 @@ function repairAtPort() {
     "gold",
     3200,
   );
+  updateHud();
+}
+
+/**
+ * Repair one of the fleet's other hulls from the port list (S24). The flat fee and
+ * the verdicts are the captain's; what changes is where the result is written: on
+ * that ship's own fleet entry, never on the ship the player is sailing.
+ */
+function repairFleetShipAtPort(shipId) {
+  if (!world || gameOver || !playerCombat || !inHomePort()) return;
+  const ship = (fleet?.ships ?? []).find((entry) => entry.id === shipId);
+  if (!ship) return;
+
+  const result = repairFleetShip(fleet, shipId, gold);
+  if (!result.repaired) {
+    showBanner(
+      result.reason === "no-damage"
+        ? t("sea.port.repairNoDamage", { name: ship.name })
+        : t("sea.port.repairShort", { gold: fmtInt.format(result.missing ?? 0) }),
+      result.reason === "no-damage" ? "info" : "danger",
+      2600,
+    );
+    return;
+  }
+
+  fleet = result.fleet;
+  gold = result.gold;
+  saveGame();
+  showBanner(
+    t("sea.port.fleetDone", { name: ship.name, gold: fmtInt.format(result.spent) }),
+    "gold",
+    3200,
+  );
+  updatePortPanel();
   updateHud();
 }
 
@@ -990,7 +1031,58 @@ function updateTargetPanel() {
 }
 
 
-/** The repair offer only exists while the hull is inside the home port (S22). */
+/**
+ * Signature of the fleet list: the hull ids, their names and their hull condition.
+ * The list is rebuilt only when it changes, because rebuilding it every frame would
+ * throw away the button the player is about to click (S24).
+ */
+let portFleetSignature = null;
+
+/** Rebuild the list of damaged fleet ships with one repair button each (S24). */
+function renderPortFleet(ships) {
+  const container = els.portFleet;
+  if (!container) return;
+  const signature = ships.map((ship) => `${ship.id}:${ship.name}:${ship.condition?.hull ?? 100}`).join("|");
+  if (signature === portFleetSignature) {
+    // Same list: only the "can I afford it" mark can change with the purse.
+    for (const button of container.querySelectorAll("button[data-ship-id]")) {
+      const ship = ships.find((entry) => entry.id === button.dataset.shipId);
+      if (ship) button.classList.toggle("is-short", gold < repairCost(ship));
+    }
+    return;
+  }
+  portFleetSignature = signature;
+  container.textContent = "";
+
+  for (const ship of ships) {
+    const row = document.createElement("div");
+    row.className = "port-ship";
+
+    const head = document.createElement("div");
+    head.className = "port-ship-head";
+    const name = document.createElement("span");
+    name.textContent = ship.name ?? ship.hullId ?? ship.id;
+    const hull = document.createElement("span");
+    hull.className = "port-ship-hull";
+    hull.textContent = t("sea.port.fleetHull", {
+      hull: fmtInt.format(Math.round(Number(ship.condition?.hull ?? 100))),
+    });
+    head.append(name, hull);
+
+    const button = document.createElement("button");
+    button.type = "button";
+    button.className = "port-ship-button";
+    button.dataset.shipId = ship.id;
+    button.textContent = t("sea.port.fleetButton", { gold: fmtInt.format(repairCost(ship)) });
+    button.classList.toggle("is-short", gold < repairCost(ship));
+    button.addEventListener("click", () => repairFleetShipAtPort(ship.id));
+
+    row.append(head, button);
+    container.append(row);
+  }
+}
+
+/** The repair offer only exists while the hull is inside the home port (S22, S24). */
 function updatePortPanel() {
   if (!els.portPanel) return;
   const docked = inHomePort() && !gameOver && playerCombat;
@@ -1002,6 +1094,7 @@ function updatePortPanel() {
       ? t("sea.port.repairNoDamage", { name: runtimeShip.name })
       : t("sea.port.repairCost", { gold: fmtInt.format(cost) });
   els.portCost.classList.toggle("is-short", cost > 0 && gold < cost);
+  renderPortFleet(damagedFleetShips(fleet));
 }
 
 /* ---------------------------------------------------------------- wind rose (S18) */

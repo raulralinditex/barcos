@@ -359,6 +359,161 @@ const soundResult = await page.evaluate(() => {
 check(soundResult === 5000, `an undamaged hull was charged (gold=${soundResult})`);
 await page.close();
 
+/* ---------------------------------------------------------------- 9: the rest of the fleet repairs too */
+
+/**
+ * The port list (S24): a captain plus a second hull. The seed flag keeps a reload
+ * from re-seeding, so the repair can be checked across a page reload.
+ */
+async function newSeaFleet({ ships, gold = 5000, locale = "es" } = {}) {
+  const page = await browser.newPage({ viewport: { width: 1400, height: 900 }, locale });
+  page.on("console", (msg) => {
+    if (msg.type() === "error") errors.push(msg.text());
+  });
+  page.on("pageerror", (err) => errors.push(`pageerror: ${err.message}`));
+  await page.addInitScript(
+    ([shipsJson, purse, lang, worldJson]) => {
+      if (localStorage.getItem("barcos:smoke-seeded-fleet") === "1") return;
+      localStorage.setItem("barcos:smoke-seeded-fleet", "1");
+      localStorage.setItem("barcos:lang:v1", lang);
+      const list = JSON.parse(shipsJson);
+      localStorage.setItem(
+        "barcos:fleet:v1",
+        JSON.stringify({ v: 1, ships: list, captainId: list[0].id }),
+      );
+      localStorage.setItem(
+        "barcos:game:v1",
+        JSON.stringify({ gold: purse, world: worldJson }),
+      );
+    },
+    [JSON.stringify(ships), gold, locale, JSON.stringify(seaWorld(ships[0]))],
+  );
+  await page.goto("http://localhost:8765/sea.html", { waitUntil: "networkidle" });
+  await page.waitForTimeout(700);
+  return page;
+}
+
+const captain = build();
+captain.condition = { hull: 80, rigging: 100, crew: 100, morale: 100 };
+const second = build();
+second.id = `${second.id}-consort`;
+second.name = "Consort";
+second.condition = { hull: 35, rigging: 60, crew: 70, morale: 55 };
+second.crewAlive = { marino: 10, artillero: 3, soldado: 8 };
+
+page = await newSeaFleet({ ships: [captain, second], gold: 5000 });
+const listed = await page.evaluate(() => {
+  const buttons = [...document.querySelectorAll("#port-panel button[data-ship-id]")];
+  return buttons.map((b) => ({
+    id: b.dataset.shipId,
+    text: b.textContent.trim(),
+    row: b.closest(".port-ship")?.textContent.replace(/\s+/g, " ").trim() ?? "",
+  }));
+});
+check(listed.length === 1, `the damaged fleet ship is not listed alone (${JSON.stringify(listed)})`);
+check(
+  listed[0]?.id === second.id,
+  `the wrong ship is listed: ${JSON.stringify(listed)}`,
+);
+check(
+  listed[0]?.text.includes(String(REPAIR.fee)),
+  `the fleet button does not show the flat fee: "${listed[0]?.text}"`,
+);
+check(
+  /Reparar/i.test(listed[0]?.text ?? ""),
+  `the fleet button is not labelled in Spanish: "${listed[0]?.text}"`,
+);
+check(
+  listed[0]?.row.includes("35"),
+  `the fleet row does not show the hull percentage: "${listed[0]?.row}"`,
+);
+check(
+  listed[0]?.row.includes("Consort"),
+  `the fleet row does not show the ship name: "${listed[0]?.row}"`,
+);
+
+await page.locator(`#port-panel button[data-ship-id="${second.id}"]`).click();
+await page.waitForTimeout(500);
+
+const fleetAfter = await page.evaluate(
+  ([captainId, secondId]) => {
+    const fleet = JSON.parse(localStorage.getItem("barcos:fleet:v1"));
+    const game = JSON.parse(localStorage.getItem("barcos:game:v1"));
+    const of = (id) => fleet.ships.find((s) => s.id === id);
+    return {
+      second: of(secondId),
+      captain: of(captainId),
+      gold: game.gold,
+      captainId: fleet.captainId,
+    };
+  },
+  [captain.id, second.id],
+);
+check(fleetAfter.second.condition.hull === 100, `the fleet ship was not repaired: hull=${fleetAfter.second.condition.hull}`);
+check(fleetAfter.second.condition.rigging === 100, `the rigging was not repaired: ${fleetAfter.second.condition.rigging}`);
+check(
+  fleetAfter.second.crewAlive.marino === second.crew.marino,
+  `the fleet ship's crew was not brought back: ${JSON.stringify(fleetAfter.second.crewAlive)}`,
+);
+check(
+  fleetAfter.gold === 5000 - REPAIR.fee,
+  `the fee was not charged exactly once: gold=${fleetAfter.gold}`,
+);
+check(
+  fleetAfter.captain.condition.hull === 80,
+  `repairing a fleet ship touched the captain: hull=${fleetAfter.captain.condition.hull}`,
+);
+check(fleetAfter.captainId === captain.id, "the captain changed");
+const listedAfter = await page.locator("#port-panel button[data-ship-id]").count();
+check(listedAfter === 0, `a repaired ship is still listed (${listedAfter} buttons)`);
+const fleetBanner = await page.locator("#banner").textContent();
+check(/Consort/.test(fleetBanner), `the player was not told which ship was repaired: "${fleetBanner}"`);
+
+// the repair lives on the fleet entry, so it survives a reload
+await page.reload({ waitUntil: "networkidle" });
+await page.waitForTimeout(700);
+const reloadedHull = await page.evaluate((id) => {
+  const fleet = JSON.parse(localStorage.getItem("barcos:fleet:v1"));
+  return fleet.ships.find((s) => s.id === id)?.condition.hull;
+}, second.id);
+check(reloadedHull === 100, `the fleet repair was lost on reload (hull=${reloadedHull})`);
+await page.close();
+
+/* ---------------------------------------------------------------- 10: a sound fleet ship is not offered */
+
+const soundSecond = build();
+soundSecond.id = `${soundSecond.id}-sound`;
+page = await newSeaFleet({ ships: [captain, soundSecond], gold: 5000 });
+const soundListed = await page.locator("#port-panel button[data-ship-id]").count();
+check(soundListed === 0, `a sound fleet ship is offered for repair (${soundListed} buttons)`);
+await page.close();
+
+/* ---------------------------------------------------------------- 11: no gold, no fleet repair */
+
+const poorSecond = build();
+poorSecond.id = `${poorSecond.id}-poor`;
+poorSecond.condition = { hull: 20, rigging: 20, crew: 20, morale: 20 };
+page = await newSeaFleet({ ships: [captain, poorSecond], gold: 10 });
+await page.locator(`#port-panel button[data-ship-id="${poorSecond.id}"]`).click();
+await page.waitForTimeout(500);
+const poorFleet = await page.evaluate(
+  ([id, captainId]) => {
+    const fleet = JSON.parse(localStorage.getItem("barcos:fleet:v1"));
+    const game = JSON.parse(localStorage.getItem("barcos:game:v1"));
+    return {
+      hull: fleet.ships.find((s) => s.id === id).condition.hull,
+      captainHull: fleet.ships.find((s) => s.id === captainId).condition.hull,
+      gold: game.gold,
+    };
+  },
+  [poorSecond.id, captain.id],
+);
+check(poorFleet.hull === 20, `a fleet ship was repaired without paying (hull=${poorFleet.hull})`);
+check(poorFleet.gold === 10, `gold was taken without a repair (gold=${poorFleet.gold})`);
+const poorBanner = await page.locator("#banner").textContent();
+check(/doblones/i.test(poorBanner), `the player was not told the fleet price: "${poorBanner}"`);
+await page.close();
+
 await browser.close();
 
 if (errors.length) failures.push(`console errors: ${errors.join(" | ")}`);

@@ -10,7 +10,15 @@ import {
   setCaptain,
   withShipCondition,
 } from "../src/model/fleet.js";
-import { REPAIR, needsRepair, repairCost, repairFee, repairShip } from "../src/model/repair.js";
+import {
+  REPAIR,
+  damagedFleetShips,
+  needsRepair,
+  repairCost,
+  repairFee,
+  repairFleetShip,
+  repairShip,
+} from "../src/model/repair.js";
 
 const ship = (overrides = {}) =>
   toRuntimeShip(
@@ -161,4 +169,114 @@ test("S22: repairing restores the bought crew, not the survivors", () => {
   const result = repairShip(hurt, 5000);
   assert.deepEqual(result.ship.crewAlive, hurt.crew);
   assert.equal(result.ship.condition.crew, 100);
+});
+
+/* ---------------------------------------------------------------- S24 repairing the rest of the fleet */
+
+const hurtShip = (overrides = {}) => ({
+  ...ship(),
+  condition: { hull: 45, rigging: 50, crew: 60, morale: 70 },
+  crewAlive: { marino: 5, artillero: 2, soldado: 3 },
+  ...overrides,
+});
+
+/** Captain plus two other hulls, each with its own id and its own damage. */
+function fleetOfThree() {
+  let fleet = empty();
+  const captain = hurtShip({ condition: { hull: 80, rigging: 100, crew: 100, morale: 100 } });
+  const hurt = hurtShip();
+  const sound = ship();
+  fleet = addShip(fleet, captain);
+  fleet = { ...fleet, ships: [...fleet.ships, hurt, sound], captainId: captain.id };
+  return { fleet, captain, hurt, sound };
+}
+
+test("S24: the port list holds only the damaged ships that are not the captain", () => {
+  const { fleet, hurt } = fleetOfThree();
+  const listed = damagedFleetShips(fleet).map((s) => s.id);
+
+  assert.deepEqual(listed, [hurt.id]);
+  assert.equal(
+    damagedFleetShips(fleet).some((s) => s.id === fleet.captainId),
+    false,
+    "the captain is repaired with R, not from the fleet list",
+  );
+});
+
+test("S24: repairing one fleet ship touches only that hull and charges the flat fee once", () => {
+  const { fleet, captain, hurt, sound } = fleetOfThree();
+  const purse = 5000;
+
+  const result = repairFleetShip(fleet, hurt.id, purse);
+
+  assert.equal(result.repaired, true);
+  assert.equal(result.reason, "repaired");
+  assert.equal(result.spent, REPAIR.fee);
+  assert.equal(result.gold, purse - REPAIR.fee);
+
+  const repaired = result.fleet.ships.find((s) => s.id === hurt.id);
+  assert.deepEqual(repaired.condition, { hull: 100, rigging: 100, crew: 100, morale: 100 });
+  assert.deepEqual(repaired.crewAlive, hurt.crew);
+
+  // the captain and the other hulls are exactly what they were
+  assert.deepEqual(
+    result.fleet.ships.find((s) => s.id === captain.id),
+    captain,
+    "the captain was touched by a fleet repair",
+  );
+  assert.deepEqual(
+    result.fleet.ships.find((s) => s.id === sound.id),
+    sound,
+    "an untouched ship changed",
+  );
+  assert.equal(result.fleet.captainId, fleet.captainId);
+  assert.equal(result.fleet.ships.length, 3);
+});
+
+test("S24: without enough gold the fleet repair changes nothing and reports the missing gold", () => {
+  const { fleet, hurt } = fleetOfThree();
+  const purse = REPAIR.fee - 30;
+
+  const result = repairFleetShip(fleet, hurt.id, purse);
+
+  assert.equal(result.repaired, false);
+  assert.equal(result.reason, "unaffordable");
+  assert.equal(result.spent, 0);
+  assert.equal(result.gold, purse);
+  assert.equal(result.missing, 30);
+  assert.deepEqual(result.fleet, fleet, "an unaffordable repair changed the fleet");
+});
+
+test("S24: a sound fleet ship pays nothing", () => {
+  const { fleet, sound } = fleetOfThree();
+
+  const result = repairFleetShip(fleet, sound.id, 5000);
+
+  assert.equal(result.repaired, false);
+  assert.equal(result.reason, "no-damage");
+  assert.equal(result.spent, 0);
+  assert.equal(result.gold, 5000);
+  assert.deepEqual(result.fleet, fleet);
+});
+
+test("S24: an unknown ship id changes neither the fleet nor the purse", () => {
+  const { fleet } = fleetOfThree();
+
+  const result = repairFleetShip(fleet, "ship-nope", 5000);
+
+  assert.equal(result.repaired, false);
+  assert.equal(result.spent, 0);
+  assert.equal(result.gold, 5000);
+  assert.deepEqual(result.fleet, fleet);
+});
+
+test("S24: the captain is not repaired through the fleet entry", () => {
+  const { fleet, captain } = fleetOfThree();
+
+  const result = repairFleetShip(fleet, captain.id, 5000);
+
+  assert.equal(result.repaired, false);
+  assert.equal(result.spent, 0);
+  assert.equal(result.gold, 5000);
+  assert.deepEqual(result.fleet, fleet);
 });
