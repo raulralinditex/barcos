@@ -1,0 +1,62 @@
+src/model/repair.js
+  s_381ecabd8422c0::t_09096978f3381c 113-150,156-159,161,167
+index.html
+  s_381ecabd8422c0::t_c23357c52fe110 147-156
+src/ui/app.js
+  s_381ecabd8422c0::t_d51da066364fad 39-44,169-172
+  s_381ecabd8422c0::t_a1380998d1644a 930-1078,1083-1114,1185
+  s_381ecabd8422c0::t_9fba014a64d85c 1079-1082
+  s_381ecabd8422c0::t_1477ff7975b5df 1155-1159
+test/repair.test.js
+  s_381ecabd8422c0::t_e1f8324ea6ab05 16,21,285-358,360
+  s_381ecabd8422c0::t_4244c9bb21fbe7 359
+src/ui/styles.css
+  s_381ecabd8422c0::t_914a887a4730b7 1216-1327
+odd/tasks/paises.md
+  s_0615c265d5ef3b::t_439f8659056585 1-71
+odd/tasks/estado-y-reparacion.md
+  s_381ecabd8422c0::t_4b6be91ad7af1c 51,113-122
+  s_0615c265d5ef3b::t_72e8b48d6f64f7 32-41,109-112
+src/i18n/en.js
+  s_381ecabd8422c0::t_1477ff7975b5df 221-231
+  s_381ecabd8422c0::t_48dd0a6b1ab698 204-220,232
+src/ui/sea.js
+  s_381ecabd8422c0::t_47a19d634adcec 542-543
+  s_381ecabd8422c0::t_ed63cdf5cb6053 544-551
+  s_381ecabd8422c0::t_9fba014a64d85c 417-420
+  s_381ecabd8422c0::t_3a0aac818d42a9 39,43,97-100,177-182
+  s_381ecabd8422c0::t_59f1889e1efd15 313-416,421-531,540,1552,1599-1601
+  s_381ecabd8422c0::t_488c623057da11 532-539
+scripts/smoke-dock.mjs
+  s_381ecabd8422c0::t_7d1709cee0cc42 1-79,82-390
+  s_381ecabd8422c0::t_90bdeffeb9a4b2 80-81
+src/i18n/es.js
+  s_381ecabd8422c0::t_48dd0a6b1ab698 201-217,229
+  s_381ecabd8422c0::t_1477ff7975b5df 218-228
+sea.html
+  s_381ecabd8422c0::t_4c74a4897bcd3e 57-66
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.6",
+  "base_commit_sha": "54447f738be612405b5719038861485e24dd8e99",
+  "prompts": {},
+  "sessions": {
+    "s_0615c265d5ef3b": {
+      "agent_id": {
+        "tool": "pi",
+        "id": "01a1cbe7-b77b-77ed-ba1b-220f1e39ae58",
+        "model": "claude-sonnet-5.5"
+      },
+      "human_author": "Raul Ripoll <raulral@ext.inditex.com>"
+    },
+    "s_381ecabd8422c0": {
+      "agent_id": {
+        "tool": "pi",
+        "id": "01a1ccc3-d4df-72f1-bbf1-b041cea458d0",
+        "model": "deepseek-v4.1-flash"
+      },
+      "human_author": "Raul Ripoll <raulral@ext.inditex.com>"
+    }
+  }
+}
