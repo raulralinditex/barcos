@@ -1,0 +1,16 @@
+src/model/ship-model.js
+  h_8b9b8fe190c867 1-275
+test/ship-model.test.js
+  h_8b9b8fe190c867 1-211
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.6",
+  "base_commit_sha": "d656173ab1053424589e347514bd99798eb0e522",
+  "prompts": {},
+  "humans": {
+    "h_8b9b8fe190c867": {
+      "author": "Raul Ripoll <raulral@ext.inditex.com>"
+    }
+  }
+}
