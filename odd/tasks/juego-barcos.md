@@ -41,8 +41,8 @@ S10. Idioma: código, comentarios e identificadores en inglés; toda la interfaz
 - T5 — UI del astillero con previsualización del casco y puertos de cañón. `S1,S2,S10` — inline — done — `fd3f68d`
 - T6 — Mundo por zonas, movimiento y encuentros. `S6,S9` — done — `d428272`
 - T7 — Combate en tiempo real por costados con municiones. `S4,S5,S6` — inline — done — ver L6
-- T8 — Flota y progresión. `S7` — pendiente
-- T9 — Autoguardado en localStorage. `S8` — pendiente
+- T8 — Flota y progresión. `S7` — inline — done — ver L10
+- T9 — Autoguardado en localStorage. `S8` — inline — done — ver L10
 
 ## Log
 
@@ -66,3 +66,15 @@ L7: Tres defectos reales encontrados y corregidos al verificar, no asumidos:
 L8: Ritmo de combate: `timeScale` pasó de 6 a 20 (andanadas cada 4-6 s en vez de 15-20 s). Balance medido con 36 duelos por zona (6 cascos x 6 semillas), jugador con la carga por defecto del astillero: costera 31 victorias / 5 derrotas (media 10 s), abierto 1/35, abismo 0/36. La progresión de dificultad de S6 ahora existe.
 
 L9: Evidencia de T7 — 86/86 tests node en verde; smoke Playwright de combate (`scripts/smoke-combat.mjs`) OK observando por interfaz: panel de objetivo al entrar en rango, Q sin blanco a babor no dispara, E consume munición y baja el casco enemigo, el enemigo hundido deja un pecio saqueable (293 doblones). Smokes de mar y astillero siguen sin errores de consola. Los binarios de Playwright no estaban instalados en esta máquina: `npx playwright install chromium` es requisito previo para correr los smokes.
+
+L10: T8 y T9 cerrados. Decisiones de producto tomadas por el usuario: "mandar más" (S7) significa **varias naves con capitana elegible** — se compran cascos, se conservan todos en puerto y el jugador elige cuál zarpa; el borrado de partida (S8) es **completo y con confirmación**.
+
+T8 — `src/model/fleet.js` (nuevo, funciones puras): `addShip` (la nave comprada pasa a ser capitana), `setCaptain`, `removeShip` (perder la capitana entrega la flota al siguiente casco), `captainShip`, `fleetWorth`, `fleetUpkeep`, `serializeFleet`/`deserializeFleet`. El astillero muestra la franja "Tu flota" en el topbar con la capitana marcada y permite promover cualquier nave con un clic. `sea.js` zarpa con `captainShip(fleet)`, no con una nave suelta. Al hundirse, la nave sale de la flota pero el resto sobrevive.
+
+T9 — `saveConfig` ya autoguardaba; faltaba el borrado. Botón "Borrar partida" con diálogo de confirmación que limpia `config`, `game`, `current-ship` y `fleet`, y recarga en estado inicial. Cancelar no toca nada.
+
+Migración: una partida guardada con la clave vieja `barcos:current-ship:v1` se adopta como flota de una nave (`deserializeFleet(json, legacyShip)`), así nadie pierde su barco. Cubierto por test.
+
+L11: Evidencia T8/T9 — 101/101 tests node en verde (15 nuevos de flota). Smoke Playwright nuevo (`scripts/smoke-fleet.mjs`) verifica por interfaz: astillero arranca sin naves, la primera botadura crea la capitana, comprar un segundo casco conserva el primero y lo corona capitán, promover otra nave funciona, el mar zarpa con la capitana persistida, "Borrar partida" pide confirmación, cancelar conserva todo y confirmar deja `fleet`/`game`/`current-ship` en null con el astillero sin naves. Smokes de mar, astillero y combate sin errores de consola.
+
+Corrección de contrato: `smoke-ui.mjs` y `smoke-combat.mjs` sembraban `barcos:current-ship:v1`; ahora siembran `barcos:fleet:v1`, que es la fuente de verdad. El smoke del mar sigue pasando sin cambios porque ejercita la migración legacy.
