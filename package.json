@@ -1,0 +1,13 @@
+{
+  "name": "juego-barcos",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "description": "Juego de barcos: flota desde un presupuesto, con el modelo naval del xlsx como motor de masas y navegacion.",
+  "scripts": {
+    "test": "node --test test/*.test.js"
+  },
+  "devDependencies": {
+    "playwright": "^1.65.0"
+  }
+}
