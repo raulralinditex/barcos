@@ -128,6 +128,21 @@ test("S9: a treasure beyond the pickup radius stays where it is", () => {
   assert.ok(world.encounters.some((e) => e.id === 998));
 });
 
+test("S9: sailing over a wreck loots its gold like a treasure", () => {
+  let world = createWorld(13, testShip);
+  world = {
+    ...world,
+    encounters: [
+      ...world.encounters,
+      { id: 997, type: "wreck", x: world.ship.x + WORLD.pickupRadiusM - 1, y: world.ship.y, gold: 240, zoneId: "costera" },
+    ],
+  };
+  const before = world.gold;
+  world = updateWorld(world, {}, 0.01);
+  assert.equal(world.gold, before + 240);
+  assert.ok(!world.encounters.some((e) => e.id === 997));
+});
+
 test("S9: collecting keeps the zone density by spawning replacements", () => {
   let world = createWorld(11, testShip);
   const band = ZONE_BANDS[0];

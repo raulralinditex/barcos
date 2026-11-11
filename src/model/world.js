@@ -180,9 +180,10 @@ export function updateWorld(world, input = {}, dt = 0) {
   let gold = world.gold;
   let collected = 0;
 
-  // move enemy sails, bounce them off the world's edge
+  // move enemy sails, bounce them off the world's edge. An engaged enemy is under
+  // its own combat AI, so the drift step hands control over and stays out of the way.
   let encounters = world.encounters.map((encounter) => {
-    if (encounter.type !== "enemy") return encounter;
+    if (encounter.type !== "enemy" || encounter.engaged) return encounter;
     const distance = encounter.drift.speedKn * KN_TO_MS * WORLD.arcadeScale * 0.5 * dt;
     let x = encounter.x + Math.cos(encounter.drift.heading) * distance;
     let y = encounter.y + Math.sin(encounter.drift.heading) * distance;
@@ -197,10 +198,10 @@ export function updateWorld(world, input = {}, dt = 0) {
     return { ...encounter, x, y, drift: { ...encounter.drift, heading } };
   });
 
-  // collect treasures under the ship
+  // collect treasures and wrecks under the ship
   encounters = encounters.filter((encounter) => {
     if (
-      encounter.type === "treasure" &&
+      (encounter.type === "treasure" || encounter.type === "wreck") &&
       Math.hypot(encounter.x - ship.x, encounter.y - ship.y) <= WORLD.pickupRadiusM
     ) {
       gold += encounter.gold;
