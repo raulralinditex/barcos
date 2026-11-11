@@ -1,0 +1,23 @@
+scripts/smoke-wind.mjs
+  s_53bc4371ebd20f::t_ea3f0dd5290cab 112-116,122-123,125,127,129,140-143,146-150,200
+  s_53bc4371ebd20f::t_ea7f81bc95de68 1-111,117-121,124,126,128,130-139,144-145,151-199,201-208
+odd/tasks/viento.md
+  s_53bc4371ebd20f::t_83e8353111b485 3,19-22,29-36
+  s_53bc4371ebd20f::t_2281e0defaa2b0 1-2,4-18,23-28
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.6",
+  "base_commit_sha": "6c6ec6b0e82ceb696f74a612a7d837de1454be58",
+  "prompts": {},
+  "sessions": {
+    "s_53bc4371ebd20f": {
+      "agent_id": {
+        "tool": "pi",
+        "id": "01a1cb5e-c63a-70e3-b958-abe976add528",
+        "model": "kimi-k3"
+      },
+      "human_author": "Raul Ripoll <raulral@ext.inditex.com>"
+    }
+  }
+}
