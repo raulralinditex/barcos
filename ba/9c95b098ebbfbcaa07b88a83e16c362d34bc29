@@ -1,0 +1,43 @@
+src/i18n/es.js
+  s_53bc4371ebd20f::t_efb34365fcc00c 102-106,133,168,197
+  s_53bc4371ebd20f::t_7e7f99dc833a4a 107
+  s_53bc4371ebd20f::t_8d5a1b36d39e78 82-101
+src/i18n/en.js
+  s_53bc4371ebd20f::t_8d5a1b36d39e78 85-104
+  s_53bc4371ebd20f::t_efb34365fcc00c 105-109,136,171,200
+  s_53bc4371ebd20f::t_7e7f99dc833a4a 110
+test/swivel.test.js
+  s_53bc4371ebd20f::t_03514845f1a68c 183-228
+  s_53bc4371ebd20f::t_f29e1637798ed6 1-182
+src/model/shipyard.js
+  s_53bc4371ebd20f::t_f3b8c1f0b95c8a 34-35
+src/model/combat.js
+  s_53bc4371ebd20f::t_01104958f4321a 266-270,277
+src/i18n/terms.js
+  s_53bc4371ebd20f::t_efb34365fcc00c 68-77,79-81
+  s_53bc4371ebd20f::t_8d5a1b36d39e78 78
+test/shipyard.test.js
+  s_53bc4371ebd20f::t_af6143b2e2dda9 218
+src/model/ship-model.js
+  s_53bc4371ebd20f::t_f3b8c1f0b95c8a 48-51,53,57,62-69,221-226,239-242,244
+src/data/naval-data.js
+  s_53bc4371ebd20f::t_f3b8c1f0b95c8a 411-412
+test/ship-model.test.js
+  s_53bc4371ebd20f::t_af6143b2e2dda9 137
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.6",
+  "base_commit_sha": "ba9c95b098ebbfbcaa07b88a83e16c362d34bc29",
+  "prompts": {},
+  "sessions": {
+    "s_53bc4371ebd20f": {
+      "agent_id": {
+        "tool": "pi",
+        "id": "01a1cb5e-c63a-70e3-b958-abe976add528",
+        "model": "claude-sonnet-5.5"
+      },
+      "human_author": "Raul Ripoll <raulral@ext.inditex.com>"
+    }
+  }
+}
