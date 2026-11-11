@@ -6,6 +6,8 @@
  */
 
 import { hullById, pieceById } from "../data/naval-data.js";
+import { createAppTranslator } from "../i18n/index.js";
+import { localisedHull, localisedZone } from "../i18n/terms.js";
 import {
   COMBAT,
   aiStep,
@@ -80,6 +82,26 @@ const els = {
 
 const fmtInt = new Intl.NumberFormat("es-ES", { maximumFractionDigits: 0 });
 const fmtOne = new Intl.NumberFormat("es-ES", { maximumFractionDigits: 1 });
+
+/* ---------------------------------------------------------------- i18n (S11-S13) */
+
+/** The sea has no selector: it inherits the language chosen in the shipyard (S13). */
+const translator = createAppTranslator(
+  typeof localStorage === "undefined" ? null : localStorage,
+  typeof navigator === "undefined" ? undefined : navigator.language,
+);
+const t = translator.t;
+
+/** Translate the static sea markup (HUD labels, help line) once on boot. */
+function applyStaticTranslations() {
+  document.documentElement.lang = translator.language;
+  for (const node of document.querySelectorAll("[data-i18n]")) {
+    node.textContent = t(node.dataset.i18n);
+  }
+  for (const node of document.querySelectorAll("[data-i18n-html]")) {
+    node.innerHTML = t(node.dataset.i18nHtml);
+  }
+}
 
 /* ---------------------------------------------------------------- boot state */
 
@@ -522,7 +544,7 @@ function firePlayerBroadside(side) {
   }
 
   if (!target) {
-    showBanner(`Sin blanco a ${side}`, "info", 1500);
+    showBanner(t("sea.banner.noTarget", { side: t(`sea.sides.${side}`) }), "info", 1500);
     return;
   }
 
@@ -530,7 +552,7 @@ function firePlayerBroadside(side) {
   if (!targetCombat) return;
   const { volley } = fireBroadside(playerCombat, side, targetDistance, rnd);
   if (volley.length === 0) {
-    showBanner(`Recargando el costado de ${side}…`, "info", 1200);
+    showBanner(t("sea.banner.reloading", { side: t(`sea.sides.${side}`) }), "info", 1200);
     return;
   }
 
@@ -592,7 +614,7 @@ function resolveDefeatedEnemies() {
     const status = encounter.combat.status;
     if (status !== "sunk" && status !== "surrendered") return encounter;
     showBanner(
-      status === "sunk" ? "¡Enemigo hundido! Saquea el pecio" : "¡Se rindió! Saquea el pecio",
+      status === "sunk" ? t("sea.banner.sunk") : t("sea.banner.surrendered"),
       "gold",
       3500,
     );
@@ -611,9 +633,11 @@ function resolveDefeatedEnemies() {
 function showGameOver() {
   if (gameOverShown) return;
   gameOverShown = true;
-  const verb = playerCombat.status === "sunk" ? "se hundió" : "se rindió";
-  els.gameoverTitle.textContent = `El ${runtimeShip.name} ${verb}`;
-  els.gameoverGold.textContent = `Bolsa: ${fmtInt.format(gold)} doblones. Necesitás un barco nuevo.`;
+  const sunk = playerCombat.status === "sunk";
+  els.gameoverTitle.textContent = t(sunk ? "sea.gameOver.sunk" : "sea.gameOver.surrendered", {
+    name: runtimeShip.name,
+  });
+  els.gameoverGold.textContent = t("sea.gameOver.purse", { gold: fmtInt.format(gold) });
   els.gameoverOverlay.classList.remove("is-hidden");
 }
 
@@ -684,7 +708,8 @@ function updateTargetPanel() {
     return;
   }
   els.targetPanel.classList.remove("is-hidden");
-  els.targetName.textContent = hullById(best.hullId)?.name ?? "Vela hostil";
+  els.targetName.textContent =
+    localisedHull(best.hullId, t)?.name ?? t("sea.target.hostileSail");
   els.targetDistance.textContent = `${fmtInt.format(bestDistance)} m`;
   els.targetHull.style.width = `${best.combat.condition.hull}%`;
   els.targetRigging.style.width = `${best.combat.condition.rigging}%`;
@@ -697,7 +722,7 @@ function updateHud() {
   const zone = zoneAtRadius(Math.hypot(world.ship.x, world.ship.y));
   els.name.textContent = `${runtimeShip.name} — ${runtimeShip.hullName}`;
   els.gold.textContent = fmtInt.format(gold);
-  els.zone.textContent = zone.name;
+  els.zone.textContent = localisedZone(zone, t).name;
   els.zone.style.color = zone.id === "abismo" ? "#c9a9ff" : zone.id === "abierto" ? "#9fc7e8" : "#bfe3c9";
   els.throttle.textContent = `${fmtInt.format(ui.throttle * 100)} %`;
   els.speed.textContent = `${fmtOne.format(world.ship.currentSpeedKn)} kn`;
@@ -735,7 +760,7 @@ function frame(now) {
   goldEarned = world.gold;
   if (goldEarned > before) {
     gold += goldEarned - before;
-    showBanner(`+${fmtInt.format(goldEarned - before)} doblones · tesoro rescatado`, "gold");
+    showBanner(t("sea.banner.treasure", { gold: fmtInt.format(goldEarned - before) }), "gold");
   }
 
   processCombat(dt, now);
@@ -759,7 +784,7 @@ function frame(now) {
   if (nearest && nearest.distance < COMBAT.engageRadiusM && now - ui.lastEnemyWarning > 6000) {
     ui.lastEnemyWarning = now;
     showBanner(
-      `¡Vela hostil a ${fmtInt.format(Math.round(nearest.distance))} m! Q babor · E estribor`,
+      t("sea.banner.enemyNear", { distance: fmtInt.format(Math.round(nearest.distance)) }),
       "danger",
       3000,
     );
@@ -810,12 +835,13 @@ function boot() {
     gameOverAt = 0;
   }
 
+  applyStaticTranslations();
   setInterval(saveGame, 3000);
   window.addEventListener("beforeunload", saveGame);
   window.addEventListener("resize", resizeCanvas);
   resizeCanvas();
   updateHud();
-  showBanner(`Zarpa el ${runtimeShip.name}. Buen viento, capitán.`, "info", 2800);
+  showBanner(t("sea.banner.depart", { name: runtimeShip.name }), "info", 2800);
   requestAnimationFrame(frame);
 }
 

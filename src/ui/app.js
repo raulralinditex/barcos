@@ -15,6 +15,17 @@ import {
   hullById,
   pieceById,
 } from "../data/naval-data.js";
+import { applyLanguage, createAppTranslator } from "../i18n/index.js";
+import {
+  defaultShipNameFor,
+  issueMessage,
+  localisedAmmo,
+  localisedCrewRoles,
+  localisedHull,
+  localisedHulls,
+  localisedPiece,
+  localisedPieces,
+} from "../i18n/terms.js";
 import { minimumShipPrice, priceShip } from "../model/economy.js";
 import {
   addShip,
@@ -65,17 +76,47 @@ const state = {
 };
 
 const MASS_SEGMENTS = [
-  { key: "light", label: "Casco vacío", color: "#8c9aa8" },
-  { key: "crew", label: "Dotación", color: "#3d6fa8" },
-  { key: "arms", label: "Armas y munición", color: "#a13c2c" },
-  { key: "provisions", label: "Provisiones", color: "#2f6b47" },
-  { key: "equipment", label: "Equipo", color: "#6b5b95" },
-  { key: "ballast", label: "Lastre", color: "#7a6a52" },
-  { key: "cargo", label: "Mercancía", color: "#b8860b" },
-  { key: "reserve", label: "Reserva (no pesa)", color: "#c9bda4" },
+  { key: "light", i18n: "mass.light", color: "#8c9aa8" },
+  { key: "crew", i18n: "mass.crew", color: "#3d6fa8" },
+  { key: "arms", i18n: "mass.ordnance", color: "#a13c2c" },
+  { key: "provisions", i18n: "mass.provisions", color: "#2f6b47" },
+  { key: "equipment", i18n: "mass.equipment", color: "#6b5b95" },
+  { key: "ballast", i18n: "mass.ballast", color: "#7a6a52" },
+  { key: "cargo", i18n: "mass.cargo", color: "#b8860b" },
+  { key: "reserve", i18n: "mass.reserve", color: "#c9bda4" },
 ];
 
 const $ = (selector) => document.querySelector(selector);
+
+/* ---------------------------------------------------------------- i18n (S11-S13) */
+
+/** One translator for the whole screen; the sea screen builds its own. */
+const translator = createAppTranslator(
+  typeof localStorage === "undefined" ? null : localStorage,
+  typeof navigator === "undefined" ? undefined : navigator.language,
+);
+const t = translator.t;
+
+/**
+ * Translate the static markup: textContent, placeholders and aria labels.
+ * Runs on boot and on every language change (S13), so no reload is needed.
+ */
+function applyStaticTranslations() {
+  document.documentElement.lang = translator.language;
+  for (const node of document.querySelectorAll("[data-i18n]")) {
+    node.textContent = t(node.dataset.i18n);
+  }
+  for (const node of document.querySelectorAll("[data-i18n-placeholder]")) {
+    node.placeholder = t(node.dataset.i18nPlaceholder);
+  }
+  for (const node of document.querySelectorAll("[data-i18n-aria]")) {
+    node.setAttribute("aria-label", t(node.dataset.i18nAria));
+  }
+  // Keys whose value carries inline markup (the sea help line).
+  for (const node of document.querySelectorAll("[data-i18n-html]")) {
+    node.innerHTML = t(node.dataset.i18nHtml);
+  }
+}
 
 const els = {
   goldValue: $("#gold-value"),
@@ -117,6 +158,7 @@ const els = {
   eraseDialog: $("#erase-dialog"),
   eraseCancel: $("#erase-cancel"),
   eraseConfirm: $("#erase-confirm"),
+  langSelect: $("#lang-select"),
 };
 
 const fmtInt = new Intl.NumberFormat("es-ES", { maximumFractionDigits: 0 });
@@ -202,9 +244,9 @@ function renderHulls() {
     card.setAttribute("aria-selected", String(hull.id === state.hullId));
     card.dataset.hullId = hull.id;
     card.innerHTML = `
-      <span class="hull-card-name">${hull.name}</span>
-      <span class="hull-card-meta">${hull.country} · arqueo ${hull.arqueo[0]}-${hull.arqueo[1]}</span>
-      <span class="hull-card-price">desde ${gold(min)} doblones</span>
+      <span class="hull-card-name">${localisedHull(hull, t).name}</span>
+      <span class="hull-card-meta">${t("shipyard.hullMeta", { country: localisedHull(hull, t).country, min: hull.arqueo[0], max: hull.arqueo[1] })}</span>
+      <span class="hull-card-price">${t("shipyard.hullPrice", { price: gold(min) })}</span>
     `;
     card.addEventListener("click", () => {
       if (state.hullId === hull.id) return;
@@ -223,7 +265,7 @@ function renderPieceSelect() {
   for (const piece of PIECES) {
     const option = document.createElement("option");
     option.value = piece.id;
-    option.textContent = `${piece.name} · ${fmtOne.format(piece.shotKg)} kg · ${piece.rangeM} m`;
+    option.textContent = `${localisedPiece(piece, t).name} · ${fmtOne.format(piece.shotKg)} kg · ${piece.rangeM} m`;
     els.pieceSelect.appendChild(option);
   }
   if (current && pieceById(current)) els.pieceSelect.value = current;
@@ -235,7 +277,7 @@ function renderBatteries() {
   if (state.batteries.length === 0) {
     const empty = document.createElement("p");
     empty.className = "hint";
-    empty.textContent = "Sin artillería. Un barco sin piezas no puede luchar: solo huir.";
+    empty.textContent = t("shipyard.noGuns");
     els.batteryList.appendChild(empty);
     return;
   }
@@ -341,43 +383,43 @@ function renderSupply(ship) {
   const fields = [
     {
       key: "days",
-      label: "Días de provisión",
+      label: t("shipyard.days"),
       value: state.days,
       step: 5,
       max: 180,
-      note: `${fmtOne.format(4.5)} kg por persona y día, con un 12 % de pérdidas.`,
+      note: t("supply.daysNote", { kg: fmtOne.format(4.5) }),
     },
     {
       key: "cargoKg",
-      label: "Mercancía",
+      label: t("shipyard.cargo"),
       value: state.cargoKg,
       step: 1000,
       max: Math.max(0, Math.floor(Math.max(cargoMax, 0))),
-      note: `Hueco real del casco: ${kg(Math.max(cargoMax, 0))}.`,
+      note: t("supply.cargoNote", { room: kg(Math.max(cargoMax, 0)) }),
     },
     {
       key: "ballastKg",
-      label: "Lastre",
+      label: t("shipyard.ballast"),
       value: state.ballastKg,
       step: 1000,
       max: 200_000,
-      note: "Sin lastre un casco vacío no aguanta el velamen.",
+      note: t("supply.ballastNote"),
     },
     {
       key: "equipmentKg",
-      label: "Equipo y recipientes",
+      label: t("shipyard.equipment"),
       value: state.equipmentKg,
       step: 500,
       max: 100_000,
-      note: "Barriles, cables, cureñas de repuesto, herramientas.",
+      note: t("supply.equipmentNote"),
     },
     {
       key: "reserveKg",
-      label: "Reserva de capacidad",
+      label: t("shipyard.reserveCapacity"),
       value: state.reserveKg,
       step: 500,
       max: 100_000,
-      note: "Ocupa presupuesto de carga, pero no es masa embarcada.",
+      note: t("supply.reserveNote"),
     },
   ];
 
@@ -439,7 +481,7 @@ function renderMassBar(ship) {
     part.className = "mass-seg";
     part.style.width = `${(value / denominator) * 100}%`;
     part.style.background = segment.color;
-    part.title = `${segment.label}: ${kg(value)}`;
+    part.title = `${t(segment.i18n)}: ${kg(value)}`;
     els.massBar.appendChild(part);
   }
 
@@ -448,17 +490,17 @@ function renderMassBar(ship) {
     over.className = "mass-seg is-over";
     over.style.width = `${(Math.min(overBy, capacity * 0.25) / denominator) * 100}%`;
     over.style.background = "#7d2b1f";
-    over.title = `Exceso: ${kg(overBy)}`;
+    over.title = t("mass.over", { value: kg(overBy) });
     els.massBar.appendChild(over);
   }
 
-  els.massReadout.textContent = `${kg(ship.budget.realMassKg)} de ${kg(hull.displacementKg)} de desplazamiento`;
+  els.massReadout.textContent = t("mass.readout", { real: kg(ship.budget.realMassKg), max: kg(hull.displacementKg) });
   els.massReadout.classList.toggle("bad", overBy > 0);
 
   els.massLegend.innerHTML = MASS_SEGMENTS.filter((segment) => values[segment.key] > 0)
     .map(
       (segment) =>
-        `<span><i class="mass-swatch" style="background:${segment.color}"></i>${segment.label} <b>${kg(values[segment.key])}</b></span>`,
+        `<span><i class="mass-swatch" style="background:${segment.color}"></i>${t(segment.i18n)} <b>${kg(values[segment.key])}</b></span>`,
     )
     .join("");
 }
@@ -472,7 +514,7 @@ function renderStats(ship) {
   els.statCargoRoom.textContent = kg(Math.max(budget.cargoMaxKg, 0));
   els.statCargoRoom.classList.toggle("bad", budget.cargoMaxKg < 0);
   els.statPeople.textContent = `${fmtInt.format(budget.people)} personas`;
-  els.statUpkeep.textContent = `${fmtOne.format(ship.upkeep)} al día`;
+  els.statUpkeep.textContent = t("shipyard.upkeepPerDay", { value: fmtOne.format(ship.upkeep) });
 }
 
 function renderGuns(ship) {
@@ -490,7 +532,7 @@ function renderVerdict(ship) {
         {
           level: "ok",
           code: "ready",
-          message: "El barco es viable y está pagado. Podés botarlo.",
+          message: t("shipyard.viable"),
         },
       ];
 
@@ -499,7 +541,7 @@ function renderVerdict(ship) {
     const row = document.createElement("div");
     row.className = `issue issue-${issue.level}`;
     const mark = issue.level === "error" ? "!" : issue.level === "warn" ? "▲" : "✓";
-    row.innerHTML = `<span class="issue-mark">${mark}</span><span>${issue.message}</span>`;
+    row.innerHTML = `<span class="issue-mark">${mark}</span><span>${issueMessage(issue, t)}</span>`;
     els.verdictIssues.appendChild(row);
   }
 }
@@ -672,7 +714,8 @@ function render() {
   els.launchBtn.disabled = !ship.feasible;
 
   for (const card of els.hullList.children) {
-    const isActive = card.querySelector(".hull-card-name")?.textContent === ship.hull.name;
+    const isActive =
+      card.querySelector(".hull-card-name")?.textContent === localisedHull(ship.hull, t).name;
     card.classList.toggle("is-active", isActive);
     card.setAttribute("aria-selected", String(isActive));
   }
@@ -708,49 +751,36 @@ function launch() {
   renderPrice(ship);
   els.goldValue.textContent = gold(state.gold);
 
-  els.sailTitle.textContent = `${name} — ${ship.hull.name}`;
+  const hullText = localisedHull(ship.hull, t);
+  els.sailTitle.textContent = `${name} — ${hullText.name}`;
   els.sailBody.innerHTML = `
     <dl class="sail-stats">
-      <div><dt>Casco</dt><dd>${ship.hull.name}</dd></div>
-      <div><dt>País</dt><dd>${ship.hull.country}</dd></div>
-      <div><dt>Eslora</dt><dd>${fmtOne.format(ship.hull.lengthM)} m</dd></div>
-      <div><dt>Desplazamiento</dt><dd>${kg(ship.hull.displacementKg)}</dd></div>
-      <div><dt>Masa embarcada</dt><dd>${kg(ship.budget.realMassKg)}</dd></div>
-      <div><dt>Calado</dt><dd>${fmtTwo.format(ship.budget.draftM)} m</dd></div>
-      <div><dt>Velocidad</dt><dd>${fmtTwo.format(ship.budget.speedKn)} nudos</dd></div>
-      <div><dt>Dotación</dt><dd>${fmtInt.format(ship.budget.people)} personas</dd></div>
-      <div><dt>Artillería</dt><dd>${ship.guns.total} piezas (${ship.guns.sides.babor}/${ship.guns.sides.estribor})</dd></div>
-      <div><dt>Provisiones</dt><dd>${state.days} días</dd></div>
-      <div><dt>Mercancía</dt><dd>${kg(state.cargoKg)}</dd></div>
-      <div><dt>Coste</dt><dd>${gold(ship.price.total)} doblones</dd></div>
-      <div><dt>Mantenimiento</dt><dd>${fmtOne.format(ship.upkeep)} al día</dd></div>
-      <div><dt>Resto de la bolsa</dt><dd>${gold(state.gold)} doblones</dd></div>
+      <div><dt>${t("sail.hull")}</dt><dd>${hullText.name}</dd></div>
+      <div><dt>${t("sail.country")}</dt><dd>${hullText.country}</dd></div>
+      <div><dt>${t("sail.length")}</dt><dd>${fmtOne.format(ship.hull.lengthM)} m</dd></div>
+      <div><dt>${t("sail.displacement")}</dt><dd>${kg(ship.hull.displacementKg)}</dd></div>
+      <div><dt>${t("sail.realMass")}</dt><dd>${kg(ship.budget.realMassKg)}</dd></div>
+      <div><dt>${t("sail.draft")}</dt><dd>${fmtTwo.format(ship.budget.draftM)} m</dd></div>
+      <div><dt>${t("sail.speed")}</dt><dd>${t("sail.knots", { value: fmtTwo.format(ship.budget.speedKn) })}</dd></div>
+      <div><dt>${t("sail.people")}</dt><dd>${t("sail.peopleCount", { value: fmtInt.format(ship.budget.people) })}</dd></div>
+      <div><dt>${t("sail.guns")}</dt><dd>${t("sail.gunsDetail", { total: ship.guns.total, babor: ship.guns.sides.babor, estribor: ship.guns.sides.estribor })}</dd></div>
+      <div><dt>${t("sail.provisions")}</dt><dd>${t("sail.days", { days: state.days })}</dd></div>
+      <div><dt>${t("sail.cargo")}</dt><dd>${kg(state.cargoKg)}</dd></div>
+      <div><dt>${t("sail.cost")}</dt><dd>${t("sail.doblones", { value: gold(ship.price.total) })}</dd></div>
+      <div><dt>${t("sail.upkeep")}</dt><dd>${t("sail.upkeepPerDay", { value: fmtOne.format(ship.upkeep) })}</dd></div>
+      <div><dt>${t("sail.purseLeft")}</dt><dd>${t("sail.doblones", { value: gold(state.gold) })}</dd></div>
     </dl>
     <p>${
       ship.warnings.length
-        ? `Zarpa con ${ship.warnings.length} advertencia(s): ${ship.warnings.map((w) => w.code).join(", ")}.`
-        : "Sin advertencias. La nave está en condiciones."
+        ? t("sail.warnings", { count: ship.warnings.length, codes: ship.warnings.map((w) => w.code).join(", ") })
+        : t("sail.clean")
     }</p>
   `;
   els.sailDialog.showModal();
 }
 
 function defaultShipName(hull) {
-  const names = {
-    patache: "Avispa",
-    "carabela-latina": "Niña",
-    jacht: "Duyfken",
-    zabra: "Augusta",
-    "galeon-pequeno": "Golden Hind",
-    fluyt: "Ruyter",
-    "nao-armada": "Rosario",
-    "galeon-guerra": "Revenge",
-    "gran-mercante": "Batavia",
-    galeaza: "Galeaza",
-    "gran-galeon": "San Martín",
-    "gran-buque-real": "Triumph",
-  };
-  return names[hull.id] ?? "Sin nombre";
+  return defaultShipNameFor(hull.id, t);
 }
 
 /* ---------------------------------------------------------------- events */
@@ -820,14 +850,15 @@ function saveFleet() {
 /** Redraw the fleet strip: every owned hull, with the captain marked. */
 function renderFleet() {
   const captain = captainShip(fleet);
-  els.fleetCount.textContent =
-    isEmptyFleet(fleet)
-      ? "sin naves"
-      : `${fleet.ships.length} ${fleet.ships.length === 1 ? "nave" : "naves"}`;
+  els.fleetCount.textContent = isEmptyFleet(fleet)
+    ? t("fleet.count.none")
+    : t(fleet.ships.length === 1 ? "fleet.count.one" : "fleet.count.many", {
+        count: fleet.ships.length,
+      });
 
   if (isEmptyFleet(fleet)) {
     els.fleetList.innerHTML =
-      '<li class="fleet-empty">Todavía no tenés naves. Construí la primera y botala.</li>';
+      `<li class="fleet-empty">${t("fleet.empty")}</li>`;
     return;
   }
 
@@ -838,12 +869,12 @@ function renderFleet() {
         <li class="fleet-item${isCaptain ? " is-captain" : ""}" data-ship-id="${ship.id}">
           <button class="fleet-ship" type="button" data-captain="${ship.id}"
             ${isCaptain ? "disabled" : ""}
-            title="${isCaptain ? "Capitana de la flota" : "Capitanea esta nave"}">
+            title="${isCaptain ? t("fleet.isCaptain") : t("fleet.promote")}">
             <span class="fleet-mark">${isCaptain ? "⚓" : "·"}</span>
             <span class="fleet-name">${ship.name}</span>
             <span class="fleet-hull">${ship.hullName}</span>
           </button>
-          ${isCaptain ? '<span class="fleet-tag">capitana</span>' : ""}
+          ${isCaptain ? `<span class="fleet-tag">${t("fleet.captain")}</span>` : ""}
         </li>`;
     })
     .join("");
@@ -879,7 +910,7 @@ function offerExistingShip() {
   const link = document.createElement("a");
   link.className = "btn";
   link.href = "./sea.html";
-  link.textContent = `⚓ Zarpar con ${captain.name}`;
+  link.textContent = t("fleet.sail", { name: captain.name });
   els.launchBtn.parentElement.appendChild(link);
 }
 
@@ -887,8 +918,33 @@ window.addEventListener("resize", () => {
   if (lastShip) drawShip(lastShip);
 });
 
+
+/* ---------------------------------------------------------------- language (S13) */
+
+/** Repaint everything after a language change, without reloading the page. */
+function repaintForLanguage() {
+  applyStaticTranslations();
+  renderHulls();
+  renderPieceSelect();
+  renderFleet();
+  render();
+  if (lastShip) {
+    els.launchBtn.disabled = !lastShip.feasible;
+  }
+}
+
+if (els.langSelect) {
+  els.langSelect.value = translator.language;
+  els.langSelect.addEventListener("change", (event) => {
+    applyLanguage(translator, localStorage, event.target.value);
+    repaintForLanguage();
+  });
+}
+
 /* ---------------------------------------------------------------- boot */
 
+applyStaticTranslations();
+if (els.langSelect) els.langSelect.value = translator.language;
 loadConfig();
 loadGold();
 renderFleet();

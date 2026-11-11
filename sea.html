@@ -3,7 +3,7 @@
   <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
-    <title>En el mar — Juego de barcos</title>
+    <title data-i18n="app.seaTitle">En el mar — Juego de barcos</title>
     <link rel="stylesheet" href="./src/ui/styles.css" />
   </head>
   <body class="sea-body">
@@ -12,15 +12,15 @@
     <div class="hud hud-ship">
       <div class="hud-title" id="hud-ship-name">—</div>
       <dl class="hud-grid">
-        <div><dt>Doblones</dt><dd id="hud-gold">0</dd></div>
-        <div><dt>Zona</dt><dd id="hud-zone">—</dd></div>
-        <div><dt>Velamen</dt><dd id="hud-throttle">0 %</dd></div>
-        <div><dt>Velocidad</dt><dd id="hud-speed">0 kn</dd></div>
-        <div><dt>Rumbo</dt><dd id="hud-heading">000°</dd></div>
-        <div><dt>Casco</dt><dd id="hud-hull">100 %</dd></div>
-        <div><dt>Aparejo</dt><dd id="hud-rigging">100 %</dd></div>
-        <div><dt>Tripulación</dt><dd id="hud-crew">100 %</dd></div>
-        <div><dt>Munición B/E</dt><dd id="hud-rounds">0/0</dd></div>
+        <div><dt data-i18n="sea.gold">Doblones</dt><dd id="hud-gold">0</dd></div>
+        <div><dt data-i18n="sea.zone">Zona</dt><dd id="hud-zone">—</dd></div>
+        <div><dt data-i18n="sea.sail">Velamen</dt><dd id="hud-throttle">0 %</dd></div>
+        <div><dt data-i18n="sea.speed">Velocidad</dt><dd id="hud-speed">0 kn</dd></div>
+        <div><dt data-i18n="sea.heading">Rumbo</dt><dd id="hud-heading">000°</dd></div>
+        <div><dt data-i18n="sea.hull">Casco</dt><dd id="hud-hull">100 %</dd></div>
+        <div><dt data-i18n="sea.rigging">Aparejo</dt><dd id="hud-rigging">100 %</dd></div>
+        <div><dt data-i18n="sea.crew">Tripulación</dt><dd id="hud-crew">100 %</dd></div>
+        <div><dt data-i18n="sea.rounds">Munición B/E</dt><dd id="hud-rounds">0/0</dd></div>
       </dl>
     </div>
 
@@ -28,27 +28,23 @@
       <div class="hud-title" id="target-name">—</div>
       <div class="target-distance" id="target-distance">—</div>
       <div class="target-bars">
-        <div class="tbar"><span>Casco</span><div class="tbar-track"><div class="tbar-fill tbar-hull" id="target-hull"></div></div></div>
-        <div class="tbar"><span>Aparejo</span><div class="tbar-track"><div class="tbar-fill tbar-rigging" id="target-rigging"></div></div></div>
-        <div class="tbar"><span>Tripulación</span><div class="tbar-track"><div class="tbar-fill tbar-crew" id="target-crew"></div></div></div>
+        <div class="tbar"><span data-i18n="sea.hull">Casco</span><div class="tbar-track"><div class="tbar-fill tbar-hull" id="target-hull"></div></div></div>
+        <div class="tbar"><span data-i18n="sea.rigging">Aparejo</span><div class="tbar-track"><div class="tbar-fill tbar-rigging" id="target-rigging"></div></div></div>
+        <div class="tbar"><span data-i18n="sea.crew">Tripulación</span><div class="tbar-track"><div class="tbar-fill tbar-crew" id="target-crew"></div></div></div>
       </div>
     </div>
 
     <div id="gameover-overlay" class="gameover-overlay is-hidden">
       <div class="gameover-card">
-        <h2 id="gameover-title">El barco se hundió</h2>
+        <h2 id="gameover-title" data-i18n="sea.gameOver.title">El barco se hundió</h2>
         <p id="gameover-gold"></p>
-        <button id="gameover-back" class="btn btn-launch" type="button">Volver al astillero</button>
+        <button id="gameover-back" class="btn btn-launch" type="button" data-i18n="sea.gameOver.back">Volver al astillero</button>
       </div>
     </div>
 
     <div class="hud hud-actions">
-      <a class="btn btn-sea" href="./index.html">⚓ Volver al astillero</a>
-      <div class="hud-help">
-        <strong>W / S</strong> velamen · <strong>A / D</strong> timón<br />
-        <strong>Q</strong> andanada de babor · <strong>E</strong> andanada de estribor<br />
-        Buscá los destellos de oro y batí las velas hostiles
-      </div>
+      <a class="btn btn-sea" href="./index.html" data-i18n="sea.back">⚓ Volver al astillero</a>
+      <div class="hud-help" data-i18n-html="sea.help"></div>
     </div>
 
     <canvas id="minimap" width="170" height="170"></canvas>
