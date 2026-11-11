@@ -1,0 +1,22 @@
+src/model/world.js
+  s_53bc4371ebd20f::t_62eddaaa0cb099 14,79-81,86,88-90,103-111
+  s_53bc4371ebd20f::t_9177af2cdcb364 257,283,301-302
+  s_53bc4371ebd20f::t_ce3d8867509f04 168-169,189-192
+  s_53bc4371ebd20f::t_814e61fd1f8bbd 112
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.6",
+  "base_commit_sha": "716b4da276bb7dd5918abe99f04fdbc1abb5ac8b",
+  "prompts": {},
+  "sessions": {
+    "s_53bc4371ebd20f": {
+      "agent_id": {
+        "tool": "pi",
+        "id": "01a1cb5e-c63a-70e3-b958-abe976add528",
+        "model": "kimi-k3"
+      },
+      "human_author": "Raul Ripoll <raulral@ext.inditex.com>"
+    }
+  }
+}
