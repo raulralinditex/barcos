@@ -1,0 +1,20 @@
+index.html
+  h_8b9b8fe190c867 1-133
+scripts/smoke-ui.mjs
+  h_8b9b8fe190c867 1-68
+src/ui/app.js
+  h_8b9b8fe190c867 1-769
+src/ui/styles.css
+  h_8b9b8fe190c867 1-818
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.6",
+  "base_commit_sha": "fd3f68de8f13644e571f3a02175c567bc76cd797",
+  "prompts": {},
+  "humans": {
+    "h_8b9b8fe190c867": {
+      "author": "Raul Ripoll <raulral@ext.inditex.com>"
+    }
+  }
+}
