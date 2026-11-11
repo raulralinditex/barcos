@@ -1,0 +1,41 @@
+src/i18n/es.js
+  s_53bc4371ebd20f::t_81d15b5fcabf45 57-58,105-106
+  s_53bc4371ebd20f::t_492d6ff80ffe9d 1-56,59-68,80-104,107-272,275,278-280
+  s_53bc4371ebd20f::t_2f55aa8e9b9030 69-79
+  s_53bc4371ebd20f::t_246c9b08973e1c 273-274,276-277
+src/i18n/core.js
+  s_53bc4371ebd20f::t_5c8e8835e1a86d 1-107
+test/i18n-catalogue.test.js
+  s_53bc4371ebd20f::t_4d08a55618adf4 127
+  s_53bc4371ebd20f::t_b0b90e02c13bc6 1-126,128-189
+src/i18n/index.js
+  s_53bc4371ebd20f::t_9930d91e9d6cf0 1-26
+src/i18n/terms.js
+  s_53bc4371ebd20f::t_03370f486972f1 11,17-20
+  s_53bc4371ebd20f::t_0f806208a4d11d 1-10,12-16,21-67
+src/i18n/en.js
+  s_53bc4371ebd20f::t_246c9b08973e1c 276-277,279-280
+  s_53bc4371ebd20f::t_4af329a7a14a01 61,72-82
+  s_53bc4371ebd20f::t_5caf1d9521e8fc 1-58,62-71,83-107,110-275,278,281-283
+  s_53bc4371ebd20f::t_81d15b5fcabf45 59-60,108-109
+test/i18n-core.test.js
+  s_53bc4371ebd20f::t_98f427cb51cbbe 1-179
+test/i18n-terms.test.js
+  s_53bc4371ebd20f::t_7b3bfea0db6e3e 1-112
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.6",
+  "base_commit_sha": "246236d9b7c5858ec77f6fd1c5b79f703a616ba0",
+  "prompts": {},
+  "sessions": {
+    "s_53bc4371ebd20f": {
+      "agent_id": {
+        "tool": "pi",
+        "id": "01a1cb5e-c63a-70e3-b958-abe976add528",
+        "model": "deepseek-v4.1-flash_high"
+      },
+      "human_author": "Raul Ripoll <raulral@ext.inditex.com>"
+    }
+  }
+}
