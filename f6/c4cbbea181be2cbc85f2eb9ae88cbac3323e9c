@@ -1,0 +1,21 @@
+test/wind.test.js
+  s_53bc4371ebd20f::t_b7f8e0660a55eb 1-175
+src/model/wind.js
+  s_53bc4371ebd20f::t_43fdca4e384eaf 1-146
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.6",
+  "base_commit_sha": "f6c4cbbea181be2cbc85f2eb9ae88cbac3323e9c",
+  "prompts": {},
+  "sessions": {
+    "s_53bc4371ebd20f": {
+      "agent_id": {
+        "tool": "pi",
+        "id": "01a1cb5e-c63a-70e3-b958-abe976add528",
+        "model": "kimi-k3"
+      },
+      "human_author": "Raul Ripoll <raulral@ext.inditex.com>"
+    }
+  }
+}
