@@ -30,6 +30,8 @@ await page.goto("http://localhost:8765/index.html", { waitUntil: "networkidle" }
 // the fleet, not about what the economy lets you afford.
 await page.evaluate(() => {
   localStorage.clear();
+  // Pin Spanish: this smoke checks fleet behaviour, not wording (smoke-i18n does that).
+  localStorage.setItem("barcos:lang:v1", "es");
   localStorage.setItem("barcos:game:v1", JSON.stringify({ gold: 40000 }));
 });
 await page.reload({ waitUntil: "networkidle" });

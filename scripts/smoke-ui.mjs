@@ -9,6 +9,10 @@ page.on("console", (msg) => {
 });
 page.on("pageerror", (err) => errors.push(`pageerror: ${err.message}`));
 
+// Pin Spanish: this smoke drives the shipyard and looks hulls up by name.
+await page.addInitScript(() => {
+  localStorage.setItem("barcos:lang:v1", "es");
+});
 await page.goto("http://localhost:8765/index.html", { waitUntil: "networkidle" });
 await page.waitForTimeout(200);
 

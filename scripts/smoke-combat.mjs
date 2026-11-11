@@ -77,6 +77,8 @@ await page.addInitScript(
       "barcos:fleet:v1",
       JSON.stringify({ v: 1, ships: [ship], captainId: ship.id }),
     );
+    // Pin Spanish: this smoke checks gunnery, not wording.
+    localStorage.setItem("barcos:lang:v1", "es");
     localStorage.setItem(
       "barcos:game:v1",
       JSON.stringify({ gold: 5000, world: worldJson }),
