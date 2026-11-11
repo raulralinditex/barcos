@@ -20,6 +20,13 @@
         <strong id="gold-value">0</strong>
         <span id="gold-delta" class="purse-delta"></span>
       </div>
+      <div class="fleet-bar">
+        <div class="fleet-head">
+          <span class="fleet-label">Tu flota</span>
+          <span class="fleet-count" id="fleet-count">0 naves</span>
+        </div>
+        <ul class="fleet-list" id="fleet-list"></ul>
+      </div>
     </header>
 
     <main class="layout">
@@ -116,6 +123,7 @@
           <strong id="price-total">0</strong>
         </div>
         <button id="launch-btn" class="btn btn-launch" type="button" disabled>Botar el barco</button>
+        <button id="erase-btn" class="btn btn-erase" type="button">Borrar partida</button>
       </div>
     </footer>
 
@@ -125,6 +133,18 @@
       <div class="sail-actions">
         <button id="sail-back" class="btn" type="button">Volver al astillero</button>
         <button id="sail-go" class="btn btn-launch" type="button">Zarpar</button>
+      </div>
+    </dialog>
+
+    <dialog id="erase-dialog" class="sail-dialog">
+      <h2>Borrar partida</h2>
+      <p>
+        Se borra la flota entera, la bolsa, el barco que estás capitaneando y el mar
+        que exploraste. No se puede deshacer.
+      </p>
+      <div class="sail-actions">
+        <button id="erase-cancel" class="btn" type="button">Cancelar</button>
+        <button id="erase-confirm" class="btn btn-erase" type="button">Borrar todo</button>
       </div>
     </dialog>
 

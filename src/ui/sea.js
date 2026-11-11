@@ -21,6 +21,12 @@ import {
   wreckPrize,
 } from "../model/combat.js";
 import {
+  captainShip,
+  deserializeFleet,
+  removeShip,
+  serializeFleet,
+} from "../model/fleet.js";
+import {
   WORLD,
   ZONE_BANDS,
   createWorld,
@@ -32,6 +38,7 @@ import {
 } from "../model/world.js";
 
 const SHIP_KEY = "barcos:current-ship:v1";
+const FLEET_KEY = "barcos:fleet:v1";
 const GAME_KEY = "barcos:game:v1";
 
 const PX_PER_M = 0.4; // camera scale: 1 px on screen = 2.5 m of sea
@@ -76,14 +83,16 @@ const fmtOne = new Intl.NumberFormat("es-ES", { maximumFractionDigits: 1 });
 
 /* ---------------------------------------------------------------- boot state */
 
-function loadRuntimeShip() {
+function loadFleet() {
   try {
-    const ship = JSON.parse(localStorage.getItem(SHIP_KEY));
-    if (ship && Number.isFinite(ship.speedKn)) return ship;
+    // The single-ship key is the save written before fleets existed: adopt it.
+    const legacy = JSON.parse(localStorage.getItem(SHIP_KEY) ?? "null");
+    const legacyShip = legacy && Number.isFinite(legacy.speedKn) ? legacy : null;
+    const fleet = deserializeFleet(localStorage.getItem(FLEET_KEY), legacyShip);
+    return { fleet, legacyShip };
   } catch {
-    /* fall through */
+    return { fleet: { ships: [], captainId: null }, legacyShip: null };
   }
-  return null;
 }
 
 function loadSavedGame() {
@@ -96,7 +105,8 @@ function loadSavedGame() {
   return null;
 }
 
-const runtimeShip = loadRuntimeShip();
+const { fleet, legacyShip } = loadFleet();
+const runtimeShip = captainShip(fleet);
 
 const ui = {
   throttle: 0,
@@ -139,6 +149,7 @@ function saveGame() {
         : undefined,
     };
     localStorage.setItem(GAME_KEY, JSON.stringify(payload));
+    localStorage.setItem(FLEET_KEY, serializeFleet(fleet));
   } catch {
     /* storage disabled: the voyage continues in memory */
   }
@@ -608,11 +619,14 @@ function showGameOver() {
 
 els.gameoverBack.addEventListener("click", () => {
   try {
+    // The sunk hull leaves the fleet; the player keeps whatever else is in port.
+    const remaining = removeShip(fleet, runtimeShip.id);
+    localStorage.setItem(FLEET_KEY, serializeFleet(remaining));
     localStorage.removeItem(SHIP_KEY);
+    localStorage.removeItem(GAME_KEY);
   } catch {
     /* nothing to remove */
   }
-  saveGame();
   window.location.href = "./index.html";
 });
 

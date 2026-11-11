@@ -16,11 +16,20 @@ import {
   pieceById,
 } from "../data/naval-data.js";
 import { minimumShipPrice, priceShip } from "../model/economy.js";
+import {
+  addShip,
+  captainShip,
+  deserializeFleet,
+  isEmptyFleet,
+  serializeFleet,
+  setCaptain,
+} from "../model/fleet.js";
 import { buildShip, toRuntimeShip } from "../model/shipyard.js";
 
 const STORAGE_KEY = "barcos:config:v1";
 const GAME_KEY = "barcos:game:v1";
 const SHIP_KEY = "barcos:current-ship:v1";
+const FLEET_KEY = "barcos:fleet:v1";
 
 /**
  * The shipyard opens with a ship the 12,000 budget actually buys, so the player can
@@ -102,6 +111,12 @@ const els = {
   sailBody: $("#sail-body"),
   sailBack: $("#sail-back"),
   sailGo: $("#sail-go"),
+  fleetList: $("#fleet-list"),
+  fleetCount: $("#fleet-count"),
+  eraseBtn: $("#erase-btn"),
+  eraseDialog: $("#erase-dialog"),
+  eraseCancel: $("#erase-cancel"),
+  eraseConfirm: $("#erase-confirm"),
 };
 
 const fmtInt = new Intl.NumberFormat("es-ES", { maximumFractionDigits: 0 });
@@ -185,6 +200,7 @@ function renderHulls() {
     card.className = `hull-card${hull.id === state.hullId ? " is-active" : ""}`;
     card.setAttribute("role", "option");
     card.setAttribute("aria-selected", String(hull.id === state.hullId));
+    card.dataset.hullId = hull.id;
     card.innerHTML = `
       <span class="hull-card-name">${hull.name}</span>
       <span class="hull-card-meta">${hull.country} · arqueo ${hull.arqueo[0]}-${hull.arqueo[1]}</span>
@@ -673,17 +689,22 @@ function launch() {
   const name = state.shipName.trim() || defaultShipName(ship.hull);
   const runtime = toRuntimeShip(ship, { name });
 
-  // The launching is the purchase: charge the purse and start a fresh voyage state
-  // (a new hull sails a new sea; the old position belonged to the previous ship).
+  // The launching is the purchase: charge the purse and add the hull to the fleet,
+  // where it becomes the captain. A new hull sails a new sea.
   state.gold -= ship.price.total;
 
+  fleet = addShip(fleet, runtime);
+
   try {
-    localStorage.setItem(SHIP_KEY, JSON.stringify(runtime));
+    localStorage.setItem(FLEET_KEY, serializeFleet(fleet));
     localStorage.setItem(GAME_KEY, JSON.stringify({ gold: state.gold }));
+    // the fleet is the source of truth now; drop the single-ship key
+    localStorage.removeItem(SHIP_KEY);
   } catch {
     /* the ship still exists in memory for this session */
   }
 
+  renderFleet();
   renderPrice(ship);
   els.goldValue.textContent = gold(state.gold);
 
@@ -773,19 +794,93 @@ els.sailGo.addEventListener("click", () => {
   window.location.href = "./sea.html";
 });
 
+/* ---------------------------------------------------------------- fleet (S7) */
+
+/** Load the owned ships, adopting the single-ship save written before fleets. */
+function loadFleetState() {
+  try {
+    const legacy = JSON.parse(localStorage.getItem(SHIP_KEY) ?? "null");
+    const legacyShip = legacy && Number.isFinite(legacy.speedKn) ? legacy : null;
+    return deserializeFleet(localStorage.getItem(FLEET_KEY), legacyShip);
+  } catch {
+    return { ships: [], captainId: null };
+  }
+}
+
+let fleet = loadFleetState();
+
+function saveFleet() {
+  try {
+    localStorage.setItem(FLEET_KEY, serializeFleet(fleet));
+  } catch {
+    /* the fleet still exists for this session */
+  }
+}
+
+/** Redraw the fleet strip: every owned hull, with the captain marked. */
+function renderFleet() {
+  const captain = captainShip(fleet);
+  els.fleetCount.textContent =
+    isEmptyFleet(fleet)
+      ? "sin naves"
+      : `${fleet.ships.length} ${fleet.ships.length === 1 ? "nave" : "naves"}`;
+
+  if (isEmptyFleet(fleet)) {
+    els.fleetList.innerHTML =
+      '<li class="fleet-empty">Todavía no tenés naves. Construí la primera y botala.</li>';
+    return;
+  }
+
+  els.fleetList.innerHTML = fleet.ships
+    .map((ship) => {
+      const isCaptain = ship.id === captain?.id;
+      return `
+        <li class="fleet-item${isCaptain ? " is-captain" : ""}" data-ship-id="${ship.id}">
+          <button class="fleet-ship" type="button" data-captain="${ship.id}"
+            ${isCaptain ? "disabled" : ""}
+            title="${isCaptain ? "Capitana de la flota" : "Capitanea esta nave"}">
+            <span class="fleet-mark">${isCaptain ? "⚓" : "·"}</span>
+            <span class="fleet-name">${ship.name}</span>
+            <span class="fleet-hull">${ship.hullName}</span>
+          </button>
+          ${isCaptain ? '<span class="fleet-tag">capitana</span>' : ""}
+        </li>`;
+    })
+    .join("");
+}
+
+els.fleetList.addEventListener("click", (event) => {
+  const button = event.target.closest("[data-captain]");
+  if (!button) return;
+  fleet = setCaptain(fleet, button.dataset.captain);
+  saveFleet();
+  renderFleet();
+});
+
+/* ---------------------------------------------------------------- erase save (S8) */
+
+els.eraseBtn.addEventListener("click", () => els.eraseDialog.showModal());
+els.eraseCancel.addEventListener("click", () => els.eraseDialog.close());
+els.eraseConfirm.addEventListener("click", () => {
+  try {
+    for (const key of [STORAGE_KEY, GAME_KEY, SHIP_KEY, FLEET_KEY]) {
+      localStorage.removeItem(key);
+    }
+  } catch {
+    /* storage disabled: nothing to erase */
+  }
+  window.location.reload();
+});
+
 /** If a ship is already in the water (another session), offer sailing it directly. */
 function offerExistingShip() {
-  try {
-    const ship = JSON.parse(localStorage.getItem(SHIP_KEY));
-    if (!ship || !ship.name) return;
-    const link = document.createElement("a");
-    link.className = "btn";
-    link.href = "./sea.html";
-    link.textContent = `⚓ Zarpar con ${ship.name}`;
-    els.launchBtn.parentElement.appendChild(link);
-  } catch {
-    /* no existing ship */
-  }
+  const captain = captainShip(fleet);
+  if (!captain || !captain.name) return;
+  const link = document.createElement("a");
+  link.className = "btn";
+  link.href = "./sea.html";
+  link.textContent = `⚓ Zarpar con ${captain.name}`;
+  els.launchBtn.parentElement.appendChild(link);
 }
 
 window.addEventListener("resize", () => {
@@ -796,6 +891,7 @@ window.addEventListener("resize", () => {
 
 loadConfig();
 loadGold();
+renderFleet();
 renderHulls();
 renderPieceSelect();
 if (state.shipName) els.shipName.value = state.shipName;
