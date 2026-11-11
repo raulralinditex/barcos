@@ -1,0 +1,133 @@
+<!doctype html>
+<html lang="es">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Astillero — Juego de barcos</title>
+    <link rel="stylesheet" href="./src/ui/styles.css" />
+  </head>
+  <body>
+    <header class="topbar">
+      <div class="brand">
+        <span class="brand-mark">⚓</span>
+        <div>
+          <h1>Astillero</h1>
+          <p class="brand-sub">Un barco a partir de un presupuesto</p>
+        </div>
+      </div>
+      <div class="purse">
+        <span class="purse-label">Doblones</span>
+        <strong id="gold-value">0</strong>
+        <span id="gold-delta" class="purse-delta"></span>
+      </div>
+    </header>
+
+    <main class="layout">
+      <section class="panel panel-hulls" aria-labelledby="hulls-title">
+        <h2 id="hulls-title">Casco</h2>
+        <p class="hint">Arqueo histórico del modelo; el desplazamiento se deriva de él.</p>
+        <div id="hull-list" class="hull-list" role="listbox" aria-label="Cascos disponibles"></div>
+      </section>
+
+      <section class="panel panel-ship" aria-labelledby="ship-title">
+        <div class="ship-head">
+          <h2 id="ship-title">El buque</h2>
+          <label class="name-field">
+            <span>Nombre</span>
+            <input id="ship-name" type="text" maxlength="28" placeholder="Sin nombre" />
+          </label>
+        </div>
+
+        <canvas id="ship-canvas" width="900" height="300" aria-label="Silueta del buque con sus puertos de cañón"></canvas>
+
+        <div class="gun-summary">
+          <div class="gun-side babor">
+            <span class="gun-side-label">Babor</span>
+            <strong id="guns-babor">0</strong>
+            <span class="gun-side-max" id="guns-babor-max"></span>
+          </div>
+          <div class="gun-total">
+            <strong id="guns-total">0</strong>
+            <span>piezas</span>
+          </div>
+          <div class="gun-side estribor">
+            <span class="gun-side-label">Estribor</span>
+            <strong id="guns-estribor">0</strong>
+            <span class="gun-side-max" id="guns-estribor-max"></span>
+          </div>
+        </div>
+
+        <div class="mass-block">
+          <div class="mass-head">
+            <h3>Balance de masa</h3>
+            <span id="mass-readout" class="mass-readout"></span>
+          </div>
+          <div class="mass-bar" id="mass-bar"></div>
+          <div class="mass-legend" id="mass-legend"></div>
+        </div>
+
+        <dl class="stats">
+          <div><dt>Calado</dt><dd id="stat-draft">—</dd></div>
+          <div><dt>Velocidad</dt><dd id="stat-speed">—</dd></div>
+          <div><dt>Fracción de carga</dt><dd id="stat-load">—</dd></div>
+          <div><dt>Hueco para carga</dt><dd id="stat-cargo-room">—</dd></div>
+          <div><dt>Dotación</dt><dd id="stat-people">—</dd></div>
+          <div><dt>Mantenimiento</dt><dd id="stat-upkeep">—</dd></div>
+        </dl>
+      </section>
+
+      <section class="panel panel-build" aria-labelledby="build-title">
+        <h2 id="build-title">Aparejo</h2>
+
+        <div class="tabs" role="tablist">
+          <button class="tab is-active" data-tab="guns" role="tab">Artillería</button>
+          <button class="tab" data-tab="crew" role="tab">Dotación</button>
+          <button class="tab" data-tab="supply" role="tab">Carga</button>
+        </div>
+
+        <div class="tab-panel is-active" data-panel="guns">
+          <div class="battery-add">
+            <label>
+              <span>Pieza</span>
+              <select id="piece-select"></select>
+            </label>
+            <button id="add-battery" class="btn btn-add" type="button">Añadir batería</button>
+          </div>
+          <div id="battery-list" class="battery-list"></div>
+        </div>
+
+        <div class="tab-panel" data-panel="crew">
+          <div id="crew-list" class="crew-list"></div>
+        </div>
+
+        <div class="tab-panel" data-panel="supply">
+          <div id="supply-list" class="supply-list"></div>
+        </div>
+      </section>
+    </main>
+
+    <footer class="footer">
+      <div class="verdict" id="verdict">
+        <div class="verdict-issues" id="verdict-issues"></div>
+      </div>
+      <div class="launch">
+        <div class="price">
+          <span>Coste total</span>
+          <strong id="price-total">0</strong>
+        </div>
+        <button id="launch-btn" class="btn btn-launch" type="button" disabled>Botar el barco</button>
+      </div>
+    </footer>
+
+    <dialog id="sail-dialog" class="sail-dialog">
+      <h2 id="sail-title">Botadura</h2>
+      <p id="sail-body"></p>
+      <div class="sail-actions">
+        <button id="sail-back" class="btn" type="button">Volver al astillero</button>
+        <button id="sail-go" class="btn btn-launch" type="button">Zarpar</button>
+      </div>
+    </dialog>
+
+    <script type="module" src="./src/ui/app.js"></script>
+  </body>
+</html>
