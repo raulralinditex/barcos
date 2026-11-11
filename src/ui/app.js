@@ -20,11 +20,12 @@ import {
   defaultShipNameFor,
   issueMessage,
   localisedAmmo,
-  localisedCrewRoles,
+  localisedCrewRole,
   localisedHull,
   localisedHulls,
   localisedPiece,
   localisedPieces,
+  familyLabel,
 } from "../i18n/terms.js";
 import { minimumShipPrice, priceShip } from "../model/economy.js";
 import {
@@ -159,6 +160,7 @@ const els = {
   eraseCancel: $("#erase-cancel"),
   eraseConfirm: $("#erase-confirm"),
   langSelect: $("#lang-select"),
+  gunsSwivel: $("#guns-swivel"),
 };
 
 const fmtInt = new Intl.NumberFormat("es-ES", { maximumFractionDigits: 0 });
@@ -288,41 +290,46 @@ function renderBatteries() {
 
     const card = document.createElement("div");
     card.className = "battery";
+    const pieceText = localisedPiece(piece, t);
+    const sideOptions = piece.swivel
+      ? `<option value="swivel" selected>${t("shipyard.battery.swivel")}</option>`
+      : `<option value="babor"${entry.side === "babor" ? " selected" : ""}>${t("shipyard.babor")}</option>
+         <option value="estribor"${entry.side === "estribor" ? " selected" : ""}>${t("shipyard.estribor")}</option>`;
+    const source = piece.provenance === "R6" ? t("shipyard.battery.source.R6") : piece.provenance;
     card.innerHTML = `
       <div class="battery-top">
         <div>
-          <div class="battery-name">${piece.name}</div>
-          <div class="battery-family">${piece.family} · ${fmtOne.format(piece.shotKg)} kg de proyectil · ${piece.reloadS} s de recarga</div>
+          <div class="battery-name">${pieceText.name}</div>
+          <div class="battery-family">${t("shipyard.battery.family", { family: familyLabel(piece.family, t), kg: fmtOne.format(piece.shotKg), reload: piece.reloadS })}</div>
         </div>
-        <button class="battery-remove" type="button" aria-label="Quitar ${piece.name}">×</button>
+        <button class="battery-remove" type="button" aria-label="${t("shipyard.battery.remove", { name: pieceText.name })}">×</button>
       </div>
       <div class="battery-fields">
-        <label><span>Costado</span>
-          <select data-field="side">
-            <option value="babor"${entry.side === "babor" ? " selected" : ""}>Babor</option>
-            <option value="estribor"${entry.side === "estribor" ? " selected" : ""}>Estribor</option>
+        <label><span>${t("shipyard.battery.side")}</span>
+          <select data-field="side"${piece.swivel ? " disabled" : ""}>
+            ${sideOptions}
           </select>
         </label>
-        <label><span>Cantidad</span>
+        <label><span>${t("shipyard.battery.qty")}</span>
           <input type="number" min="0" max="40" step="1" value="${entry.qty}" data-field="qty" />
         </label>
-        <label><span>Disparos/pieza</span>
+        <label><span>${t("shipyard.battery.shots")}</span>
           <input type="number" min="0" max="200" step="5" value="${entry.shotsPerPiece}" data-field="shotsPerPiece" />
         </label>
-        <label><span>Munición</span>
+        <label><span>${t("shipyard.battery.ammo")}</span>
           <select data-field="ammoId">
             ${piece.ammo
               .map(
                 (ammoId) =>
-                  `<option value="${ammoId}"${entry.ammoId === ammoId ? " selected" : ""}>${ammoById(ammoId).name}</option>`,
+                  `<option value="${ammoId}"${entry.ammoId === ammoId ? " selected" : ""}>${localisedAmmo(ammoId, t).name}</option>`,
               )
               .join("")}
           </select>
         </label>
       </div>
       <div class="battery-meta">
-        <span>${piece.provenance === "R6" ? "Dato R6" : piece.provenance} · alcance ${piece.rangeM} m</span>
-        <span>${fmtInt.format(entry.qty * entry.shotsPerPiece)} disparos</span>
+        <span>${t("shipyard.battery.meta", { source, range: piece.rangeM })}</span>
+        <span>${t("shipyard.battery.rounds", { value: fmtInt.format(entry.qty * entry.shotsPerPiece) })}</span>
       </div>
     `;
 
@@ -355,14 +362,15 @@ function renderCrew() {
     const qty = state.crew[role.id] ?? 0;
     const row = document.createElement("div");
     row.className = "crew-row";
+    const roleText = localisedCrewRole(role, t);
     row.innerHTML = `
       <div>
-        <h4>${role.name}</h4>
-        <p>${role.description}</p>
-        <p>${gold(role.hireGold)} doblones al contratar · ${fmtOne.format(role.wageGoldPerDay)} al día</p>
+        <h4>${roleText.name}</h4>
+        <p>${roleText.description}</p>
+        <p>${t("shipyard.crewTerms", { hire: gold(role.hireGold), wage: fmtOne.format(role.wageGoldPerDay) })}</p>
       </div>
       <label>
-        <span>Cantidad</span>
+        <span>${t("shipyard.battery.qty")}</span>
         <input type="number" min="0" max="400" step="1" value="${qty}" data-role="${role.id}" />
       </label>
     `;
@@ -509,11 +517,11 @@ function renderStats(ship) {
   const { budget, hull } = ship;
   els.statDraft.textContent = `${fmtTwo.format(budget.draftM)} m`;
   els.statDraft.classList.toggle("bad", budget.draftM > hull.draftRefM + 0.9);
-  els.statSpeed.textContent = `${fmtTwo.format(budget.speedKn)} nudos`;
+  els.statSpeed.textContent = t("sail.knots", { value: fmtTwo.format(budget.speedKn) });
   els.statLoad.textContent = `${fmtOne.format(budget.loadFraction * 100)} %`;
   els.statCargoRoom.textContent = kg(Math.max(budget.cargoMaxKg, 0));
   els.statCargoRoom.classList.toggle("bad", budget.cargoMaxKg < 0);
-  els.statPeople.textContent = `${fmtInt.format(budget.people)} personas`;
+  els.statPeople.textContent = t("sail.peopleCount", { value: fmtInt.format(budget.people) });
   els.statUpkeep.textContent = t("shipyard.upkeepPerDay", { value: fmtOne.format(ship.upkeep) });
 }
 
@@ -521,6 +529,8 @@ function renderGuns(ship) {
   els.gunsBabor.textContent = String(ship.guns.sides.babor);
   els.gunsEstribor.textContent = String(ship.guns.sides.estribor);
   els.gunsTotal.textContent = String(ship.guns.total);
+  const swivels = ship.guns.sides.swivel;
+  els.gunsSwivel.textContent = swivels > 0 ? t("shipyard.swivels", { count: swivels }) : "";
   els.gunsBaborMax.textContent = `/ ${ship.hull.maxPiecesPerSide}`;
   els.gunsEstriborMax.textContent = `/ ${ship.hull.maxPiecesPerSide}`;
 }
@@ -676,19 +686,36 @@ function drawShip(ship) {
   drawRow(sides.babor, cy + halfBeam * 0.34, 1);
   drawRow(sides.estribor, cy - halfBeam * 0.34, -1);
 
+  // swivels ride the rail on the centre line: a pivot post, not a gun port (S20)
+  for (let i = 0; i < sides.swivel; i += 1) {
+    const frac = sides.swivel === 1 ? 0.5 : i / (sides.swivel - 1);
+    const x = startX + usable * frac;
+    ctx.beginPath();
+    ctx.arc(x, cy, Math.max(2.5, portSize * 0.45), 0, Math.PI * 2);
+    ctx.fillStyle = "#b8860b";
+    ctx.fill();
+    ctx.strokeStyle = "#1c1c1c";
+    ctx.lineWidth = 1;
+    ctx.stroke();
+  }
+
   // side labels
   ctx.font = "600 11px ui-sans-serif, system-ui, sans-serif";
   ctx.fillStyle = "rgba(23,54,93,0.75)";
   ctx.textAlign = "left";
-  ctx.fillText(`BABOR ${sides.babor}`, 10, cssHeight - 22);
+  ctx.fillText(t("shipyard.canvasBabor", { count: sides.babor }), 10, cssHeight - 22);
   ctx.textAlign = "right";
-  ctx.fillText(`ESTRIBOR ${sides.estribor}`, cssWidth - 10, 18);
+  ctx.fillText(t("shipyard.canvasEstribor", { count: sides.estribor }), cssWidth - 10, 18);
+  if (sides.swivel > 0) {
+    ctx.textAlign = "center";
+    ctx.fillText(t("shipyard.canvasSwivel", { count: sides.swivel }), cssWidth / 2, cssHeight - 22);
+  }
 
   // draft marker
   ctx.textAlign = "left";
   ctx.fillStyle = "rgba(16,22,31,0.6)";
   ctx.font = "11px ui-sans-serif, system-ui, sans-serif";
-  ctx.fillText(`${fmtTwo.format(ship.budget.draftM)} m de calado`, 10, 18);
+  ctx.fillText(t("shipyard.canvasDraft", { value: fmtTwo.format(ship.budget.draftM) }), 10, 18);
 }
 
 /* ---------------------------------------------------------------- render */
@@ -763,7 +790,7 @@ function launch() {
       <div><dt>${t("sail.draft")}</dt><dd>${fmtTwo.format(ship.budget.draftM)} m</dd></div>
       <div><dt>${t("sail.speed")}</dt><dd>${t("sail.knots", { value: fmtTwo.format(ship.budget.speedKn) })}</dd></div>
       <div><dt>${t("sail.people")}</dt><dd>${t("sail.peopleCount", { value: fmtInt.format(ship.budget.people) })}</dd></div>
-      <div><dt>${t("sail.guns")}</dt><dd>${t("sail.gunsDetail", { total: ship.guns.total, babor: ship.guns.sides.babor, estribor: ship.guns.sides.estribor })}</dd></div>
+      <div><dt>${t("sail.guns")}</dt><dd>${t(ship.guns.sides.swivel > 0 ? "sail.gunsDetailSwivel" : "sail.gunsDetail", { total: ship.guns.total, babor: ship.guns.sides.babor, estribor: ship.guns.sides.estribor, swivel: ship.guns.sides.swivel })}</dd></div>
       <div><dt>${t("sail.provisions")}</dt><dd>${t("sail.days", { days: state.days })}</dd></div>
       <div><dt>${t("sail.cargo")}</dt><dd>${kg(state.cargoKg)}</dd></div>
       <div><dt>${t("sail.cost")}</dt><dd>${t("sail.doblones", { value: gold(ship.price.total) })}</dd></div>
@@ -789,10 +816,12 @@ els.addBattery.addEventListener("click", () => {
   const pieceId = els.pieceSelect.value;
   const piece = pieceById(pieceId);
   if (!piece) return;
-  const side = state.batteries.filter((b) => b.side === "babor").length
-    <= state.batteries.filter((b) => b.side === "estribor").length
-    ? "babor"
-    : "estribor";
+  const side = piece.swivel
+    ? "swivel"
+    : state.batteries.filter((b) => b.side === "babor").length
+        <= state.batteries.filter((b) => b.side === "estribor").length
+      ? "babor"
+      : "estribor";
   state.batteries.push({
     pieceId,
     qty: 2,

@@ -1236,3 +1236,19 @@ input[type="number"] {
     bottom: 200px;
   }
 }
+
+/* ---------- swivel guns (S20) ---------- */
+
+.gun-swivel {
+  display: block;
+  min-height: 1em;
+  font-size: 10.5px;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--gold);
+}
+
+.battery select:disabled {
+  opacity: 0.85;
+  cursor: default;
+}

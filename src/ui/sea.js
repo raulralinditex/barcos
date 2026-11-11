@@ -846,7 +846,10 @@ function updateHud() {
   els.hull.textContent = `${fmtInt.format(condition.hull)} %`;
   els.rigging.textContent = `${fmtInt.format(condition.rigging)} %`;
   els.crew.textContent = `${fmtInt.format(condition.crew)} %`;
-  els.rounds.textContent = `${fmtInt.format(roundsLeft("babor"))}/${fmtInt.format(roundsLeft("estribor"))}`;
+  const swivelRounds = roundsLeft("swivel");
+  els.rounds.textContent =
+    `${fmtInt.format(roundsLeft("babor"))}/${fmtInt.format(roundsLeft("estribor"))}` +
+    (swivelRounds > 0 ? ` · ${t("sea.roundsSwivel", { count: fmtInt.format(swivelRounds) })}` : "");
 }
 
 /** Rounds still in the racks of one side. */
