@@ -54,9 +54,11 @@ const dialogStats = await page.locator(".sail-stats div").count();
 await page.screenshot({ path: "/tmp/shipyard-dialog.png" });
 
 const stored = await page.evaluate(() => {
-  const raw = localStorage.getItem("barcos:current-ship:v1");
+  const raw = localStorage.getItem("barcos:fleet:v1");
   if (!raw) return null;
-  const ship = JSON.parse(raw);
+  const fleet = JSON.parse(raw);
+  const ship = fleet.ships.find((s) => s.id === fleet.captainId) ?? fleet.ships[0];
+  if (!ship) return null;
   return { name: ship.name, hullId: ship.hullId, guns: ship.guns, speedKn: +ship.speedKn.toFixed(2) };
 });
 

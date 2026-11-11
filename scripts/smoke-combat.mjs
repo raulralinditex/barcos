@@ -71,7 +71,12 @@ page.on("pageerror", (err) => errors.push(`pageerror: ${err.message}`));
 
 await page.addInitScript(
   ([shipJson, worldJson]) => {
-    localStorage.setItem("barcos:current-ship:v1", shipJson);
+    // The fleet is the source of truth: seed it with this one hull as captain.
+    const ship = JSON.parse(shipJson);
+    localStorage.setItem(
+      "barcos:fleet:v1",
+      JSON.stringify({ v: 1, ships: [ship], captainId: ship.id }),
+    );
     localStorage.setItem(
       "barcos:game:v1",
       JSON.stringify({ gold: 5000, world: worldJson }),
@@ -117,22 +122,13 @@ const hullBefore = await targetHull();
 let hullAfter = hullBefore;
 
 // Fire on the broadside cadence and watch for the real outcome: the wreck the
-// defeated corsair leaves in the saved world. A beaten enemy strikes its sails
-// and runs (COMBAT.fleeHullPct), so the player has to keep way on and steer to
-// stay in arc — otherwise the fight simply never resolves, which is the point.
+// defeated corsair leaves in the saved world. The player holds station so the
+// check is about gunnery, not about whether a scripted pilot can out-sail the AI.
 let wreck = null;
-for (let i = 0; i < 120 && !wreck; i += 1) {
-  await page.keyboard.press("w"); // steerage way
-  await page.keyboard.press("e"); // starboard battery
-  await page.waitForTimeout(400);
-  // hunt: turn toward the enemy whenever the panel shows it outside the arc
-  const inArc = await targetPanel();
-  if (!inArc) {
-    await page.keyboard.down("d");
-    await page.waitForTimeout(300);
-    await page.keyboard.up("d");
-  }
-  if (inArc) hullAfter = await targetHull();
+for (let i = 0; i < 150 && !wreck; i += 1) {
+  await page.keyboard.press("e");
+  await page.waitForTimeout(900);
+  if (await targetPanel()) hullAfter = await targetHull();
   const found = (await savedEncounters()).find((e) => e.type === "wreck");
   if (found) wreck = found;
 }
