@@ -19,6 +19,8 @@ import { minimumShipPrice, priceShip } from "../model/economy.js";
 import { buildShip, toRuntimeShip } from "../model/shipyard.js";
 
 const STORAGE_KEY = "barcos:config:v1";
+const GAME_KEY = "barcos:game:v1";
+const SHIP_KEY = "barcos:current-ship:v1";
 
 /**
  * The shipyard opens with a ship the 12,000 budget actually buys, so the player can
@@ -146,6 +148,16 @@ function loadConfig() {
     if (typeof saved.shipName === "string") state.shipName = saved.shipName;
   } catch {
     /* a corrupted save must never block the shipyard */
+  }
+}
+
+/** The purse is shared with the sea screen: treasure earned out there buys here. */
+function loadGold() {
+  try {
+    const game = JSON.parse(localStorage.getItem(GAME_KEY));
+    if (game && Number.isFinite(game.gold)) state.gold = game.gold;
+  } catch {
+    /* keep the starting purse */
   }
 }
 
@@ -661,11 +673,19 @@ function launch() {
   const name = state.shipName.trim() || defaultShipName(ship.hull);
   const runtime = toRuntimeShip(ship, { name });
 
+  // The launching is the purchase: charge the purse and start a fresh voyage state
+  // (a new hull sails a new sea; the old position belonged to the previous ship).
+  state.gold -= ship.price.total;
+
   try {
-    localStorage.setItem("barcos:current-ship:v1", JSON.stringify(runtime));
+    localStorage.setItem(SHIP_KEY, JSON.stringify(runtime));
+    localStorage.setItem(GAME_KEY, JSON.stringify({ gold: state.gold }));
   } catch {
     /* the ship still exists in memory for this session */
   }
+
+  renderPrice(ship);
+  els.goldValue.textContent = gold(state.gold);
 
   els.sailTitle.textContent = `${name} — ${ship.hull.name}`;
   els.sailBody.innerHTML = `
@@ -683,7 +703,7 @@ function launch() {
       <div><dt>Mercancía</dt><dd>${kg(state.cargoKg)}</dd></div>
       <div><dt>Coste</dt><dd>${gold(ship.price.total)} doblones</dd></div>
       <div><dt>Mantenimiento</dt><dd>${fmtOne.format(ship.upkeep)} al día</dd></div>
-      <div><dt>Resto de la bolsa</dt><dd>${gold(state.gold - ship.price.total)} doblones</dd></div>
+      <div><dt>Resto de la bolsa</dt><dd>${gold(state.gold)} doblones</dd></div>
     </dl>
     <p>${
       ship.warnings.length
@@ -749,12 +769,24 @@ document.querySelectorAll(".tab").forEach((tab) => {
 els.launchBtn.addEventListener("click", launch);
 els.sailBack.addEventListener("click", () => els.sailDialog.close());
 els.sailGo.addEventListener("click", () => {
-  // The sailing phase (T6/T7) reads barcos:current-ship:v1. Until it exists, say so
-  // instead of pretending the ship sailed somewhere.
-  els.sailBody.innerHTML = `<p>El casco está en el agua y la partida guardada. La navegación y el combate son la siguiente etapa del juego.</p>`;
-  els.sailGo.disabled = true;
-  els.sailGo.textContent = "Próximamente";
+  saveConfig();
+  window.location.href = "./sea.html";
 });
+
+/** If a ship is already in the water (another session), offer sailing it directly. */
+function offerExistingShip() {
+  try {
+    const ship = JSON.parse(localStorage.getItem(SHIP_KEY));
+    if (!ship || !ship.name) return;
+    const link = document.createElement("a");
+    link.className = "btn";
+    link.href = "./sea.html";
+    link.textContent = `⚓ Zarpar con ${ship.name}`;
+    els.launchBtn.parentElement.appendChild(link);
+  } catch {
+    /* no existing ship */
+  }
+}
 
 window.addEventListener("resize", () => {
   if (lastShip) drawShip(lastShip);
@@ -763,7 +795,9 @@ window.addEventListener("resize", () => {
 /* ---------------------------------------------------------------- boot */
 
 loadConfig();
+loadGold();
 renderHulls();
 renderPieceSelect();
 if (state.shipName) els.shipName.value = state.shipName;
 render();
+offerExistingShip();

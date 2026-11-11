@@ -1,0 +1,38 @@
+<!doctype html>
+<html lang="es">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>En el mar — Juego de barcos</title>
+    <link rel="stylesheet" href="./src/ui/styles.css" />
+  </head>
+  <body class="sea-body">
+    <canvas id="sea-canvas"></canvas>
+
+    <div class="hud hud-ship">
+      <div class="hud-title" id="hud-ship-name">—</div>
+      <dl class="hud-grid">
+        <div><dt>Doblones</dt><dd id="hud-gold">0</dd></div>
+        <div><dt>Zona</dt><dd id="hud-zone">—</dd></div>
+        <div><dt>Velamen</dt><dd id="hud-throttle">0 %</dd></div>
+        <div><dt>Velocidad</dt><dd id="hud-speed">0 kn</dd></div>
+        <div><dt>Rumbo</dt><dd id="hud-heading">000°</dd></div>
+        <div><dt>Casco</dt><dd id="hud-hull">100 %</dd></div>
+      </dl>
+    </div>
+
+    <div class="hud hud-actions">
+      <a class="btn btn-sea" href="./index.html">⚓ Volver al astillero</a>
+      <div class="hud-help">
+        <strong>W / S</strong> velamen · <strong>A / D</strong> timón<br />
+        Buscá los destellos de oro y evitá las velas hostiles
+      </div>
+    </div>
+
+    <canvas id="minimap" width="170" height="170"></canvas>
+
+    <div id="banner" class="sea-banner" aria-live="polite"></div>
+
+    <script type="module" src="./src/ui/sea.js"></script>
+  </body>
+</html>
