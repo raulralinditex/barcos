@@ -1,0 +1,26 @@
+.gitignore
+  s_53bc4371ebd20f::t_f5181baa3358b5 3
+scripts/smoke-combat.mjs
+  s_53bc4371ebd20f::t_bcb506a6317c0f 5,7,11,142-145,154-158,162,168,170-173
+  s_53bc4371ebd20f::t_172f4f01643a59 8-10,12-18,23,25-26,28,35,38,85-106,108-117,139,146-152,159-161,163,174
+  s_53bc4371ebd20f::t_11e9b65f5b8f33 120-122,131,133-134
+  s_53bc4371ebd20f::t_96f50f8b35ff14 1-4,6,19-22,24,27,29-34,36-37,39-84,107,138,140-141,169
+  s_53bc4371ebd20f::t_f2d879b7e0cbcc 118-119,123,136-137,153,164-167
+  s_53bc4371ebd20f::t_cc66009fc78c14 124-130,132,135
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.6",
+  "base_commit_sha": "3742a498b50a4c09a6a0a257665be13ce81041c5",
+  "prompts": {},
+  "sessions": {
+    "s_53bc4371ebd20f": {
+      "agent_id": {
+        "tool": "pi",
+        "id": "01a1cb5e-c63a-70e3-b958-abe976add528",
+        "model": "deepseek-v4.1-flash_high"
+      },
+      "human_author": "Raul Ripoll <raulral@ext.inditex.com>"
+    }
+  }
+}
