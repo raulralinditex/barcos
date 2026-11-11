@@ -1,0 +1,29 @@
+src/ui/styles.css
+  s_53bc4371ebd20f::t_16c76d32612bc7 1165-1238
+src/i18n/es.js
+  s_53bc4371ebd20f::t_68527da5c884d7 133-140
+src/ui/sea.js
+  s_53bc4371ebd20f::t_746c41cd86b68b 766-767,769,797,806,814-827
+  s_53bc4371ebd20f::t_7358b9c8600afa 11,61-62,722-765,768,770-796,798-805,807-813,828-830,910
+sea.html
+  s_53bc4371ebd20f::t_95aa15567802c0 58-59
+  s_53bc4371ebd20f::t_d7d090c68bf625 50-57,60-62
+src/i18n/en.js
+  s_53bc4371ebd20f::t_68527da5c884d7 136-143
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.6",
+  "base_commit_sha": "eecea7bf873dc61032437ce449fe2f28ba38e383",
+  "prompts": {},
+  "sessions": {
+    "s_53bc4371ebd20f": {
+      "agent_id": {
+        "tool": "pi",
+        "id": "01a1cb5e-c63a-70e3-b958-abe976add528",
+        "model": "kimi-k3"
+      },
+      "human_author": "Raul Ripoll <raulral@ext.inditex.com>"
+    }
+  }
+}
