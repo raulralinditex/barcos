@@ -10,6 +10,7 @@
  */
 
 import { ZONES, HULLS } from "../data/naval-data.js";
+import { escortStation, stepEscort } from "./formation.js";
 import { referenceSpeedKn } from "./ship-model.js";
 import { windAt, windEffect } from "./wind.js";
 
@@ -27,15 +28,103 @@ export const WORLD = {
   /** Encounters appear inside a ring at this distance from the ship. */
   spawnRadiusM: 2600,
   despawnRadiusM: 3400,
+  /**
+   * Past this distance a ship in combat gives up the chase (S58). It sits well outside
+   * the engage radius, so a fight cannot flicker on and off at the edge.
+   */
+  disengageRadiusM: 4600,
+  /**
+   * A sail that was in combat and gave up the chase is forgotten much later than a
+   * passing one (S58): it is not erased the instant it disengages, which is exactly
+   * what read as "the enemy forgot me".
+   */
+  disengagedDespawnRadiusM: 10200,
   /** Base treasure value before the zone loot factor, in gold. */
   treasureBaseGold: [50, 100],
+  /**
+   * Water around the home port that no hostile may enter (S66). The port itself is
+   * 110 m; the zone is wide enough to cover the approach, so a player can repair and
+   * resupply without a fight parked on the quay.
+   */
+  safeZoneM: 300,
 };
+
+/** The safe zone around the home port, readable on its own (S66). */
+export const SAFE_ZONE = WORLD;
+
+/** Radius of the safe zone right now, reading the live setting (S66). */
+export function safeZoneRadiusM() {
+  const radius = Number(WORLD.safeZoneM);
+  return Number.isFinite(radius) && radius > 0 ? radius : 0;
+}
+
+/**
+ * Whether a position lies inside the safe zone around the home port (S66). The edge
+ * counts as inside, so a hostile cannot park on the line. A broken position fails
+ * closed: an unknown position is never handed protection.
+ */
+export function insideSafeZone(position) {
+  const x = Number(position?.x);
+  const y = Number(position?.y);
+  if (!Number.isFinite(x) || !Number.isFinite(y)) return false;
+  const radius = safeZoneRadiusM();
+  if (radius <= 0) return false;
+  return Math.hypot(x, y) <= radius;
+}
+
+/**
+ * The nearest point outside the safe zone along the bearing from the yard (S66). An
+ * enemy that drifts or is shoved into the zone is put back on its own line out, so it
+ * is pushed the way it came instead of being teleported sideways. A position already
+ * outside, or a broken one, comes back unchanged.
+ */
+export function clampToSafeZone(position) {
+  const x = Number(position?.x);
+  const y = Number(position?.y);
+  if (!Number.isFinite(x) || !Number.isFinite(y)) return position;
+  const radius = safeZoneRadiusM();
+  if (radius <= 0) return position;
+  const distance = Math.hypot(x, y);
+  if (distance >= radius) return position;
+  // At the yard itself there is no bearing to keep: pick due north so the result is a
+  // real point instead of a division by zero.
+  if (distance < 1e-6) return { ...position, x: 0, y: radius };
+  const scale = radius / distance;
+  return { ...position, x: x * scale, y: y * scale };
+}
+
+/**
+ * A spawn point at `distanceM` from the yard on `angle`, never inside the safe zone
+ * (S66). Enemies must appear in open water, so a spawn that would land in the zone is
+ * pushed out to its edge.
+ */
+export function spawnOutsideSafeZone(angle, distanceM) {
+  const distance = Number.isFinite(distanceM) ? Math.max(0, distanceM) : 0;
+  const point = { x: Math.cos(angle) * distance, y: Math.sin(angle) * distance };
+  const radius = safeZoneRadiusM();
+  if (radius <= 0) return point;
+  const current = Math.hypot(point.x, point.y);
+  if (current > radius) return point;
+  // A metre clear of the line, because the edge itself counts as inside: a hostile
+  // parked exactly on it would still be able to fire into the yard.
+  const safeDistance = radius + 1;
+  if (current < 1e-6) return { x: Math.cos(angle) * safeDistance, y: Math.sin(angle) * safeDistance };
+  const scale = safeDistance / current;
+  return { x: point.x * scale, y: point.y * scale };
+}
 
 export const ZONE_BANDS = [
   { id: "costera", maxRadiusM: 1200, encounters: 10, enemyShare: 0.15 },
   { id: "abierto", maxRadiusM: 3200, encounters: 16, enemyShare: 0.45 },
-  { id: "abismo", maxRadiusM: WORLD.radiusM, encounters: 22, enemyShare: 0.6 },
+  // The outer band is the edge of the world. It is resolved at call time instead of
+  // copied here, because the settings screen can change WORLD.radiusM (S33).
+  { id: "abismo", encounters: 22, enemyShare: 0.6, edge: true },
 ];
+
+/** Radius of one band, reading the live world radius for the outermost one. */
+function bandRadius(band) {
+  return band.edge ? WORLD.radiusM : band.maxRadiusM;
+}
 
 /** Hulls an enemy sail can use in each zone; deeper water means harder ships. */
 export const ENEMY_POOLS = {
@@ -69,9 +158,9 @@ const moveToward = (current, target, maxDelta) => {
 /** Zone for a distance from the origin, merging the band tuning with the data table. */
 export function zoneAtRadius(radiusM) {
   const band =
-    ZONE_BANDS.find((b) => radiusM < b.maxRadiusM) ?? ZONE_BANDS[ZONE_BANDS.length - 1];
+    ZONE_BANDS.find((b) => radiusM < bandRadius(b)) ?? ZONE_BANDS[ZONE_BANDS.length - 1];
   const zone = ZONES.find((z) => z.id === band.id);
-  return { ...zone, ...band };
+  return { ...zone, ...band, maxRadiusM: bandRadius(band) };
 }
 
 /**
@@ -80,21 +169,38 @@ export function zoneAtRadius(radiusM) {
  * eases; it never teleports. The wind trims the speed and pushes the hull
  * sideways (S17).
  */
-export function stepShip(ship, input = {}, dt = 0) {
+/**
+ * The one hull physics every ship obeys (S57): the player's, the enemy's and the
+ * escort's. `stepShip` and the enemy AI both call it, so a rule added here reaches
+ * every hull on the sea instead of only the captain's.
+ *
+ * The hull is described by `speedKn` (its own maximum) and `turnFactor` (its share of
+ * the rudder rate, S48). `input.wind` is optional: a ship that feels no wind simply
+ * sails straight.
+ */
+export function stepHull(ship, input = {}, dt = 0) {
   const turn = clamp(input.turn ?? 0, -1, 1);
   const throttle = clamp(input.throttle ?? 0, 0, 1);
   const wind = input.wind ?? null;
 
   // A following wind lets the ship make more way; a head wind holds it back.
-  const speedFactor = wind ? windEffect(wind, ship.heading ?? 0).speedFactor : 1;
-  const targetSpeed = ship.speedKn * throttle * speedFactor;
+  const windFactor = wind ? windEffect(wind, ship.heading ?? 0).speedFactor : 1;
+  // Shredded sails slow the hull (S89). The curve was declared in combat.js since S5 and
+  // nothing applied it, so a dismasted ship sailed as fast as a whole one. It is applied
+  // here, in the one physics every hull obeys (S57), so the rule reaches the player, the
+  // escorts and the enemies alike.
+  const rigFactor = riggingSpeedFactor(input.rigging);
+  const targetSpeed = ship.speedKn * throttle * windFactor * rigFactor;
   const currentSpeedKn = moveToward(
     ship.currentSpeedKn ?? 0,
     targetSpeed,
     ship.speedKn * WORLD.accelerationRate * dt,
   );
 
-  const heading = normalizeAngle((ship.heading ?? 0) + turn * WORLD.maxTurnRate * dt);
+  // The hull's own share of the rudder rate: a heavy hull turns wider (S48). A ship with
+  // no factor on record turns at the base rate, as it always did.
+  const turnFactor = Number.isFinite(ship.turnFactor) && ship.turnFactor > 0 ? ship.turnFactor : 1;
+  const heading = normalizeAngle((ship.heading ?? 0) + turn * WORLD.maxTurnRate * turnFactor * dt);
   const distanceM = currentSpeedKn * KN_TO_MS * WORLD.arcadeScale * dt;
 
   let x = ship.x + Math.cos(heading) * distanceM;
@@ -120,6 +226,25 @@ export function stepShip(ship, input = {}, dt = 0) {
   return { ...ship, x, y, heading, currentSpeedKn };
 }
 
+/**
+ * The share of its speed a hull may still make with the rigging it has left (S89).
+ *
+ * `combatant` is the same shape `combat.js` hands around; anything missing, broken or
+ * absent means a whole rig, because a ship with no combat state has taken no damage. The
+ * curve is the one `speedFactor` in combat.js declares, kept here so the physics stays
+ * pure and does not import the combat model back.
+ */
+export function riggingSpeedFactor(combatant) {
+  const rigging = Number(combatant?.condition?.rigging);
+  if (!Number.isFinite(rigging)) return 1;
+  return 0.3 + 0.7 * (clamp(rigging, 0, 100) / 100);
+}
+
+/** The captain's hull: the shared physics of `stepHull`, nothing of its own (S57). */
+export function stepShip(ship, input = {}, dt = 0) {
+  return stepHull(ship, input, dt);
+}
+
 function spawnOne(rnd, ship, type, zone, id) {
   const angle = rnd() * Math.PI * 2;
   const distance = WORLD.spawnRadiusM * (0.4 + 0.6 * rnd());
@@ -136,6 +261,17 @@ function spawnOne(rnd, ship, type, zone, id) {
     const [min, max] = WORLD.treasureBaseGold;
     const gold = Math.round((min + rnd() * (max - min)) * zone.lootFactor);
     return { id, type, x, y, gold, zoneId: zone.id };
+  }
+
+  // A spawn is never placed inside the safe zone around the shipyard (S66).
+  if (type === "enemy") {
+    const safe = spawnOutsideSafeZone(angle, Math.hypot(x - ship.x, y - ship.y));
+    const point = { x: ship.x + safe.x, y: ship.y + safe.y };
+    if (insideSafeZone(point)) {
+      const pushed = clampToSafeZone(point);
+      x = pushed.x;
+      y = pushed.y;
+    }
   }
 
   const pool = ENEMY_POOLS[zone.id] ?? ENEMY_POOLS.costera;
@@ -175,6 +311,8 @@ export function createWorld(seed, ship, gold = 0) {
       currentSpeedKn: 0,
       speedKn: ship.speedKn ?? 5,
     },
+    /** The rest of the fleet, in formation behind the captain (S36). */
+    escorts: [],
     encounters: [],
   };
   return updateWorld(world, {}, 0);
@@ -189,7 +327,20 @@ export function updateWorld(world, input = {}, dt = 0) {
   const timeS = (world.timeS ?? 0) + dt;
   // The wind the ship feels right now; the caller may override it (tests, replay).
   const wind = input.wind ?? windAt(world.seed, timeS);
-  const ship = stepShip(world.ship, { ...input, wind }, dt);
+  // `rigging` carries the captain's combat state, so her shredded sails slow her too
+  // (S89); a caller that knows nothing about combat sails with a whole rig.
+  const ship = stepShip(world.ship, { ...input, wind, rigging: input.rigging ?? world.playerCombat }, dt);
+
+  // The rest of the fleet keeps its station relative to the captain, each hull with
+  // its own speed, so a slow escort really does fall behind (S36).
+  const escorts = (world.escorts ?? []).map((escort, index) =>
+    stepEscort(
+      escort,
+      escortStation(ship, index),
+      { wind, captainSpeedKn: ship.currentSpeedKn },
+      dt,
+    ),
+  );
   let rngState = world.rngState;
   let nextId = world.nextId;
   const rnd = () => {
@@ -216,6 +367,14 @@ export function updateWorld(world, input = {}, dt = 0) {
       x *= scale;
       y *= scale;
     }
+    // The water around the shipyard is closed to hostiles (S66): a sail that drifts
+    // into it is put back on its own line out and turns away.
+    if (insideSafeZone({ x, y })) {
+      const pushed = clampToSafeZone({ x, y });
+      x = pushed.x;
+      y = pushed.y;
+      heading = normalizeAngle(heading + Math.PI);
+    }
     return { ...encounter, x, y, drift: { ...encounter.drift, heading } };
   });
 
@@ -232,11 +391,34 @@ export function updateWorld(world, input = {}, dt = 0) {
     return true;
   });
 
-  // forget encounters left far behind
-  encounters = encounters.filter(
-    (encounter) =>
-      Math.hypot(encounter.x - ship.x, encounter.y - ship.y) <= WORLD.despawnRadiusM,
-  );
+  // An enemy in combat is not forgotten for being far: it is the one hunting you, and
+  // erasing it mid-fight reads as the sea losing its memory (S58). Past the disengage
+  // radius it gives up the chase instead, releases its combat and goes back to drifting,
+  // so it stays on the sea as a sail that lost you.
+  encounters = encounters.map((encounter) => {
+    if (encounter.type !== "enemy" || !encounter.engaged) return encounter;
+    const distance = Math.hypot(encounter.x - ship.x, encounter.y - ship.y);
+    if (distance <= WORLD.disengageRadiusM) return encounter;
+    const { combat, ...rest } = encounter;
+    return {
+      ...rest,
+      engaged: false,
+      wasEngaged: true,
+      drift: { heading: rest.heading ?? rest.drift?.heading ?? 0, speedKn: rest.drift?.speedKn ?? 1 },
+    };
+  });
+
+  // Forget the sails left far behind. An enemy still in combat is never dropped here:
+  // only the disengage rule above may release it. One that gave up the chase is
+  // forgotten much later, so it is not erased the moment it disengages (S58).
+  encounters = encounters.filter((encounter) => {
+    const distance = Math.hypot(encounter.x - ship.x, encounter.y - ship.y);
+    if (encounter.engaged) return true;
+    const forget = encounter.wasEngaged
+      ? WORLD.disengagedDespawnRadiusM
+      : WORLD.despawnRadiusM;
+    return distance <= forget;
+  });
 
   // keep density matched to the current zone
   const zone = zoneAtRadius(Math.hypot(ship.x, ship.y));
@@ -254,7 +436,7 @@ export function updateWorld(world, input = {}, dt = 0) {
     nextId += 1;
   }
 
-  return { ...world, ship, gold, encounters, rngState, nextId, collected, timeS };
+  return { ...world, ship, escorts, gold, encounters, rngState, nextId, collected, timeS };
 }
 
 /** Nearest encounter of a type, for HUD warnings and minimap blips. */
@@ -282,6 +464,7 @@ export function serializeWorld(world) {
     gold: world.gold,
     timeS: world.timeS ?? 0,
     ship: world.ship,
+    escorts: world.escorts ?? [],
     encounters: world.encounters,
   });
 }
@@ -307,6 +490,17 @@ export function deserializeWorld(json) {
         currentSpeedKn: Number.isFinite(data.ship.currentSpeedKn) ? data.ship.currentSpeedKn : 0,
         speedKn: Number.isFinite(data.ship.speedKn) ? data.ship.speedKn : 5,
       },
+      // A save written before the formation existed has no escorts: it sails with
+      // the captain alone, which is exactly what it did (S39).
+      escorts: Array.isArray(data.escorts)
+        ? data.escorts.filter(
+            (escort) =>
+              escort &&
+              typeof escort.id === "string" &&
+              Number.isFinite(escort.x) &&
+              Number.isFinite(escort.y),
+          )
+        : [],
       encounters: data.encounters,
     };
   } catch {

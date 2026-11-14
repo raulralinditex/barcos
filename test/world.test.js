@@ -10,10 +10,13 @@ import {
   mulberry32,
   nearestEncounter,
   serializeWorld,
+  riggingSpeedFactor,
+  stepHull,
   stepShip,
   updateWorld,
   zoneAtRadius,
 } from "../src/model/world.js";
+import { COMBAT } from "../src/model/combat.js";
 
 const testShip = { speedKn: 8 };
 
@@ -196,4 +199,112 @@ test("S8: a corrupted save yields null instead of a broken sea", () => {
   assert.equal(deserializeWorld("{}"), null);
   assert.equal(deserializeWorld('{"v":1}'), null);
   assert.equal(deserializeWorld('{"v":1,"rngState":1,"gold":10,"ship":{},"encounters":[]}'), null);
+});
+
+/* S58 — an engaged enemy is not erased for being far; it disengages instead. */
+
+const combatant = (overrides = {}) => ({
+  status: "fighting",
+  pieces: [],
+  crew: { artillero: 0, marino: 100, soldado: 50 },
+  crewMin: 10,
+  condition: { hull: 100, rigging: 100, crew: 100, morale: 100 },
+  maxSpeedKn: 5,
+  ...overrides,
+});
+
+const engagedEnemy = (x, y, combat = combatant()) => ({
+  id: 901, type: "enemy", hullId: "patache", x, y, heading: 0, currentSpeedKn: 0,
+  engaged: true, combat, drift: { heading: 0, speedKn: 1 },
+});
+
+const seaWith = (ship, encounters) => ({
+  seed: 42, rngState: 42, nextId: 2000, gold: 0, timeS: 0,
+  ship: { x: ship.x, y: ship.y, heading: 0, speedKn: 8, currentSpeedKn: 0 },
+  escorts: [], encounters,
+});
+
+test("S58: an unengaged sail is still forgotten past the despawn radius", () => {
+  const far = { id: 1, type: "enemy", hullId: "patache", x: 0, y: 5000, heading: 0, currentSpeedKn: 0, drift: { heading: 0, speedKn: 1 } };
+  const world = updateWorld(seaWith({ x: 0, y: 0 }, [far]), {}, 0);
+  assert.equal(world.encounters.some((e) => e.id === 1), false, "a drifting sail left behind is forgotten");
+});
+
+test("S58: an engaged enemy is not erased for being far from the player", () => {
+  const far = engagedEnemy(0, 5000);
+  const world = updateWorld(seaWith({ x: 0, y: 0 }, [far]), {}, 0);
+  const kept = world.encounters.find((e) => e.id === 901);
+  assert.ok(kept, "an enemy in combat must survive the despawn radius");
+});
+
+test("S58: past the disengage radius the enemy gives up the chase but stays in the world", () => {
+  const far = engagedEnemy(0, WORLD.disengageRadiusM + 1);
+  const world = updateWorld(seaWith({ x: 0, y: 0 }, [far]), {}, 0);
+  const kept = world.encounters.find((e) => e.id === 901);
+  assert.ok(kept, "it stays in the world");
+  assert.equal(kept.engaged, false, "it is no longer engaged");
+  assert.equal(kept.combat, undefined, "its combat is released, so it goes back to drifting");
+});
+
+test("S58: inside the disengage radius the chase goes on", () => {
+  const near = engagedEnemy(0, WORLD.disengageRadiusM - 1);
+  const world = updateWorld(seaWith({ x: 0, y: 0 }, [near]), {}, 0);
+  const kept = world.encounters.find((e) => e.id === 901);
+  assert.equal(kept.engaged, true);
+  assert.ok(kept.combat, "it keeps its combat");
+});
+
+test("S58: the disengage radius is larger than the engage radius, so it cannot flicker", () => {
+  // A ship that engaged must not disengage the instant it steps outside the engage radius.
+  assert.ok(
+    WORLD.disengageRadiusM > COMBAT.engageRadiusM,
+    `disengage ${WORLD.disengageRadiusM} must exceed engage ${COMBAT.engageRadiusM}`,
+  );
+});
+
+test("S58: a disengaged enemy drifts again instead of standing still", () => {
+  const far = engagedEnemy(0, WORLD.disengageRadiusM + 1);
+  const first = updateWorld(seaWith({ x: 0, y: 0 }, [far]), {}, 1);
+  const kept = first.encounters.find((e) => e.id === 901);
+  assert.equal(kept.engaged, false);
+  const second = updateWorld(first, {}, 1);
+  const moved = second.encounters.find((e) => e.id === 901);
+  assert.notEqual(moved.x, kept.x, "a sail under drift keeps moving");
+});
+
+test("S58: a defeated enemy is not resurrected by the disengage rule", () => {
+  const sunk = engagedEnemy(0, WORLD.disengageRadiusM + 1, combatant({ status: "sunk", condition: { hull: 0, rigging: 100, crew: 100, morale: 100 } }));
+  const world = updateWorld(seaWith({ x: 0, y: 0 }, [sunk]), {}, 0);
+  const kept = world.encounters.find((e) => e.id === 901);
+  assert.ok(kept, "it is still there for the wreck rule to resolve");
+});
+
+/* ---------------------------------------------------------------- S89: rigging and speed */
+
+test("S89: a shredded rig slows the hull, the same way on every ship", () => {
+  // The rule existed in combat.js since S5 and nothing applied it: `stepHull` computed the
+  // speed from the hull's own maximum and never looked at the rigging, so a dismasted ship
+  // sailed as fast as a whole one. This is the check that the sea actually uses it.
+  const ship = {
+    x: 0, y: 0, heading: 0, currentSpeedKn: 0, speedKn: 10, turnFactor: 1,
+  };
+  const input = { throttle: 1 };
+  const step = (rigging) => {
+    let current = { ...ship };
+    const rig = { condition: { hull: 100, rigging, crew: 100, morale: 100 } };
+    for (let i = 0; i < 400; i += 1) current = stepHull(current, { ...input, rigging: rig }, 0.1);
+    return current.currentSpeedKn;
+  };
+  const whole = step(100);
+  const half = step(50);
+  const shredded = step(0);
+
+  assert.ok(Math.abs(whole - 10) < 0.05, `a whole rig must make the hull's full speed, got ${whole}`);
+  assert.ok(half < whole - 0.5, `half a rig did not cost speed (${whole} -> ${half})`);
+  assert.ok(shredded < half, `a shredded rig must be the slowest (${shredded} vs ${half})`);
+  // The curve is the one combat.js already declares: 0.3 at zero rigging, 1 at full.
+  assert.ok(
+    Math.abs(shredded - 3) < 0.1,
+    `a shredded rig must leave 30 % of the hull's speed, got ${shredded} of ${whole}`,
+  );
 });

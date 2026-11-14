@@ -2084,7 +2084,8 @@ function frame(now) {
 
   const before = goldEarned;
   for (let step = 0; step < ui.timeScale; step += 1) {
-    world = updateWorld(world, gameOver ? {} : readInput(), dt);
+    // The captain's combat state rides along, so her shredded rig slows her (S89).
+    world = updateWorld(world, gameOver ? {} : { ...readInput(), rigging: playerCombat }, dt);
     // The voyage eats the crew's reserve (S67). It runs on the world clock, so a
     // fast-forward burns it faster, exactly like everything else the sea does.
     if (!gameOver) burnVoyageSupply(dt);

@@ -7,7 +7,7 @@
  *  - "E_impacto = 0.5*m*v^2" and "no hay valores históricos 0-100 medidos" -> the
  *    damage scale below is a declared game convention; the damage SPLIT between
  *    hull, rigging and crew comes from the ammunition table (S5).
- *  - "los artilleros ... recargas más lentas" -> gunner shortage slows reloads.
+ *  - S53: living gunners determine available guns and reload acceleration.
  *
  * Time is compressed (COMBAT.timeScale) because a 240 s historical reload is not
  * fun to wait for; distance is NOT compressed (the world model already scales it).
@@ -16,9 +16,11 @@
  * ship-model.js); fire, damage and tick functions mutate them in place.
  */
 
-import { ammoById, hullById, pieceById } from "../data/naval-data.js";
+import { AMMO, ammoById, hullById, pieceById } from "../data/naval-data.js";
 import { referenceSpeedKn } from "./ship-model.js";
-import { mulberry32 } from "./world.js";
+import { mulberry32, stepHull } from "./world.js";
+import { hullTurnFactor } from "./turning.js";
+import { crewedPieces, reloadBonus } from "./gunnery.js";
 
 export const COMBAT = {
   /** Enemies activate and can be engaged within this distance. */
@@ -39,6 +41,21 @@ export const COMBAT = {
    * (S6: deeper water fields heavier hulls).
    */
   referenceArqueo: 166,
+  /** Draw the range circle of each beam (S68). 1 is on, 0 is off; it is a setting. */
+  showRange: 1,
+  /**
+   * What the first broadside of a beam is worth, once the fight has started (S69). The
+   * opening volley is the reward for being ready when the enemy is not: it hits harder
+   * and finds its mark more often. Both are multipliers, never below 1.
+   */
+  openingDamageBonus: 1.25,
+  openingAccuracyBonus: 1.15,
+  /**
+   * How much longer the guns take to reload after a change of round (S70). Switching is
+   * a real act aboard: the racks have to be emptied and refilled, so flipping between
+   * chain shot and iron whenever the range changes is no longer free.
+   */
+  ammoReloadPenalty: 0.25,
   /** Crew damage points needed to kill one crew member. */
   casualtyPoints: 5,
   /** Crew condition at or below this % forces a surrender. */
@@ -51,6 +68,38 @@ export const COMBAT = {
    */
   timeScale: 20,
 };
+
+/**
+ * How hard the enemies of each zone hit, as a multiplier on the damage their guns
+ * deal (S60). Every zone ships at 1, so the curve the game was tuned with is the one
+ * that plays until the player moves a slider. The settings screen owns these values.
+ */
+export const ZONE_DAMAGE = { costera: 1, abierto: 1, abismo: 1 };
+
+/**
+ * What a defeated hull leaves behind (S61). The prize is a share of her catalogue price
+ * plus a flat sum, and then the zone's loot factor. The share is the tuning value; the
+ * flat sum is small enough that a coastal boat still pays for the powder it took to
+ * sink her, and is not worth a slider of its own.
+ */
+export const LOOT = { hullShare: 0.06, flatGold: 50 };
+
+/** The multiplier of a zone, falling back to coastal water for anything unknown. */
+export function zoneDamageFactor(zoneId) {
+  const factor = ZONE_DAMAGE[zoneId];
+  return Number.isFinite(factor) && factor >= 0 ? factor : ZONE_DAMAGE.costera;
+}
+
+/**
+ * What one combatant's guns hit for (S60): its zone's live multiplier. Read at the
+ * moment of firing instead of stored when the fight starts, so a value changed on the
+ * settings screen reaches the next volley without waiting for a new voyage. A
+ * combatant with no zone — the captain, an escort — is never scaled.
+ */
+export function damageFactorOf(combatant) {
+  if (!combatant || !combatant.zoneId) return 1;
+  return zoneDamageFactor(combatant.zoneId);
+}
 
 const clamp = (value, min, max) => Math.min(max, Math.max(min, value));
 const normalizeAngle = (a) => {
@@ -229,19 +278,175 @@ export function createEnemyCombatant(encounter, zone, worldSeed) {
     condition: { hull: 100, rigging: 100, crew: 100, morale: 100 },
     crewDamagePool: 0,
     damageDealt: { babor: 0, estribor: 0 },
+    // The water this enemy hunts in, which decides what its guns hit for (S60).
+    zoneId,
     status: "fighting",
+  };
+}
+
+/* ---------------------------------------------------------------- ammunition choice (S65) */
+
+/**
+ * The rounds the player can call for in the middle of a fight, one per key (S65). Iron
+ * to sink, chain shot to strip the rig, hailshot to clear a deck: the three things a
+ * captain actually chooses between, and the three the catalogue already models.
+ */
+export const AMMO_SWITCH = ["bala-hierro", "cadena", "metralla"];
+
+/** Key to round: the player presses 1, 2 or 3. */
+export const AMMO_KEYS = Object.freeze({
+  "1": "bala-hierro",
+  "2": "cadena",
+  "3": "metralla",
+});
+
+/** The round a key stands for, or null when the key means nothing. */
+export function ammoKeyAmmoId(key) {
+  const name = typeof key === "string" ? key.trim() : "";
+  return Object.prototype.hasOwnProperty.call(AMMO_KEYS, name) ? AMMO_KEYS[name] : null;
+}
+
+/** Whether one gun can actually fire a round: what the piece itself declares. */
+function pieceCarries(pieceId, ammoId) {
+  const piece = pieceById(pieceId);
+  return Boolean(piece && Array.isArray(piece.ammo) && piece.ammo.includes(ammoId));
+}
+
+/**
+ * Load one beam with `ammoId` (S65), the swivels included, because a swivel answers for
+ * whichever beam fires it (S20). Only the guns that can fire the round are switched: a
+ * 32-pounder cannot take chain shot, so she keeps whatever she had, and so does her
+ * reload clock and her rounds. Nothing is spent by switching.
+ *
+ * Returns what happened, so the HUD can say it: how many guns took the round and how
+ * many kept theirs.
+ */
+export function setSideAmmo(combatant, side, ammoId) {
+  const result = { ammoId, switched: 0, kept: 0 };
+  if (!combatant || !Array.isArray(combatant.pieces)) return result;
+  if (!ammoById(ammoId)) return result;
+
+  for (const p of combatant.pieces) {
+    if (p.side !== side && p.side !== "swivel") continue;
+    if (pieceCarries(p.pieceId, ammoId)) {
+      if (p.ammoId !== ammoId) {
+        result.switched += 1;
+        // Changing the round costs reload time on this gun until it fires again (S70).
+        const cost = Number(COMBAT.ammoReloadPenalty);
+        p.ammoPenalty = Number.isFinite(cost) && cost > 0 ? cost : 0;
+      }
+      p.ammoId = ammoId;
+    } else {
+      result.kept += 1;
+    }
+  }
+  return result;
+}
+
+/**
+ * Load every beam that can take the round with `ammoId` (S65): what the key press does
+ * when the player is not choosing a beam. Both sides and the swivels are asked; the guns
+ * that cannot carry the round keep the one they had.
+ */
+export function setBroadsideAmmo(combatant, ammoId) {
+  const result = { ammoId, switched: 0, kept: 0 };
+  if (!combatant || !Array.isArray(combatant.pieces)) return result;
+  if (!ammoById(ammoId)) return result;
+  for (const side of ["babor", "estribor"]) {
+    const one = setSideAmmo(combatant, side, ammoId);
+    result.switched += one.switched;
+    result.kept += one.kept;
+  }
+  // A hull with swivels only would otherwise never see them switched.
+  const swivels = combatant.pieces.filter((p) => p.side === "swivel");
+  if (swivels.length && !combatant.pieces.some((p) => p.side === "babor" || p.side === "estribor")) {
+    for (const p of swivels) {
+      if (pieceCarries(p.pieceId, ammoId)) {
+        if (p.ammoId !== ammoId) result.switched += 1;
+        p.ammoId = ammoId;
+      } else {
+        result.kept += 1;
+      }
+    }
+  }
+  return result;
+}
+
+/** The same as `setBroadsideAmmo`, named for what the key press does. */
+export function chooseAmmo(combatant, ammoId) {
+  return setBroadsideAmmo(combatant, ammoId);
+}
+
+/**
+ * What one beam is loaded with, for the HUD (S65). A beam whose guns do not all carry the
+ * same round reads as mixed, and names the round most of her guns have: after asking for
+ * chain shot, a beam with one 32-pounder left on iron is honestly mixed, not "chain".
+ */
+function describeSide(combatant, side) {
+  const guns = (combatant?.pieces ?? []).filter((p) => p.side === side || p.side === "swivel");
+  if (guns.length === 0) return { id: null, name: "", mixed: false };
+  const counts = new Map();
+  for (const gun of guns) counts.set(gun.ammoId, (counts.get(gun.ammoId) ?? 0) + 1);
+  const [id] = [...counts.entries()].sort((a, b) => b[1] - a[1])[0];
+  return { id, name: ammoById(id)?.name ?? id, mixed: counts.size > 1 };
+}
+
+/** Both beams, for the HUD: what is loaded right now, mixed rounds included (S65). */
+export function describeAmmo(combatant) {
+  return { babor: describeSide(combatant, "babor"), estribor: describeSide(combatant, "estribor") };
+}
+
+/* ---------------------------------------------------------------- the opening volley (S69) */
+
+const clampBonus = (value) => {
+  const numeric = Number(value);
+  return Number.isFinite(numeric) && numeric >= 1 ? numeric : 1;
+};
+
+/**
+ * Mark that a fight has started for this combatant (S69): every beam that has not fired
+ * yet gets its opening bonus back. Called when an enemy is first engaged, so a new fight
+ * is a new opening instead of a bonus that was already spent on the last one.
+ */
+export function markEngaged(combatant) {
+  if (!combatant) return combatant;
+  combatant.engaged = true;
+  combatant.openedFire = { babor: false, estribor: false };
+  return combatant;
+}
+
+/**
+ * What one beam's volley is worth right now (S69): the opening multipliers while the
+ * beam has not fired yet in this engagement, and plain 1s after that. A sunk or struck
+ * ship has no volley to improve.
+ */
+export function openingBonus(combatant, side) {
+  const none = { damage: 1, accuracy: 1 };
+  if (!combatant || combatant.status !== "fighting") return none;
+  if (!combatant.engaged) return none;
+  if (combatant.openedFire?.[side]) return none;
+  return {
+    damage: clampBonus(COMBAT.openingDamageBonus),
+    accuracy: clampBonus(COMBAT.openingAccuracyBonus),
   };
 }
 
 /* ---------------------------------------------------------------- gunnery */
 
-/** Reload multiplier from gunner shortage; Infinity means the guns are silent. */
-export function reloadFactor(combatant) {
-  if (combatant.pieces.length === 0) return 1;
-  const needed = Math.ceil(combatant.pieces.length / 2);
+/**
+ * Reload-time multiplier for this hull (S53, S56).
+ *
+ * The bonus is measured against the **whole crewed battery**, not against the guns
+ * that happen to be reloading at this instant (S56). Measured on the reloading guns
+ * alone, a ship that fires one beam at a time — which is exactly what the enemy AI
+ * does — halves the denominator and collects the maximum bonus for free, without a
+ * single spare gunner. The just-fired guns are still passed in so a caller can say
+ * what it fired, but they no longer narrow the denominator.
+ */
+export function reloadFactor(combatant, justFired = []) {
   const gunners = combatant.crew.artillero ?? 0;
-  if (gunners <= 0) return Infinity;
-  return clamp(needed / gunners, 1, 3);
+  if (gunners <= 0) return combatant.pieces.length ? Infinity : 1;
+  return 1 / reloadBonus(crewedPieces(combatant.pieces, gunners), gunners);
 }
 
 /** Accuracy multiplier from crew condition: a broken crew shoots worse. */
@@ -259,16 +464,70 @@ export function maneuverFactor(combatant) {
   return (combatant.crew.marino ?? 0) >= combatant.crewMin ? 1 : 0.5;
 }
 
-/** Hit probability by distance, from the workbook's effective-range idea (R6). */
-export function hitProbability(piece, distanceM, accuracyMod = 1) {
-  if (distanceM > piece.rangeM) return 0;
-  const x = distanceM / piece.rangeM;
+/**
+ * How far a gun actually carries with the round it is loaded with (S68). The catalogue
+ * has always declared a `rangeFactor` per ammunition — chain shot and hailshot do not
+ * fly as far as iron — but nothing read it, so a gun reached the same distance whatever
+ * it was loaded with. A round the piece cannot fire falls back to its bare range: this
+ * gates and draws range, so it must fail open rather than make a gun useless.
+ */
+export function effectiveRangeM(piece, ammoId) {
+  const base = Number(piece?.rangeM);
+  if (!Number.isFinite(base) || base <= 0) return 0;
+  if (!Array.isArray(piece.ammo) || !piece.ammo.includes(ammoId)) return base;
+  // The declared range is the range with the piece's own round: a verso's 180 m are its
+  // hailshot range, and the catalogue says so. Applying the factor on top would halve
+  // the reach of the very round the datum describes, so the principal round keeps the
+  // bare range and only a different round moves it (S68).
+  if (piece.ammo[0] === ammoId) return base;
+  const factor = Number(ammoById(ammoId)?.rangeFactor);
+  if (!Number.isFinite(factor) || factor <= 0) return base;
+  return base * factor;
+}
+
+/**
+ * Hit probability by distance, from the workbook's effective-range idea (R6). `ammoId`
+ * narrows the range to what that round carries (S68); without it the gun's bare range
+ * is used, which is what the callers that predate the round argument expect.
+ */
+export function hitProbability(piece, distanceM, accuracyMod = 1, ammoId = null) {
+  const range = ammoId ? effectiveRangeM(piece, ammoId) : Number(piece?.rangeM);
+  if (!Number.isFinite(range) || range <= 0) return 0;
+  if (distanceM > range) return 0;
+  const x = distanceM / range;
   return COMBAT.baseAccuracy * (1 - Math.pow(x, 1.6)) * accuracyMod;
 }
 
-/** Damage of one hit, split by the ammunition's declared profile (S5). */
-export function damageRoll(piece, ammo, falloff) {
-  const total = piece.shotKg * ammo.massFactor * COMBAT.damageScale * falloff;
+/**
+ * The range of one beam right now (S68): the shortest gun that can answer for it, with
+ * the round it is actually loaded with. The shortest, not the longest, because a circle
+ * drawn at the longest gun's range would promise a reach half the battery does not have.
+ * The swivels answer for both beams (S20). Zero when the beam has no guns at all.
+ */
+export function sideRangeM(combatant, side) {
+  if (!combatant || !Array.isArray(combatant.pieces)) return 0;
+  let shortest = Infinity;
+  for (const p of combatant.pieces) {
+    if (p.side !== side && p.side !== "swivel") continue;
+    const range = effectiveRangeM(pieceById(p.pieceId), p.ammoId);
+    if (range > 0 && range < shortest) shortest = range;
+  }
+  return Number.isFinite(shortest) ? shortest : 0;
+}
+
+/** The radius to draw for one beam, or 0 when the circle is switched off (S68). */
+export function rangeCircleM(combatant, side) {
+  if (!COMBAT.showRange) return 0;
+  return sideRangeM(combatant, side);
+}
+
+/**
+ * Damage of one hit, split by the ammunition's declared profile (S5), scaled by the
+ * zone's multiplier (S60). `factor` is 1 for the captain and for anything that does not
+ * declare one, so only the enemy's zones can be tuned.
+ */
+export function damageRoll(piece, ammo, falloff, factor = 1) {
+  const total = piece.shotKg * ammo.massFactor * COMBAT.damageScale * falloff * factor;
   return {
     hull: total * ammo.damageSplit.hull,
     rigging: total * ammo.damageSplit.rigging,
@@ -283,14 +542,15 @@ export function damageRoll(piece, ammo, falloff) {
  */
 export function firingPieces(combatant, side, distanceM) {
   if (combatant.status !== "fighting") return [];
-  if (!Number.isFinite(reloadFactor(combatant))) return [];
+  const available = new Set(crewedPieces(combatant.pieces, combatant.crew.artillero ?? 0));
   return combatant.pieces.filter((p) => {
+    if (!available.has(p)) return false;
     const piece = pieceById(p.pieceId);
     return (
       (p.side === side || p.side === "swivel") &&
       p.reloadTimer <= 0 &&
       p.shotsLeft > 0 &&
-      piece.rangeM >= distanceM
+      effectiveRangeM(piece, p.ammoId) >= distanceM
     );
   });
 }
@@ -304,17 +564,25 @@ export function fireBroadside(combatant, side, distanceM, rnd) {
   const volley = [];
   if (pieces.length === 0) return { combatant, volley };
 
-  const factor = reloadFactor(combatant);
+  const factor = reloadFactor(combatant, pieces);
   const accuracy = accuracyModifier(combatant);
+  // The first volley of a beam after engaging is the opening one (S69): harder hitting
+  // and better aimed, and it is spent by firing.
+  const opening = openingBonus(combatant, side);
   let landed = 0;
   for (const p of pieces) {
     const piece = pieceById(p.pieceId);
-    p.reloadTimer = (piece.reloadS * factor) / COMBAT.timeScale;
+    // A gun that changed round reloads more slowly until it fires again (S70).
+    const penalty = 1 + Math.max(0, Number(p.ammoPenalty) || 0);
+    p.reloadTimer = (piece.reloadS * factor * penalty) / COMBAT.timeScale;
+    p.ammoPenalty = 0;
     p.shotsLeft -= 1;
 
-    const hit = rnd() < hitProbability(piece, distanceM, accuracy);
-    const falloff = 1 - 0.5 * (distanceM / piece.rangeM);
-    const damage = hit ? damageRoll(piece, ammoById(p.ammoId), falloff) : null;
+    const hit = rnd() < Math.min(1, hitProbability(piece, distanceM, accuracy * opening.accuracy, p.ammoId));
+    const falloff = 1 - 0.5 * (distanceM / effectiveRangeM(piece, p.ammoId));
+    const damage = hit
+      ? damageRoll(piece, ammoById(p.ammoId), falloff, damageFactorOf(combatant) * opening.damage)
+      : null;
     if (damage) landed += damage.hull + damage.rigging + damage.crew;
     volley.push({
       pieceId: p.pieceId,
@@ -325,6 +593,9 @@ export function fireBroadside(combatant, side, distanceM, rnd) {
       distanceM,
     });
   }
+  // Firing spends this beam's opening bonus (S69), so the next volley is a plain one.
+  if (!combatant.openedFire) combatant.openedFire = { babor: false, estribor: false };
+  combatant.openedFire[side] = true;
   // The floating bars read what each beam has actually put into the enemy (S21).
   if (!combatant.damageDealt) combatant.damageDealt = { babor: 0, estribor: 0 };
   combatant.damageDealt[side] = (combatant.damageDealt[side] ?? 0) + landed;
@@ -338,7 +609,8 @@ export function fireBroadside(combatant, side, distanceM, rnd) {
  * bolted to a side and answer for whichever beam fires them (S20).
  */
 export function sidePieces(combatant, side) {
-  return combatant.pieces.filter((p) => p.side === side || p.side === "swivel");
+  const available = new Set(crewedPieces(combatant.pieces, combatant.crew.artillero ?? 0));
+  return combatant.pieces.filter((p) => available.has(p) && (p.side === side || p.side === "swivel"));
 }
 
 /**
@@ -360,9 +632,9 @@ function expectedVolley(combatant, guns, distanceM) {
     const piece = pieceById(p.pieceId);
     const ammo = ammoById(p.ammoId);
     if (!ammo) return sum;
-    const falloff = 1 - 0.5 * (distanceM / piece.rangeM);
-    const damage = damageRoll(piece, ammo, falloff);
-    const expected = hitProbability(piece, distanceM, accuracy);
+    const falloff = 1 - 0.5 * (distanceM / effectiveRangeM(piece, p.ammoId));
+    const damage = damageRoll(piece, ammo, falloff, damageFactorOf(combatant));
+    const expected = hitProbability(piece, distanceM, accuracy, p.ammoId);
     return sum + expected * (damage.hull + damage.rigging + damage.crew);
   }, 0);
 }
@@ -373,7 +645,6 @@ function expectedVolley(combatant, guns, distanceM) {
  * lucky roll, so the bar does not flicker (S21).
  */
 export function readyDamage(combatant, side, distanceM) {
-  if (!Number.isFinite(reloadFactor(combatant))) return 0;
   return expectedVolley(combatant, firingPieces(combatant, side, distanceM), distanceM);
 }
 
@@ -386,9 +657,8 @@ export function readyDamage(combatant, side, distanceM) {
  */
 export function sideCapacity(combatant, side, distanceM) {
   if (combatant.status !== "fighting") return 0;
-  if (!Number.isFinite(reloadFactor(combatant))) return 0;
   const guns = sidePieces(combatant, side).filter(
-    (p) => p.shotsLeft > 0 && pieceById(p.pieceId).rangeM >= distanceM,
+    (p) => p.shotsLeft > 0 && effectiveRangeM(pieceById(p.pieceId), p.ammoId) >= distanceM,
   );
   return expectedVolley(combatant, guns, distanceM);
 }
@@ -426,6 +696,18 @@ function applyCasualties(combatant, count) {
     0,
     Math.round((100 * totalPeople(combatant.crew)) / combatant.initialCrew),
   );
+}
+
+/**
+ * Bring a combatant's status in line with its condition. Restoring a saved voyage
+ * copies condition and crew straight onto the combatant, so a hull that went down on
+ * the last trip would otherwise come back "fighting" with zero hull (S36).
+ */
+export function refreshStatus(combatant) {
+  if (!combatant || !combatant.condition) return combatant;
+  if (combatant.status && combatant.status !== "fighting") return combatant;
+  updateStatus(combatant);
+  return combatant;
 }
 
 function updateStatus(combatant) {
@@ -467,11 +749,16 @@ export function tickCombatant(combatant, dt) {
   return combatant;
 }
 
-/** Gold in a defeated enemy's wreck, scaled by hull value and zone loot. */
+/**
+ * Gold in a defeated enemy's wreck, scaled by hull value and zone loot (S61). The hull's
+ * share is the tuning value, so the settings screen can make prizes richer or poorer
+ * without a new voyage.
+ */
 export function wreckPrize(encounter, zone) {
   const hull = hullById(encounter.hullId);
   const loot = zone?.lootFactor ?? 1;
-  return Math.round(((hull?.priceGold ?? 500) * 0.06 + 50) * loot);
+  const share = Number.isFinite(LOOT.hullShare) && LOOT.hullShare >= 0 ? LOOT.hullShare : 0.06;
+  return Math.round(((hull?.priceGold ?? 500) * share + LOOT.flatGold) * loot);
 }
 
 /* ---------------------------------------------------------------- enemy AI */
@@ -486,7 +773,7 @@ export function preferredRange(enemy) {
  * One AI tick: approach, hold the broadside band, flee when beaten. Returns the
  * updated enemy position/heading plus any volley fired at the player.
  */
-export function aiStep(enemy, playerPos, dt, rnd) {
+export function aiStep(enemy, playerPos, dt, rnd, { wind = null } = {}) {
   const combat = enemy.combat;
   if (!combat || combat.status !== "fighting") {
     return { enemy: { ...enemy, currentSpeedKn: 0 }, volley: [] };
@@ -521,17 +808,19 @@ export function aiStep(enemy, playerPos, dt, rnd) {
     }
   }
 
-  // integrate movement (same convention as the world model, enemies keep their own)
-  const currentSpeedKn =
-    Math.abs((enemy.currentSpeedKn ?? 0) - maxSpeed * throttle) < maxSpeed * 0.25 * dt
-      ? maxSpeed * throttle
-      : (enemy.currentSpeedKn ?? 0) +
-        Math.sign(maxSpeed * throttle - (enemy.currentSpeedKn ?? 0)) * maxSpeed * 0.25 * dt;
+  // A crew below the hull's minimum answers the helm poorly, the enemy included (S57).
+  turn *= maneuverFactor(combat);
 
-  const heading = normalizeAngle(enemy.heading + turn * 0.55 * dt);
-  const KN = 1852 / 3600;
-  const x = enemy.x + Math.cos(heading) * currentSpeedKn * KN * 12 * dt;
-  const y = enemy.y + Math.sin(heading) * currentSpeedKn * KN * 12 * dt;
+  // The enemy hull moves with the same physics as the player's (S57): one shared
+  // function decides the heading, the speed and the drift, so the two can never drift
+  // apart again. Its own hull's turn factor is included, as it is for the captain (S48).
+  const stepped = stepHull(
+    { ...enemy, speedKn: combat.maxSpeedKn, turnFactor: hullTurnFactor(enemy.hullId) },
+    // Her own rigging, not the player's: a dismasted enemy is slow too (S89).
+    { turn, throttle, wind, rigging: combat },
+    dt,
+  );
+  const { x, y, heading, currentSpeedKn } = stepped;
 
   // fire after moving, on the side that now bears
   const newDistance = Math.hypot(playerPos.x - x, playerPos.y - y);
