@@ -1,0 +1,51 @@
+test/formation.test.js
+  s_fbb00885ed79f8::t_8c64b54f766821 97
+  s_fbb00885ed79f8::t_510e3138e15571 1-21,28-57,62,67-83,99-144,146-177
+  s_fbb00885ed79f8::t_88c15c66f7b9d4 58-61,63-66,84-86,89-90,96
+  s_0db9c2d8e2c71c::t_bdca983b24e5a8 22-27
+  s_fbb00885ed79f8::t_792ef53354bd26 87-88,91-95,98,145
+odd/tasks/flota-en-formacion.md
+  s_fbb00885ed79f8::t_6b07fff5d13120 3,29-32,41-51
+  s_273470a569a5b8::t_38ee69bdd018b3 52-59
+  s_fbb00885ed79f8::t_2ab62a8f14e7c9 1-2,4-28,33-40
+src/model/formation.js
+  s_fbb00885ed79f8::t_725d711345b5b8 1-25,31-90,95,97,99-100,103-105,108-149,153,157,162-180
+  s_fbb00885ed79f8::t_d706b5ceaa6dc0 26-30,154-156,158-161
+  s_273470a569a5b8::t_58e13402e9222a 106-107,150-152
+  s_fbb00885ed79f8::t_792ef53354bd26 91-94,96,98,101-102
+scripts/smoke-visible-escorts.mjs
+  s_273470a569a5b8::t_0dd5d9695d51eb 1-45,47-107
+  s_273470a569a5b8::t_f44f2ceb635a7f 46
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.6",
+  "base_commit_sha": "63c97c3bd0078a49f54e86a4e5f1e703e1fb15fa",
+  "prompts": {},
+  "sessions": {
+    "s_0db9c2d8e2c71c": {
+      "agent_id": {
+        "tool": "pi",
+        "id": "01a1cd18-6116-74d7-91e7-f855b80408a8",
+        "model": "deepseek-v4.1-flash"
+      },
+      "human_author": "Raul Ripoll <raulral@ext.inditex.com>"
+    },
+    "s_273470a569a5b8": {
+      "agent_id": {
+        "tool": "pi",
+        "id": "01a1d098-627b-7272-80a7-a39aba728357",
+        "model": "claude-sonnet-5.5"
+      },
+      "human_author": "Raul Ripoll <raulral@ext.inditex.com>"
+    },
+    "s_fbb00885ed79f8": {
+      "agent_id": {
+        "tool": "pi",
+        "id": "01a1ccee-391a-73a4-b55a-66013b3f51e8",
+        "model": "claude-sonnet-5.5"
+      },
+      "human_author": "Raul Ripoll <raulral@ext.inditex.com>"
+    }
+  }
+}
