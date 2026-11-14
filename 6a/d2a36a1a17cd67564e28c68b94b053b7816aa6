@@ -1,0 +1,49 @@
+src/model/gunnery.js
+  s_9d38d8fb706940::t_7fe9d1bc487182 1-40
+test/gunnery.test.js
+  s_9d38d8fb706940::t_eef4aa20792794 7,129-131
+  s_da4f60aa90c620::t_4bcaf5959dff96 42,46,49,60,64-65,92,97-98
+  s_da4f60aa90c620::t_4af52bac6369de 138-179
+  s_9d38d8fb706940::t_b3f72b47fc93ef 3-4,51,101-113
+  s_9d38d8fb706940::t_f303ae269a18ba 1-2,5-6,8-41,43-45,47-48,50,52-59,61-63,66-86,88-91,93-96,99-100,114-117,121-122,125,128,133,135-137
+  s_9d38d8fb706940::t_68812c9fa8b3ef 87,118-120,123-124,126-127,132,134
+odd/tasks/artilleros-y-recarga.md
+  s_273470a569a5b8::t_e83978a5d0bedd 3,18-20,33-42
+  s_da4f60aa90c620::t_117774d4810f11 43-75
+  s_da4f60aa90c620::t_78a6f563a96bf8 106-139
+  s_273470a569a5b8::t_077507f020d158 1-2,4-12,14-17,21-27
+  s_da4f60aa90c620::t_0e74f2d89d1cf5 76-105
+  s_273470a569a5b8::t_6eda2fdb35dabe 13,28-32
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.6",
+  "base_commit_sha": "6ad2a36a1a17cd67564e28c68b94b053b7816aa6",
+  "prompts": {},
+  "sessions": {
+    "s_273470a569a5b8": {
+      "agent_id": {
+        "tool": "pi",
+        "id": "01a1d098-627b-7272-80a7-a39aba728357",
+        "model": "claude-sonnet-5.5"
+      },
+      "human_author": "Raul Ripoll <raulral@ext.inditex.com>"
+    },
+    "s_9d38d8fb706940": {
+      "agent_id": {
+        "tool": "pi",
+        "id": "01a1d413-f644-73ba-8d97-286a0339ba8e",
+        "model": "gpt-6.1-terra"
+      },
+      "human_author": "Raul Ripoll <raulral@ext.inditex.com>"
+    },
+    "s_da4f60aa90c620": {
+      "agent_id": {
+        "tool": "pi",
+        "id": "01a1d4b0-cdfc-7736-b408-a2614d2e15dc",
+        "model": "deepseek-v4.1-flash"
+      },
+      "human_author": "Raul Ripoll <raulral@ext.inditex.com>"
+    }
+  }
+}
