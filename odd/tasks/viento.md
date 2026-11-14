@@ -1,13 +1,13 @@
 # Juego de barcos — viento
 
-Estado: completado.
+Estado: completado; influencia de la velocidad ajustada al ±60 %.
 
 ## Specs
 
 S16. Viento determinista y uniforme: el viento de un mar está definido por `(seed, tiempo)` y siempre vale lo mismo para el mismo par. La dirección y la fuerza varían de forma **aleatoria pero continua**: puntos de control cada pocos segundos interpolados suavemente, sin saltos. Nunca hay calma absoluta ni huracán permanente.
 
 S17. El viento mueve el barco en dos ejes:
-- **Velocidad**: con el viento de popa el barco gana hasta un 40 % de velocidad; de proa pierde hasta un 40 %. De través es neutro.
+- **Velocidad**: con el viento de popa el barco gana hasta un 60 % de velocidad; de proa pierde hasta un 60 %. De través es neutro. (Ajustado desde el 40 % el 2026-11-12: pedido del usuario.)
 - **Deriva**: el viento empuja el casco de costado, perpendicular al rumbo, hacia el lado al que sopla. La deriva crece con la fuerza y con cuánto cae el viento por el través.
 
 S18. Indicadores en pantalla: dos flechas sobre una rosa de los vientos. La primera muestra **dirección y fuerza actuales**; la segunda, **dirección y fuerza que habrá 10 segundos después**. La flecha apunta hacia donde sopla el viento y su largo representa la fuerza. La predicción es exacta, no aproximada, porque el modelo es determinista (S16).
@@ -34,3 +34,7 @@ L21: Efecto medido en `stepShip` con un rumbo fijo al este durante 30 s: sin vie
 L22: Evidencia — 162/162 tests node en verde (18 nuevos de viento). Smoke nuevo `scripts/smoke-wind.mjs` verifica por interfaz: la rosa existe y está dibujada (no es un cuadrado vacío), el texto muestra un punto cardinal y una fuerza, el viento cambia en 6 s, navegar a favor recorre más que navegar en contra, y ambas flechas renderizan. La leyenda mostraba el texto duplicado por spans anidados con data-i18n; corregido usando clases y un span por entrada.
 
 L23: Corrección del smoke: la primera versión del timón navegaba en círculos porque apretaba la tecla sin soltarla. Ahora usa timón proporcional (mantener hasta casi el rumbo y soltar), y la comprobación de "más rápido a favor" pasa midiendo distancia recorrida, no la lectura del HUD, que suaviza la velocidad.
+
+L21 (verbatim): "vamos a aumentar la influencia del viento en la velocidad, en vez de +40%/-40% vamos a pasar a +60%/-60%"
+
+L22: S17 cambia de ±40 % a ±60 %: `WIND.maxSpeedBonus` y `WIND.maxSpeedPenalty` pasan a 0.6. La deriva no cambia (`driftFactor` 0.35). Los tests existentes de viento leen las constantes en vez de fijar el número, así que siguen valiendo; el smoke de viento mide que de popa se cubra más terreno que de proa, que es la regla y no el porcentaje.

@@ -24,9 +24,9 @@ export const WIND = {
   /** How far the second indicator looks ahead (S18). */
   forecastS: 10,
   /** Strongest bonus a following wind can give to speed (S17). */
-  maxSpeedBonus: 0.4,
+  maxSpeedBonus: 0.6,
   /** Strongest penalty a head wind can give to speed (S17). */
-  maxSpeedPenalty: 0.4,
+  maxSpeedPenalty: 0.6,
   /** How hard the wind pushes the hull sideways, as a fraction of its speed (S17). */
   driftFactor: 0.35,
 };
@@ -87,7 +87,7 @@ export function windAt(seed, timeS) {
     direction: normalizeAngle(direction),
     strengthKn,
     /** 0 at the calmest wind, 1 at the strongest: what the arrow length shows. */
-    strength: (strengthKn - WIND.minStrengthKn) / (WIND.maxStrengthKn - WIND.minStrengthKn),
+    strength: strengthFraction(strengthKn),
   };
 }
 
@@ -112,10 +112,25 @@ export function windVector(wind) {
  * The speed factor scales between the penalty and the bonus; the drift factor
  * says how hard the hull is pushed sideways, which peaks on the beam.
  */
+/**
+ * Where `strengthKn` sits between the calmest and the strongest wind, as 0..1.
+ *
+ * A wind read from an older voyage can fall outside the current range, because the
+ * settings screen may have moved it (S33). Deriving the fraction from the knots
+ * instead of trusting the stored one keeps the effect honest and the division safe.
+ */
+export function strengthFraction(strengthKn) {
+  const span = WIND.maxStrengthKn - WIND.minStrengthKn;
+  if (!(span > 0)) return 0;
+  return clamp((strengthKn - WIND.minStrengthKn) / span, 0, 1);
+}
+
 export function windEffect(wind, heading) {
   // Wind blows towards `direction`; a ship sailing the same way has it astern.
   const alignment = Math.cos(angleDiff(heading, wind.direction));
-  const strength = clamp(wind.strength, 0, 1);
+  const strength = strengthFraction(
+    Number.isFinite(wind.strengthKn) ? wind.strengthKn : wind.strength,
+  );
 
   const speedFactor =
     alignment >= 0
