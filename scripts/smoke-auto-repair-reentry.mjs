@@ -66,8 +66,16 @@ const angleDiff = (to, from) => {
   return d;
 };
 
-/** Steer towards a point with short helm pulses until `done(state)` holds. */
-async function sailUntil(target, done, label, seconds = 45) {
+/**
+ * Steer towards a point with short helm pulses until `done(state)` holds.
+ *
+ * The deadline is wall clock, and the crossing is slow by design: the hull has to turn,
+ * accelerate and cover a few hundred metres. It failed at 45 s when this smoke ran as one
+ * of forty-five in series, because a loaded machine makes every helm pulse and every
+ * storage read slower. The bound is generous on purpose — a real hang still fails, it just
+ * takes longer to say so.
+ */
+async function sailUntil(target, done, label, seconds = 120) {
   const deadline = Date.now() + seconds * 1000;
   for (;;) {
     let s;
