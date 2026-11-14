@@ -83,6 +83,35 @@ export function isEmptyFleet(fleet) {
  * to live on the ship, not on the sea screen: it survives changing captain, going
  * back to the shipyard and sailing out again.
  */
+/**
+ * Fold the live condition of every fighting hull into the fleet sheet (S90).
+ *
+ * The sea already kept the captain's damage on her fleet entry, but not the escorts',
+ * so an escort beaten down to 30 % came back to the shipyard showing whatever the sheet
+ * last said, and the repair price followed that stale number. The rule is the same for
+ * every hull: the sea save is the fresher one.
+ *
+ * `live` is a list of `{ id, combat }`, the shape the sea screen holds for the captain
+ * and her escorts. A hull with no live combat, or one that is not in the fleet, is left
+ * exactly as it was: this only ever brings damage home, never invents it.
+ */
+export function withLiveCondition(fleet, live) {
+  const ships = fleet?.ships ?? [];
+  if (!Array.isArray(live)) return { ...fleet, ships };
+  let result = { ...fleet, ships };
+  for (const entry of live) {
+    const id = entry?.id;
+    const combat = entry?.combat;
+    if (typeof id !== "string" || !combat || typeof combat !== "object") continue;
+    if (!ships.some((ship) => ship.id === id)) continue;
+    result = withShipCondition(result, id, {
+      condition: combat.condition,
+      crewAlive: combat.crew,
+    });
+  }
+  return result;
+}
+
 export function withShipCondition(fleet, shipId, { condition, crewAlive } = {}) {
   const ships = fleet?.ships ?? [];
   if (!ships.some((ship) => ship.id === shipId)) return { ...fleet, ships };

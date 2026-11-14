@@ -11,6 +11,7 @@ import {
   removeShip,
   serializeFleet,
   setCaptain,
+  withLiveCondition,
 } from "../src/model/fleet.js";
 
 const ship = (id, overrides = {}) => ({
@@ -140,4 +141,46 @@ test("S8: a save written before fleets existed becomes a one-ship fleet", () => 
   const fleet = deserializeFleet(null, legacy);
   assert.equal(fleet.ships.length, 1);
   assert.equal(captainShip(fleet).id, "legacy");
+});
+
+/* ---------------------------------------------------------------- S90: escorts keep their damage */
+
+test("S90: a live escort's damage reaches the fleet sheet, not only the sea save", () => {
+  // The sea wrote the captain's condition into the fleet sheet but never the escorts', so
+  // an escort at 30 % hull came back to the shipyard at whatever the sheet last said and
+  // the repair price followed that stale number.
+  const captain = { id: "a", name: "Captain", condition: { hull: 100, rigging: 100, crew: 100, morale: 100 } };
+  const escort = { id: "b", name: "Escort", condition: { hull: 80, rigging: 90, crew: 100, morale: 100 } };
+  const fleet = { ships: [captain, escort], captainId: "a" };
+
+  const live = [
+    { id: "a", combat: { condition: { hull: 100, rigging: 100, crew: 100, morale: 100 }, crew: { marino: 10 } } },
+    { id: "b", combat: { condition: { hull: 30, rigging: 55, crew: 70, morale: 60 }, crew: { marino: 6 } } },
+  ];
+
+  const merged = withLiveCondition(fleet, live);
+  const saved = merged.ships.find((ship) => ship.id === "b");
+  assert.equal(saved.condition.hull, 30, "the escort's hull did not reach the fleet sheet");
+  assert.equal(saved.condition.rigging, 55, "the escort's rigging did not reach the fleet sheet");
+  assert.deepEqual(saved.crewAlive, { marino: 6 }, "the escort's crew did not reach the fleet sheet");
+  // The captain keeps working exactly as before.
+  assert.equal(merged.ships.find((ship) => ship.id === "a").condition.hull, 100);
+});
+
+test("S90: a hull with no live combat keeps the condition it had", () => {
+  const fleet = {
+    ships: [{ id: "a", condition: { hull: 44, rigging: 44, crew: 44, morale: 44 } }],
+    captainId: "a",
+  };
+  const merged = withLiveCondition(fleet, [{ id: "a" }, { id: "ghost", combat: { condition: { hull: 1 } } }]);
+  assert.equal(merged.ships[0].condition.hull, 44, "a hull with no combat must keep its saved condition");
+  assert.equal(merged.ships.length, 1, "a live hull that is not in the fleet must not be added");
+});
+
+test("S90: a broken live list never throws and never loses the fleet", () => {
+  const fleet = { ships: [{ id: "a", condition: { hull: 10 } }], captainId: "a" };
+  for (const broken of [null, undefined, "x", 42, [null], [{ id: "a", combat: null }]]) {
+    const merged = withLiveCondition(fleet, broken);
+    assert.equal(merged.ships.length, 1, `broke on ${JSON.stringify(broken)}`);
+  }
 });

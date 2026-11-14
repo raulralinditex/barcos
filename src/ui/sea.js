@@ -40,6 +40,7 @@ import {
   deserializeFleet,
   fleetUpkeep,
   removeShip,
+  withLiveCondition,
   sailingShips,
   serializeFleet,
   setCaptain,
@@ -285,13 +286,13 @@ function saveGame() {
     };
     localStorage.setItem(GAME_KEY, JSON.stringify(payload));
     // The damage also lives on the hull itself, so it survives the way back to the
-    // shipyard and a change of captain (S23).
-    if (playerCombat && runtimeShip) {
-      fleet = withShipCondition(fleet, runtimeShip.id, {
-        condition: playerCombat.condition,
-        crewAlive: playerCombat.crew,
-      });
-    }
+    // shipyard and a change of captain (S23). Every hull, not only the captain (S90): an
+    // escort's damage used to stay in the sea save alone, so the shipyard quoted her
+    // repair from a stale sheet.
+    fleet = withLiveCondition(fleet, [
+      { id: runtimeShip?.id, combat: playerCombat },
+      ...escorts.map((escort) => ({ id: escort.id, combat: escort.combat })),
+    ]);
     localStorage.setItem(FLEET_KEY, serializeFleet(fleet));
   } catch {
     /* storage disabled: the voyage continues in memory */
