@@ -1,0 +1,41 @@
+src/model/turning.js
+  s_273470a569a5b8::t_546d31c54386e1 1-50
+src/model/autofire.js
+  s_273470a569a5b8::t_d7b4d6297e5d4f 1-53
+odd/tasks/disparo-automatico-y-giro.md
+  s_273470a569a5b8::t_a1e7d85e867664 1-46
+test/turning.test.js
+  s_da4f60aa90c620::t_aa3cd7f05181f9 161,163,170,172
+  s_273470a569a5b8::t_b4fa95299d2f8c 1-108
+  s_da4f60aa90c620::t_7e706d9331ccb9 109-149,160,162,166-169,171,175-200
+  s_da4f60aa90c620::t_ea5410153f1037 150-159,164-165,173-174
+test/autofire.test.js
+  s_273470a569a5b8::t_f41513cd228a79 1-100
+scripts/smoke-turning.mjs
+  s_273470a569a5b8::t_b8d5b78490ee9d 1-17,21-83
+  s_273470a569a5b8::t_32b64bc11866e4 18-20
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.6",
+  "base_commit_sha": "7daa8ff5f9016c5339ae5756d1e596bd1e72cea0",
+  "prompts": {},
+  "sessions": {
+    "s_273470a569a5b8": {
+      "agent_id": {
+        "tool": "pi",
+        "id": "01a1d098-627b-7272-80a7-a39aba728357",
+        "model": "claude-sonnet-5.5"
+      },
+      "human_author": "Raul Ripoll <raulral@ext.inditex.com>"
+    },
+    "s_da4f60aa90c620": {
+      "agent_id": {
+        "tool": "pi",
+        "id": "01a1d4b0-cdfc-7736-b408-a2614d2e15dc",
+        "model": "deepseek-v4.1-flash"
+      },
+      "human_author": "Raul Ripoll <raulral@ext.inditex.com>"
+    }
+  }
+}
