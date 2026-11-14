@@ -1,0 +1,48 @@
+scripts/smoke-dock.mjs
+  s_c6ded83af037ef::t_a3e08c81341b05 6,8-17,117-118,124,127,131-132,135,138-139,142-143,147,151,156,158,160-164,167,169-170,173-174,177-178,180,182-183,186-187,189-194,197,199,201,203-204,206-208,210-211,213,226,228-234,239-240,242-244,246-247,249-253,255-256,259-260,262-267,269-270,274,276,278-279,282-284,286-288,300
+  s_1a64bf95dff461::t_f221bedcf159b2 120-121,125,134,136,153-155,294
+  s_fbb00885ed79f8::t_db2a5c6cc4a7ab 3
+  s_2c8dc4aa4f8da8::t_be31182e51e21d 122-123
+  s_c6ded83af037ef::t_35da1c568e1c82 214-219,221-222
+  s_c6ded83af037ef::t_01e8092649b56c 119,126
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.6",
+  "base_commit_sha": "829efececf0472d328d72455efba3edf6eac1b74",
+  "prompts": {},
+  "sessions": {
+    "s_1a64bf95dff461": {
+      "agent_id": {
+        "tool": "pi",
+        "id": "01a1d18e-76ac-7141-bcf5-3f087966ee70",
+        "model": "gpt-6.1-terra"
+      },
+      "human_author": "Raul Ripoll <raulral@ext.inditex.com>"
+    },
+    "s_2c8dc4aa4f8da8": {
+      "agent_id": {
+        "tool": "pi",
+        "id": "01a1d1ec-b773-727c-bfc1-218cab6bd280",
+        "model": "gpt-6.1-terra"
+      },
+      "human_author": "Raul Ripoll <raulral@ext.inditex.com>"
+    },
+    "s_c6ded83af037ef": {
+      "agent_id": {
+        "tool": "pi",
+        "id": "01a1daee-b1ed-7761-bcc5-aec60ce861d8",
+        "model": "deepseek-v4.1-flash_high"
+      },
+      "human_author": "Raul Ripoll <raulral@ext.inditex.com>"
+    },
+    "s_fbb00885ed79f8": {
+      "agent_id": {
+        "tool": "pi",
+        "id": "01a1ccee-391a-73a4-b55a-66013b3f51e8",
+        "model": "claude-sonnet-5.5"
+      },
+      "human_author": "Raul Ripoll <raulral@ext.inditex.com>"
+    }
+  }
+}
