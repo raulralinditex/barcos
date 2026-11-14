@@ -1,0 +1,130 @@
+scripts/smoke-safe-zone.mjs
+  s_f06c10fdae734f::t_cabe79da138294 1-166
+scripts/smoke-formation.mjs
+  s_273470a569a5b8::t_e1d5c4482758d0 131-132,134
+  s_273470a569a5b8::t_c62d6ca6b05303 130,135,151-153
+  s_fbb00885ed79f8::t_f93eba05db8ee0 1-129,133,136-150,154-304
+scripts/smoke-start-gold.mjs
+  s_f06c10fdae734f::t_5dd08e11010a8a 1-61
+scripts/smoke-fort-combat.mjs
+  s_f06c10fdae734f::t_b8abeb722d85f1 103,106
+  s_f06c10fdae734f::t_cb2e0628fdf38e 121-122
+  s_f06c10fdae734f::t_2f6aca7b2e07db 3-4,37-42
+  s_f06c10fdae734f::t_983834a7d29d7c 108-110,112-117
+  s_f06c10fdae734f::t_790f92eca20ef5 53-55,75,107,111
+  s_f06c10fdae734f::t_5311d835032598 91-95,97
+  s_f06c10fdae734f::t_00ab4e576932e5 1-2,5-36,43-45,48-52,56-74,76-90,96,98-102,104-105,118-120,123-125,127-145
+  s_f06c10fdae734f::t_36fdcb4d0cf8ba 46-47,126
+test/sale.test.js
+  s_f06c10fdae734f::t_3cb1b4875915ff 1-209
+scripts/smoke-escort-hud.mjs
+  s_f06c10fdae734f::t_bb356d453ca7e4 233
+  s_da4f60aa90c620::t_3d8a2a2fa6492a 12,158-173,176-182
+  s_da4f60aa90c620::t_e287e7f0a65f25 134-136,140
+  s_f06c10fdae734f::t_12827ea47401d3 4-6,13,120,122-125,127,129-131,147,151,154-155,157
+  s_f06c10fdae734f::t_0cce059fc3430c 9
+  s_f06c10fdae734f::t_8682792e629bf1 39-44
+  s_273470a569a5b8::t_45fa0d664bd8ca 1-3,7-8,10-11,14-38,45-119,121,126,128,132-133,137-139,141-146,148-150,152-153,156,174-175,183-196,198-203,205-232
+  s_273470a569a5b8::t_bba67b11a764be 197,204
+scripts/smoke-opening-broadside.mjs
+  s_f06c10fdae734f::t_856ea22d0889fc 3,129-135,140-165,167,176,182-183,185,222
+  s_f06c10fdae734f::t_9b47fd18f437d5 34-36,42
+  s_f06c10fdae734f::t_c909aebcaef3e6 75-78
+  s_f06c10fdae734f::t_09f9eac6434371 117-119,122
+  s_f06c10fdae734f::t_f19aec9b44fcc8 136-139,166,168-175,186-211
+  s_f06c10fdae734f::t_252087f5218e7f 1-2,4-9,11-33,37-41,43-74,79-116,120-121,123-128,181,184,212-221,223
+  s_f06c10fdae734f::t_84c60c2f6c3609 177-180
+  s_f06c10fdae734f::t_43cda2431e4caf 10
+src/model/settings-storage.js
+  s_fbb00885ed79f8::t_185d6cfa24cb34 1-39
+scripts/smoke-duel-panel.mjs
+  s_f06c10fdae734f::t_1ba65cdcb9ed61 1-140
+test/sea-hud.test.js
+  s_da4f60aa90c620::t_00139d7fddc8f3 98-131
+  s_273470a569a5b8::t_4a393fe6304b8b 1-3,13-14,21-22,25,29-30,38-39,42-43,55,58-60,66-97
+  s_f06c10fdae734f::t_7d76312425c431 4-12,15-20,23-24,26-28,31-37,40-41,44-54,56-57,61-65
+src/model/sale.js
+  s_f06c10fdae734f::t_b01296e1bb3144 1-149
+scripts/smoke-ammo-switch.mjs
+  s_f06c10fdae734f::t_0902ffb3d94401 1-127,134-165
+  s_f06c10fdae734f::t_49d4e825b5750f 128-133
+scripts/smoke-swivel.mjs
+  s_273470a569a5b8::t_c6b1219c55bb90 150-151
+src/model/fort.js
+  s_f06c10fdae734f::t_ab4c37cd04f4e8 19-22,25
+  s_f06c10fdae734f::t_83fe50113b2893 1-11,14-18,27-30,36,38-173
+  s_f06c10fdae734f::t_124751be6e70d6 23-24,26,31-35,37
+  s_f06c10fdae734f::t_5a0d3a3be82f0a 12-13
+scripts/smoke-fort.mjs
+  s_f06c10fdae734f::t_1d18fc44e2bba7 1-62
+test/combat.test.js
+  s_f06c10fdae734f::t_a26190c50882dd 147-148,150-155,161-162
+  s_9d38d8fb706940::t_2cdcfa0e571120 166,194,200-202
+  s_da4f60aa90c620::t_2b6c7353148eae 196-198
+  s_da4f60aa90c620::t_efb772ad68b9ef 203-205
+scripts/smoke-gunnery.mjs
+  s_9d38d8fb706940::t_98b0f2c69e3324 58
+  s_9d38d8fb706940::t_3db8f5b20bfad6 1-57,59-101
+test/fort.test.js
+  s_f06c10fdae734f::t_e34ad375a81369 1-232
+scripts/smoke-flags.mjs
+  s_f06c10fdae734f::t_d0d7ecc352a899 119,121
+  s_f06c10fdae734f::t_bfde12aee62069 1-93,127-129,131-132,135,137,139,157-189,191
+  s_f06c10fdae734f::t_55c03e2083465c 190
+  s_f06c10fdae734f::t_d3f8d9dafb20c4 94-118,120,122-126,130,133-134,136,138,140-156
+src/model/flag.js
+  s_f06c10fdae734f::t_2ae75ca7f5970d 36-40
+  s_f06c10fdae734f::t_a7b3ebdeb63a93 1-35,41-77
+scripts/smoke-sale.mjs
+  s_f06c10fdae734f::t_82a4257b6ca387 1-3,6-93,97-100,104-200
+  s_f06c10fdae734f::t_8bdc531523bd28 94-96,101-103
+  s_f06c10fdae734f::t_08910fe53f6649 4-5
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.6",
+  "base_commit_sha": "c8d6bbf777307d05a0dea415efd8a899e24ab678",
+  "prompts": {},
+  "sessions": {
+    "s_273470a569a5b8": {
+      "agent_id": {
+        "tool": "pi",
+        "id": "01a1d098-627b-7272-80a7-a39aba728357",
+        "model": "claude-sonnet-5.5"
+      },
+      "human_author": "Raul Ripoll <raulral@ext.inditex.com>"
+    },
+    "s_9d38d8fb706940": {
+      "agent_id": {
+        "tool": "pi",
+        "id": "01a1d413-f644-73ba-8d97-286a0339ba8e",
+        "model": "gpt-6.1-terra"
+      },
+      "human_author": "Raul Ripoll <raulral@ext.inditex.com>"
+    },
+    "s_da4f60aa90c620": {
+      "agent_id": {
+        "tool": "pi",
+        "id": "01a1d4b0-cdfc-7736-b408-a2614d2e15dc",
+        "model": "deepseek-v4.1-flash"
+      },
+      "human_author": "Raul Ripoll <raulral@ext.inditex.com>"
+    },
+    "s_f06c10fdae734f": {
+      "agent_id": {
+        "tool": "pi",
+        "id": "01a1d6ff-202c-776e-a594-1d85cdb28493",
+        "model": "claude-sonnet-5.5"
+      },
+      "human_author": "Raul Ripoll <raulral@ext.inditex.com>"
+    },
+    "s_fbb00885ed79f8": {
+      "agent_id": {
+        "tool": "pi",
+        "id": "01a1ccee-391a-73a4-b55a-66013b3f51e8",
+        "model": "claude-sonnet-5.5"
+      },
+      "human_author": "Raul Ripoll <raulral@ext.inditex.com>"
+    }
+  }
+}
