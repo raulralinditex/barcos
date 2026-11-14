@@ -189,6 +189,7 @@ export const es = {
   "sea.banner.surrendered": "¡Se rindió! Saquea el pecio",
   "sea.banner.escortFire": "{name} dispara por {side}",
   "sea.banner.escortLost": "¡Perdimos el {name}! Sale de la flota",
+  "sea.banner.commandHandover": "¡Perdimos el {lost}! El {name} toma el mando de la flota",
   "shipyard.fort.title": "Astillero",
   "shipyard.fort.ours": "En tus manos",
   "shipyard.fort.taken": "Tomado por el enemigo",

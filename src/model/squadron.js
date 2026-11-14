@@ -66,10 +66,15 @@ export function pruneAllies(allies) {
   return { survivors, lost };
 }
 
-/**
- * Whether the voyage is over. Only the captain decides it: losing an escort is a
- * loss, not the end of the game.
- */
+/** The first fighting escort takes command only when the captain is lost. */
+export function nextCommandShip(allies) {
+  const line = Array.isArray(allies) ? allies : [];
+  const status = line[0]?.combat?.status;
+  if (status !== "sunk" && status !== "surrendered") return null;
+  return alliedTargets(line.slice(1))[0] ?? null;
+}
+
+/** Whether the voyage is over: every hull must be lost before the voyage ends. */
 export function squadronStatus(allies) {
   const line = Array.isArray(allies) ? allies : [];
   // The voyage is over when nothing is left to sail, not when the captain falls (S87).

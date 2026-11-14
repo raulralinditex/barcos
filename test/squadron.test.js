@@ -13,6 +13,7 @@
 import test from "node:test";
 import assert from "node:assert/strict";
 
+import * as squadron from "../src/model/squadron.js";
 import { createPlayerCombatant } from "../src/model/combat.js";
 import { buildShip, toRuntimeShip } from "../src/model/shipyard.js";
 import {
@@ -185,6 +186,38 @@ test("S87: a surrendered escort counts as lost, like a sunk one", () => {
   const end = squadronStatus([captain, escort]);
   assert.equal(end.over, true);
   assert.equal(end.reason, "surrendered", "the reason follows the flagship");
+});
+
+test("S87: command passes to the first fighting escort when the captain is lost", () => {
+  const captain = ally("captain", 0, 0);
+  const sunk = ally("sunk", 10, 0);
+  const surrendered = ally("surrendered", 20, 0);
+  const first = ally("first", 30, 0);
+  const second = ally("second", 40, 0);
+  sunk.combat.status = "sunk";
+  surrendered.combat.status = "surrendered";
+  for (const status of ["sunk", "surrendered"]) {
+    captain.combat.status = status;
+    assert.equal(squadron.nextCommandShip([captain, sunk, surrendered, first, second]), first);
+  }
+});
+
+test("S87: there is no handover when no escort is fighting", () => {
+  const captain = ally("captain", 0, 0);
+  const escort = ally("escort", 10, 0);
+  captain.combat.status = "sunk";
+  for (const status of ["sunk", "surrendered"]) {
+    escort.combat.status = status;
+    assert.equal(squadron.nextCommandShip([captain, escort]), null);
+  }
+  assert.equal(squadron.nextCommandShip([captain]), null);
+});
+
+test("S87: a fighting captain keeps command", () => {
+  const captain = ally("captain", 0, 0);
+  const escort = ally("escort", 10, 0);
+  assert.equal(squadron.nextCommandShip([captain, escort]), null);
+  assert.equal(squadron.nextCommandShip([]), null);
 });
 
 test("S36: the captain can also be forced to surrender", () => {

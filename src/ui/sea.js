@@ -42,6 +42,7 @@ import {
   removeShip,
   sailingShips,
   serializeFleet,
+  setCaptain,
   withShipCondition,
 } from "../model/fleet.js";
 import {
@@ -60,6 +61,7 @@ import { burnSupply, supplySeconds } from "../model/game-time.js";
 import {
   closestTarget,
   escortFire,
+  nextCommandShip,
   pruneAllies,
   squadronStatus,
 } from "../model/squadron.js";
@@ -189,7 +191,7 @@ const loaded = loadFleet();
 // `fleet` is reassigned whenever the condition of a hull changes (S22, S23).
 let fleet = loaded.fleet;
 const { legacyShip } = loaded;
-const runtimeShip = captainShip(fleet);
+let runtimeShip = captainShip(fleet);
 
 const ui = {
   /** Simulation steps per frame: 1, 2, 4 or 8, cycled by the time-warp key (S31). */
@@ -1544,13 +1546,42 @@ function processCombat(dt, now) {
 
   resolveDefeatedEnemies();
 
-  // Only the captain ends the voyage (S36): losing an escort is a loss, not the end.
+  // The voyage ends when nothing is left to sail (S87): losing the flagship is a blow,
+  // not the end, and the next hull in line takes over. Only when every hull is gone does
+  // the sinking screen come up.
   const status = squadronStatus(allies());
   if (status.over && !gameOver) {
     gameOver = true;
     gameOverAt = now;
     ui.throttle = 0;
+  } else {
+    handOverCommand();
   }
+}
+
+/** Promote the first fighting escort without moving her or rebuilding her combatant. */
+function handOverCommand() {
+  const next = nextCommandShip(allies());
+  if (!next) return false;
+  const previousName = runtimeShip.name;
+  fleet = setCaptain(removeShip(fleet, runtimeShip.id), next.id);
+  runtimeShip = captainShip(fleet);
+  playerCombat = next.combat;
+  escorts = escorts.filter((escort) => escort.id !== next.id);
+  world = {
+    ...world,
+    ship: {
+      x: next.x, y: next.y, heading: next.heading, currentSpeedKn: next.currentSpeedKn,
+      speedKn: next.speedKn, turnFactor: hullTurnFactor(runtimeShip.hullId),
+    },
+    escorts: escorts.map(({ combat, ...rest }) => rest),
+  };
+  ui.trail = [];
+  pruneLostEscorts();
+  world = { ...world, escorts: escorts.map(({ combat, ...rest }) => rest) };
+  saveGame();
+  showBanner(t("sea.banner.commandHandover", { lost: previousName, name: runtimeShip.name }), "danger", 4000);
+  return true;
 }
 
 /**
@@ -2174,10 +2205,9 @@ function boot() {
       // voyage wins, or an escort would come back whole after being shot to pieces.
       combatant.condition = { ...combatant.condition, ...saved.condition };
       combatant.crew = { ...combatant.crew, ...saved.crew };
-      // A hull that went down on the last trip is not "fighting" just because it was
-      // rebuilt from a sheet: without this it sails on with zero hull (S36).
-      refreshStatus(combatant);
     }
+    // Neither a saved sea nor the fleet sheet may bring a lost hull back fighting.
+    refreshStatus(combatant);
     const place = (world.escorts ?? []).find((entry) => entry.id === ship.id);
     const escort = createEscort(
       { id: ship.id, speedKn: ship.speedKn, turnFactor: hullTurnFactor(ship.hullId) },
@@ -2234,13 +2264,15 @@ function boot() {
     ? savedCrewCondition
     : crewFromMen;
   if (playerCombat.condition.hull <= 0 || playerCombat.condition.crew <= COMBAT.surrenderCrewPct) {
-    // The saved voyage ended in a sinking: show the same verdict instead of sailing on.
     playerCombat.status = playerCombat.condition.hull <= 0 ? "sunk" : "surrendered";
-    gameOver = true;
-    gameOverAt = 0;
   }
 
   applyStaticTranslations();
+  const handedOver = handOverCommand();
+  if (!handedOver && squadronStatus(allies()).over) {
+    gameOver = true;
+    gameOverAt = 0;
+  }
   renderTimeBadge();
   // Opening inside is not an arrival; leaving and returning arms the next one.
   wasInPort = inHomePort();
@@ -2249,7 +2281,7 @@ function boot() {
   window.addEventListener("resize", resizeCanvas);
   resizeCanvas();
   updateHud();
-  showBanner(t("sea.banner.depart", { name: runtimeShip.name }), "info", 2800);
+  if (!handedOver) showBanner(t("sea.banner.depart", { name: runtimeShip.name }), "info", 2800);
   requestAnimationFrame(frame);
 }
 

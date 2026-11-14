@@ -54,6 +54,7 @@ S84. **La pantalla sigue diciendo la verdad.** Los smokes y la documentación se
 - T98 — `scripts/smoke-settings.mjs` al conteo nuevo y dos smokes nuevos (casco creado y comprado; valor recortado al margen). `S84` — inline — pendiente
 - T99 — Regresión (`npm test` y todos los smokes), documentación y Engram. `S79,S80,S81,S82,S83,S84` — inline — pendiente
 - T100 — Al abrir el astillero con flota, seleccionar la capitana y mostrar su aparejo; conservar el constructor con la flota vacía y probar ambos en navegador. `S83,S84` — inline — hecho
+- T101 — Si se pierde la capitana, pasar el mando a la primera escolta que siga luchando y conservar su navegación; tests y smoke con RED y GREEN. `S84,L48` — inline — hecho
 
 ## Log
 
@@ -89,3 +90,5 @@ S86. Reparar deja de ser automático y pasa a ser un botón por nave. Pedido (ve
 - Evidencia: `scripts/smoke-manual-repair.mjs` con RED observado (sin el manejador del botón: "the repair button did not repair the captain (40)") y GREEN. `npm test` 605/605 (611 menos los 6 de S49).
 
 L52: Reversión de S85 aplicada. Los paneles de combate se muestran siempre otra vez: el panel de duelo vuelve a abrirse con cualquier nave peleando (S73), las barras de condición vuelven a dibujarse fuera de combate y las filas del panel del buque pierden su marca de "sólo en combate". Se restaura el test de S73 que la reversión deja válido otra vez. `npm test` 605/605; `scripts/smoke-combat.mjs` verde.
+
+L53: La regla de L48 ya evitaba terminar el viaje al perder la capitana, pero el jugador seguía gobernando el casco hundido. Ahora la primera escolta que lucha toma el mando con su posición, rumbo, velocidad y estado de combate; la capitana perdida sale de la flota y un aviso lo anuncia. Sin supervivientes sigue la pantalla de hundimiento. `npm test` 610/610; `scripts/smoke-command-handover.mjs` observó RED al anular el relevo sólo en la respuesta del navegador («HUD did not hand command to Escort (got Flagship — Galeón pequeño)») y GREEN al recuperarlo, con `cmp` contra una copia en memoria del archivo sin cambios. También comprobó navegación, recarga de la página y los caminos de capitana intacta y flota perdida.
