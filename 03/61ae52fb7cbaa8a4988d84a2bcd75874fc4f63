@@ -1,0 +1,196 @@
+src/i18n/es.js
+  s_273470a569a5b8::t_bba67b11a764be 177
+  s_f06c10fdae734f::t_0c389aefd10bb8 292-297
+  s_f06c10fdae734f::t_c70b6217c91ca3 91
+  s_fbb00885ed79f8::t_2ac0e9435b4dc1 26-27
+  s_95f2af011bc7e7::t_e116e35120c420 130-132
+  s_fbb00885ed79f8::t_1faba4d889099b 34-35,43
+  s_95f2af011bc7e7::t_b3923c0ed8a0cf 124-129,133-134
+  s_fbb00885ed79f8::t_b2d4dbf00d6fc3 44-45
+  s_f06c10fdae734f::t_c543bf01ae37be 135-138,199,299-301,341-345
+  s_fbb00885ed79f8::t_123cf9bfb08c2a 270
+  s_f06c10fdae734f::t_503be70a2e02c2 336-338
+  s_f06c10fdae734f::t_3e20275d524452 207
+  s_fbb00885ed79f8::t_451f0dfe32e9c1 268-269,271-291,302-320,333-334,348-351,382
+  s_1a64bf95dff461::t_893ca3d7f9c7a3 232-234
+  s_f06c10fdae734f::t_55aa43413d309d 208-210
+  s_273470a569a5b8::t_71605548e85b24 185-186
+  s_cbeb974d811fa5::t_5098bb6871e892 444-458,511-513
+  s_fbb00885ed79f8::t_aa48eb0966b8e7 346
+  s_c6ded83af037ef::t_1c5dd54e08c0f3 352-381
+  s_f06c10fdae734f::t_25f343f8ce3ffe 192
+  s_fbb00885ed79f8::t_ad2828402300b1 221
+  s_fbb00885ed79f8::t_4fbeba3f878349 174-176
+  s_9d38d8fb706940::t_14b8eed4d57f0e 257-258,321-332
+  s_f06c10fdae734f::t_d53eeee6be81b9 162,193-198
+  s_273470a569a5b8::t_669599e1af5eb6 29-30
+  s_f06c10fdae734f::t_1b5549732ace52 347
+  s_f06c10fdae734f::t_c41ec21d2a8c6e 187-190
+  s_2686c03d022a41::t_fc8b9a12fe0b12 225-226,248-249
+  s_f06c10fdae734f::t_ef553c75a19396 83,298,335,339-340
+  s_0f5026df9808a9::t_c1e2661433e67e 22,28,89,140-143
+  s_fbb00885ed79f8::t_49ee9898c607f9 36-42
+  s_f06c10fdae734f::t_d6f2d231d699cb 191
+src/ui/config.js
+  s_fbb00885ed79f8::t_e0f1062dfee711 14
+  s_fbb00885ed79f8::t_7fbeb16f784cae 174,177-178
+  s_fbb00885ed79f8::t_f0c530582e8302 1-13,15-65,68-173,175-176,179-219
+  s_c6ded83af037ef::t_186237437b826e 66-67
+src/i18n/en.js
+  s_fbb00885ed79f8::t_49ee9898c607f9 38-44
+  s_f06c10fdae734f::t_25f343f8ce3ffe 195
+  s_fbb00885ed79f8::t_955a706b0338f9 36-37,45
+  s_fbb00885ed79f8::t_451f0dfe32e9c1 271-272,274-294,305-323,336-337,351-354,385
+  s_fbb00885ed79f8::t_123cf9bfb08c2a 273
+  s_f06c10fdae734f::t_c70b6217c91ca3 94
+  s_f06c10fdae734f::t_f1e235f790d412 202
+  s_f06c10fdae734f::t_3e20275d524452 210
+  s_f06c10fdae734f::t_c543bf01ae37be 138-141,302-304
+  s_95f2af011bc7e7::t_f487821e0cd2d2 127-132,136-137
+  s_f06c10fdae734f::t_55aa43413d309d 211-213
+  s_fbb00885ed79f8::t_ad2828402300b1 224
+  s_f06c10fdae734f::t_c41ec21d2a8c6e 190-193
+  s_1a64bf95dff461::t_3d043a0f2a0be3 235-237
+  s_9d38d8fb706940::t_691294c2c21183 260-261,324-335
+  s_f06c10fdae734f::t_0c389aefd10bb8 295-300
+  s_fbb00885ed79f8::t_2ac0e9435b4dc1 28-29
+  s_f06c10fdae734f::t_ef553c75a19396 86,301,338,342-343
+  s_f06c10fdae734f::t_503be70a2e02c2 339-341
+  s_273470a569a5b8::t_bba67b11a764be 180
+  s_2686c03d022a41::t_6f9b9400fc5d04 228-229,251-252
+  s_f06c10fdae734f::t_1b5549732ace52 350
+  s_f06c10fdae734f::t_5d0dfb63fc140a 344-348
+  s_fbb00885ed79f8::t_4fbeba3f878349 177-179
+  s_fbb00885ed79f8::t_aa48eb0966b8e7 349
+  s_0f5026df9808a9::t_76ebf35a215451 24,30,92,143-146
+  s_273470a569a5b8::t_669599e1af5eb6 31-32
+  s_273470a569a5b8::t_7f0b9a5aa153f5 188-189
+  s_cbeb974d811fa5::t_5098bb6871e892 447-461,514-516
+  s_c6ded83af037ef::t_1c5dd54e08c0f3 355-384
+  s_f06c10fdae734f::t_d53eeee6be81b9 165,196-201
+  s_95f2af011bc7e7::t_cddfc5e97195d3 133-135
+  s_fbb00885ed79f8::t_b2d4dbf00d6fc3 46-47
+  s_f06c10fdae734f::t_d6f2d231d699cb 194
+scripts/smoke-settings.mjs
+  s_fbb00885ed79f8::t_dd2e1381ad4be7 155-157,159-160,164,167,172,174-175
+  s_fbb00885ed79f8::t_2909cf512714ed 94,106
+  s_fbb00885ed79f8::t_233c513301e1d3 152-153
+  s_fbb00885ed79f8::t_57d618b67a9690 35-36
+  s_fbb00885ed79f8::t_c8bccf030e7853 85,90,102
+  s_fbb00885ed79f8::t_45f0d1b386e318 140-145
+  s_c6ded83af037ef::t_a67630f31e2393 79
+  s_fbb00885ed79f8::t_ad227ee524a2eb 1-34,37-78,80-84,86-89,91-93,95-101,103-105,107-139,146-151,154,158,161-163,165-166,168-171,173,176-188
+test/settings.test.js
+  s_c6ded83af037ef::t_d8ca8e3627327e 12-13,24-27
+  s_c6ded83af037ef::t_01476ec7470821 191-249
+  s_fbb00885ed79f8::t_6128675953c53b 1-11,14-23,28-80,83-92,95,97-110,113-140,142-150,152-156,158-190
+  s_fbb00885ed79f8::t_a7cf5f94f807bc 81-82,93-94,96,111-112,141,151,157
+src/model/settings.js
+  s_c6ded83af037ef::t_7ebfb7b8520574 21-24
+  s_f06c10fdae734f::t_b19caa8fec4345 18,75,77-78,82
+  s_f06c10fdae734f::t_0b108e081e4244 48
+  s_fbb00885ed79f8::t_0aaf51c76697b8 173-175,177
+  s_f06c10fdae734f::t_247833415dd8fa 17,83-84
+  s_f06c10fdae734f::t_1e4f3a89661d91 12,16,89,112-114
+  s_9d38d8fb706940::t_7b57d177f2ff97 14,61-62,151-152,164,205,218
+  s_c6ded83af037ef::t_398a22ec35830d 230-232,255
+  s_9d38d8fb706940::t_09c0bf70f1ad5b 249-252
+  s_f06c10fdae734f::t_0c0ac30f046365 53-54
+  s_f06c10fdae734f::t_1b5549732ace52 13,115-117
+  s_fbb00885ed79f8::t_aa48eb0966b8e7 85
+  s_c6ded83af037ef::t_6193f98985b051 65-67
+  s_fbb00885ed79f8::t_5dd0714541b569 1-11,15,19-20,25-47,52,57-60,63-64,70,88,118-124,153-163,165-172,176,178-204,206-217,219-229,233-248,253-254,256-264
+  s_f06c10fdae734f::t_51e562d05ce2a5 56
+  s_c6ded83af037ef::t_13c66fdba22430 49-51,68-69,80-81,86-87,90-111,125-150
+  s_f06c10fdae734f::t_84db081e346e14 71-74
+  s_f06c10fdae734f::t_2f524457a41d92 55
+  s_f06c10fdae734f::t_8212b4afa998da 76,79
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.6",
+  "base_commit_sha": "0361ae52fb7cbaa8a4988d84a2bcd75874fc4f63",
+  "prompts": {},
+  "sessions": {
+    "s_0f5026df9808a9": {
+      "agent_id": {
+        "tool": "pi",
+        "id": "01a1d0ec-bbab-72bd-a221-e93abbdb895d",
+        "model": "gpt-6.1-terra"
+      },
+      "human_author": "Raul Ripoll <raulral@ext.inditex.com>"
+    },
+    "s_1a64bf95dff461": {
+      "agent_id": {
+        "tool": "pi",
+        "id": "01a1d18e-76ac-7141-bcf5-3f087966ee70",
+        "model": "gpt-6.1-terra"
+      },
+      "human_author": "Raul Ripoll <raulral@ext.inditex.com>"
+    },
+    "s_2686c03d022a41": {
+      "agent_id": {
+        "tool": "pi",
+        "id": "01a1d0cf-da15-7559-999c-621204968732",
+        "model": "gpt-6.1-terra"
+      },
+      "human_author": "Raul Ripoll <raulral@ext.inditex.com>"
+    },
+    "s_273470a569a5b8": {
+      "agent_id": {
+        "tool": "pi",
+        "id": "01a1d098-627b-7272-80a7-a39aba728357",
+        "model": "claude-sonnet-5.5"
+      },
+      "human_author": "Raul Ripoll <raulral@ext.inditex.com>"
+    },
+    "s_95f2af011bc7e7": {
+      "agent_id": {
+        "tool": "pi",
+        "id": "01a1d1c6-aa34-7262-927f-c33fba016b2b",
+        "model": "gpt-6.1-terra"
+      },
+      "human_author": "Raul Ripoll <raulral@ext.inditex.com>"
+    },
+    "s_9d38d8fb706940": {
+      "agent_id": {
+        "tool": "pi",
+        "id": "01a1d413-f644-73ba-8d97-286a0339ba8e",
+        "model": "gpt-6.1-terra"
+      },
+      "human_author": "Raul Ripoll <raulral@ext.inditex.com>"
+    },
+    "s_c6ded83af037ef": {
+      "agent_id": {
+        "tool": "pi",
+        "id": "01a1daee-b1ed-7761-bcc5-aec60ce861d8",
+        "model": "deepseek-v4.1-flash_high"
+      },
+      "human_author": "Raul Ripoll <raulral@ext.inditex.com>"
+    },
+    "s_cbeb974d811fa5": {
+      "agent_id": {
+        "tool": "pi",
+        "id": "01a1ccea-d49b-7600-90e2-f75f9fba6025",
+        "model": "deepseek-v4.1-flash"
+      },
+      "human_author": "Raul Ripoll <raulral@ext.inditex.com>"
+    },
+    "s_f06c10fdae734f": {
+      "agent_id": {
+        "tool": "pi",
+        "id": "01a1d6ff-202c-776e-a594-1d85cdb28493",
+        "model": "claude-sonnet-5.5"
+      },
+      "human_author": "Raul Ripoll <raulral@ext.inditex.com>"
+    },
+    "s_fbb00885ed79f8": {
+      "agent_id": {
+        "tool": "pi",
+        "id": "01a1ccee-391a-73a4-b55a-66013b3f51e8",
+        "model": "claude-sonnet-5.5"
+      },
+      "human_author": "Raul Ripoll <raulral@ext.inditex.com>"
+    }
+  }
+}
