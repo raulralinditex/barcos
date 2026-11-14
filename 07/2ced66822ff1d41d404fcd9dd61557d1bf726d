@@ -1,0 +1,33 @@
+test/squadron.test.js
+  s_c6ded83af037ef::t_e67d7be69c6fd9 163-189
+  s_fbb00885ed79f8::t_9b7cd314f40c87 63-64
+  s_fbb00885ed79f8::t_16b2483afcc0bc 101
+  s_fbb00885ed79f8::t_1499ec6fc9be22 1-62,65-100,102-162,190-196
+src/model/squadron.js
+  s_fbb00885ed79f8::t_727929abaec3dd 1-73,88-89
+  s_c6ded83af037ef::t_40489e62d3c96c 74-87
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.6",
+  "base_commit_sha": "072ced66822ff1d41d404fcd9dd61557d1bf726d",
+  "prompts": {},
+  "sessions": {
+    "s_c6ded83af037ef": {
+      "agent_id": {
+        "tool": "pi",
+        "id": "01a1daee-b1ed-7761-bcc5-aec60ce861d8",
+        "model": "deepseek-v4.1-flash_high"
+      },
+      "human_author": "Raul Ripoll <raulral@ext.inditex.com>"
+    },
+    "s_fbb00885ed79f8": {
+      "agent_id": {
+        "tool": "pi",
+        "id": "01a1ccee-391a-73a4-b55a-66013b3f51e8",
+        "model": "claude-sonnet-5.5"
+      },
+      "human_author": "Raul Ripoll <raulral@ext.inditex.com>"
+    }
+  }
+}
