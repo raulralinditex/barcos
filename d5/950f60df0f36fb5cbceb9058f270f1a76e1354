@@ -1,0 +1,26 @@
+test/fleet.test.js
+  s_c6ded83af037ef::t_ee2ee870c2221a 14
+  s_c6ded83af037ef::t_29ff1e35f5a94d 145-186
+src/model/fleet.js
+  s_c6ded83af037ef::t_22aa7c5a37489d 86-114
+src/ui/sea.js
+  s_c6ded83af037ef::t_9a6508a6cafeef 43,289-295
+odd/tasks/catalogo-editable.md
+  s_c6ded83af037ef::t_5ba92afe00eb65 115-119
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.6",
+  "base_commit_sha": "d5950f60df0f36fb5cbceb9058f270f1a76e1354",
+  "prompts": {},
+  "sessions": {
+    "s_c6ded83af037ef": {
+      "agent_id": {
+        "tool": "pi",
+        "id": "01a1daee-b1ed-7761-bcc5-aec60ce861d8",
+        "model": "deepseek-v4.1-flash_high"
+      },
+      "human_author": "Raul Ripoll <raulral@ext.inditex.com>"
+    }
+  }
+}
