@@ -1,0 +1,23 @@
+odd/tasks/catalogo-editable.md
+  s_8ca75549fb5486::t_08e9cb90660e01 62
+odd/tasks/escala-y-configuracion.md
+  s_8ca75549fb5486::t_ea6c617e00b503 133-137
+odd/tasks/pendientes.md
+  s_8ca75549fb5486::t_9096fd7f838011 24,26,62-63
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.6",
+  "base_commit_sha": "4fc055e2492aeb181d8e6b7ecb0457ef5835324b",
+  "prompts": {},
+  "sessions": {
+    "s_8ca75549fb5486": {
+      "agent_id": {
+        "tool": "pi",
+        "id": "01a1dc00-69e3-7628-b102-1d36f2ff622f",
+        "model": "deepseek-v4.1-flash_high"
+      },
+      "human_author": "Raul Ripoll <raulral@ext.inditex.com>"
+    }
+  }
+}
