@@ -1,0 +1,19 @@
+scripts/smoke-i18n.mjs
+  s_0f5026df9808a9::t_677b8e4ab95808 80
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.6",
+  "base_commit_sha": "2a14002cfc553b75ba0401ed88f4902ccc783e38",
+  "prompts": {},
+  "sessions": {
+    "s_0f5026df9808a9": {
+      "agent_id": {
+        "tool": "pi",
+        "id": "01a1d0ec-bbab-72bd-a221-e93abbdb895d",
+        "model": "gpt-6.1-terra"
+      },
+      "human_author": "Raul Ripoll <raulral@ext.inditex.com>"
+    }
+  }
+}
