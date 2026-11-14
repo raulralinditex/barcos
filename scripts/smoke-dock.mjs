@@ -1,16 +1,20 @@
 import { chromium } from "playwright";
 import { buildShip, toRuntimeShip } from "../src/model/shipyard.js";
-import { REPAIR } from "../src/model/repair.js";
+import { repairCost } from "../src/model/repair.js";
 
 /**
- * Browser smoke for the dock dialog (S25), driven through the UI only.
+ * Browser smoke for repairing a fleet, driven through the UI only.
  *
- * The question is asked once per arrival: on entering the port radius from outside,
- * and on opening the sea already inside it with something damaged. It lists the
- * damaged segments of every hull (captain included), repairs with the same rules as
- * S22/S24, and never comes back while the ship stays in port. The shipyard asks the
- * same question with the shop's purse, and its repair must survive the saved combat
- * of the last voyage, which the sea prefers on boot.
+ * The rule changed with S86: arriving at the home port no longer repairs anything or
+ * spends a doublón, and the shipyard no longer asks. Repairing is a button on each fleet
+ * entry, and this smoke pins both halves of that:
+ *
+ *   - arriving saves and opens the shipyard, with the damage and the purse untouched;
+ *   - the button on a fleet entry repairs that hull, charges once, and patches the saved
+ *     combat of the last voyage so the sea does not undo it on boot.
+ *
+ * The sea's own repair in port (the R key, S22/S24) is a different offer and is pinned
+ * here too, because it must keep working.
  */
 
 const build = (overrides = {}) =>
@@ -110,281 +114,187 @@ const hurtCaptain = () => {
   return captain;
 };
 
-/* ------------------------------------------- 1: boot inside the port, captain damaged */
+/** The repair button of one fleet entry, as the player sees it. */
+const repairButton = (page, shipId) => page.locator(`.fleet-item[data-ship-id="${shipId}"] [data-repair]`);
+
+async function sailIn(page) {
+  for (let press = 0; press < 4; press += 1) await page.keyboard.press("w");
+  await page.waitForURL("**/index.html", { timeout: 15000 });
+  await page.waitForLoadState("networkidle");
+  await page.waitForTimeout(400);
+}
+
+/* ------------------------------------------- 1: arriving repairs nothing and costs nothing */
 
 const captain = hurtCaptain();
 let page = await openPage({
-  ships: [captain],
-  world: seaWorld(captain),
-  gold: 5000,
-  flag: "barcos:smoke-dock-1",
+  ships: [captain], world: seaWorld(captain, { x: 115, heading: Math.PI }),
+  gold: 5000, flag: "barcos:smoke-dock-1",
 });
-
-const dialogShown = await page.locator("#dock-dialog").isVisible();
-check(dialogShown, "the dock dialog did not open on boot inside the port with a damaged hull");
-
-const rows = await page.evaluate(() =>
-  [...document.querySelectorAll("#dock-list .dock-ship")].map((row) => ({
-    id: row.dataset.shipId,
-    text: row.textContent.replace(/\s+/g, " ").trim(),
-    button: row.querySelector("button")?.textContent.trim() ?? "",
-  })),
-);
-check(rows.length === 1, `the dialog does not list exactly the damaged hull (${rows.length})`);
-check(rows[0]?.text.includes("42"), `the dialog does not show the hull percentage: "${rows[0]?.text}"`);
-check(rows[0]?.text.includes("61"), `the dialog does not show the rigging percentage: "${rows[0]?.text}"`);
+check(await page.locator("#dock-dialog").count() === 0, "sea still contains a dock dialog");
+await sailIn(page);
+let saved = await fleetOf(page);
 check(
-  rows[0]?.text.includes("40/70"),
-  `the dialog does not show the crew alive out of the complement: "${rows[0]?.text}"`,
+  saved.game.gold === 5000,
+  `arriving charged the purse (${saved.game.gold}, expected 5000): repair is manual now (S86)`,
 );
 check(
-  /42|61/.test(rows[0]?.text ?? "") && /casco/i.test(rows[0]?.text ?? ""),
-  `the dialog does not say what needs mending: "${rows[0]?.text}"`,
-);
-check(
-  rows[0]?.button.includes(String(REPAIR.fee)),
-  `the dialog does not show the flat fee: "${rows[0]?.button}"`,
-);
-check(
-  /Reparar/i.test(rows[0]?.button ?? ""),
-  `the repair button is not labelled in Spanish: "${rows[0]?.button}"`,
-);
-
-// "Ahora no" closes it, and the question does not come back while she stays in port
-await page.locator("#dock-later").click();
-await page.waitForTimeout(400);
-check(await page.locator("#dock-dialog").isHidden(), "Ahora no did not close the dialog");
-await page.waitForTimeout(2000);
-check(
-  await page.locator("#dock-dialog").isHidden(),
-  "the dialog came back after Ahora no while the ship stayed in port",
-);
-// the previous repair surfaces keep working (S22, S24)
-check(await page.locator("#port-panel").isVisible(), "the port panel disappeared behind the dialog");
-await page.close();
-
-/* ------------------------------------------- 2: outside the port, and entering it */
-
-page = await openPage({
-  ships: [hurtCaptain()],
-  world: seaWorld(hurtCaptain(), { x: 900, y: 0 }),
-  gold: 5000,
-  flag: "barcos:smoke-dock-2",
-});
-check(
-  await page.locator("#dock-dialog").isHidden(),
-  "the dock dialog opened with the ship away from port",
-);
-await page.close();
-
-// seeded just outside the radius, heading for the origin: sailing in asks the question
-const inbound = hurtCaptain();
-page = await openPage({
-  ships: [inbound],
-  world: seaWorld(inbound, { x: 260, y: 0, heading: Math.PI }),
-  gold: 5000,
-  flag: "barcos:smoke-dock-3",
-});
-check(
-  await page.locator("#dock-dialog").isHidden(),
-  "the dock dialog opened before the hull entered the port radius",
-);
-for (let press = 0; press < 4; press += 1) await page.keyboard.press("w");
-let appeared = false;
-for (let waited = 0; waited < 40; waited += 1) {
-  await page.waitForTimeout(500);
-  if (await page.locator("#dock-dialog").isVisible()) {
-    appeared = true;
-    break;
-  }
-}
-check(appeared, "the dock dialog did not open on entering the port radius");
-// Escape closes it and the game keys keep working afterwards
-await page.keyboard.press("Escape");
-await page.waitForTimeout(300);
-check(await page.locator("#dock-dialog").isHidden(), "Escape did not close the dock dialog");
-await page.keyboard.press("w");
-await page.waitForTimeout(300);
-const throttleAfterEscape = await page.locator("#hud-throttle").textContent();
-check(
-  Number.parseInt(throttleAfterEscape, 10) > 0,
-  `the game keys stopped working after the dialog (throttle "${throttleAfterEscape}")`,
-);
-await page.close();
-
-/* ------------------------------------------- 3: repair the captain from the dialog */
-
-page = await openPage({
-  ships: [hurtCaptain()],
-  world: seaWorld(hurtCaptain()),
-  gold: 5000,
-  flag: "barcos:smoke-dock-4",
-});
-await page.locator("#dock-list button[data-ship-id]").click();
-await page.waitForTimeout(600);
-
-const repaired = await fleetOf(page);
-check(
-  repaired.fleet.ships[0].condition.hull === 100,
-  `the captain's hull was not repaired from the dialog: ${repaired.fleet.ships[0].condition.hull}`,
-);
-check(
-  repaired.fleet.ships[0].condition.rigging === 100,
-  `the rigging was not repaired: ${repaired.fleet.ships[0].condition.rigging}`,
-);
-check(
-  repaired.fleet.ships[0].crewAlive.marino === 34,
-  `the crew was not brought back to its complement: ${JSON.stringify(repaired.fleet.ships[0].crewAlive)}`,
-);
-check(
-  repaired.game.gold === 5000 - REPAIR.fee,
-  `the fee was not charged exactly once: gold=${repaired.game.gold}`,
+  saved.fleet.ships[0].condition.hull === 42,
+  `arriving repaired the captain (${saved.fleet.ships[0].condition.hull}): repair is manual now (S86)`,
 );
 check(
   await page.locator("#dock-dialog").isHidden(),
-  "the dialog stayed open with nothing left to repair",
-);
-check(
-  (await page.locator("#hud-hull").textContent()).startsWith("100"),
-  "the HUD still shows damage after the repair",
+  "the shipyard opened the repair dialog by itself: repairing is the player's decision (S86)",
 );
 await page.close();
 
-/* ------------------------------------------- 4: no gold, nothing changes */
+/* ------------------------------------------- 2: the button repairs the hull the player picks */
 
+const lead = hurtCaptain();
+const escort = hurtCaptain();
+escort.name = "Escort";
+const leadCost = repairCost(lead);
 page = await openPage({
-  ships: [hurtCaptain()],
-  world: seaWorld(hurtCaptain()),
-  gold: 10,
-  flag: "barcos:smoke-dock-5",
+  path: "index.html", ships: [lead, escort], gold: 5000, flag: "barcos:smoke-dock-2",
 });
-const poorButton = page.locator("#dock-list button[data-ship-id]").first();
-check(
-  (await poorButton.getAttribute("class"))?.includes("is-short"),
-  "the unaffordable repair button is not marked",
-);
-await poorButton.click();
-await page.waitForTimeout(600);
-const poor = await fleetOf(page);
-check(poor.fleet.ships[0].condition.hull === 42, `a repair happened without paying: ${poor.fleet.ships[0].condition.hull}`);
-check(poor.game.gold === 10, `gold was taken without a repair: ${poor.game.gold}`);
-const note = await page.locator("#dock-note").textContent();
-check(
-  note.includes(String(REPAIR.fee - 10)),
-  `the dialog does not say how much is missing: "${note}"`,
-);
-await page.close();
-
-/* ------------------------------------------- 5: a sound fleet is not asked */
-
-const sound = build();
-page = await openPage({
-  ships: [sound],
-  world: seaWorld(sound),
-  gold: 5000,
-  flag: "barcos:smoke-dock-6",
-});
-check(
-  await page.locator("#dock-dialog").isHidden(),
-  "the dock dialog opened with nothing damaged",
-);
-await page.close();
-
-/* ------------------------------------------- 6: the shipyard, and the saved combat trap */
-
-const yardCaptain = hurtCaptain();
-const yardCombat = {
-  condition: { ...HURT },
-  crew: { ...HURT_CREW },
-  pieces: [{ shotsLeft: 25, reloadTimer: 0 }],
-};
-page = await openPage({
-  path: "index.html",
-  ships: [yardCaptain],
-  gold: 5000,
-  combat: yardCombat,
-  flag: "barcos:smoke-dock-7",
-});
-check(
-  await page.locator("#dock-dialog").isVisible(),
-  "the shipyard did not ask about a damaged fleet on opening",
-);
-const yardRows = await page.locator("#dock-list .dock-ship").count();
-check(yardRows === 1, `the shipyard lists the wrong number of hulls (${yardRows})`);
+const leadButton = repairButton(page, lead.id);
+check(await leadButton.count() === 1, "the captain has no repair button in the fleet panel");
+check(await leadButton.isEnabled(), "a damaged captain's repair button is disabled");
 const purseBefore = await page.locator("#gold-value").textContent();
-await page.locator("#dock-list button[data-ship-id]").click();
+await leadButton.click();
 await page.waitForTimeout(600);
 
-const yard = await fleetOf(page);
+saved = await fleetOf(page);
 check(
-  yard.fleet.ships[0].condition.hull === 100,
-  `the shipyard did not repair the captain's fleet entry: ${yard.fleet.ships[0].condition.hull}`,
+  saved.fleet.ships[0].condition.hull === 100,
+  `the button did not repair the captain's fleet entry: ${saved.fleet.ships[0].condition.hull}`,
 );
 check(
-  yard.game.gold === 5000 - REPAIR.fee,
-  `the shipyard purse was not charged once: gold=${yard.game.gold}`,
+  saved.fleet.ships[1].condition.hull === HURT.hull,
+  `repairing one hull repaired another: escort at ${saved.fleet.ships[1].condition.hull}`,
 );
 check(
-  yard.game.combat?.player?.condition?.hull === 100,
-  `the saved combat of the last voyage still carries the damage: ${JSON.stringify(yard.game.combat?.player?.condition)}`,
+  saved.game.gold === 5000 - leadCost,
+  `the purse was not charged once: gold=${saved.game.gold}, expected ${5000 - leadCost}`,
 );
 const purseAfter = await page.locator("#gold-value").textContent();
 check(
-  purseAfter !== purseBefore && purseAfter.includes(String(5000 - REPAIR.fee)),
+  purseAfter !== purseBefore && purseAfter.includes(String(5000 - leadCost)),
   `the displayed purse was not updated ("${purseBefore}" -> "${purseAfter}")`,
 );
+check(
+  await repairButton(page, lead.id).isDisabled(),
+  "a sound hull still offers a repair",
+);
 
-// and the sea must not undo the repair through its fresher-looking combat save
+// The sea must not undo the repair through its fresher-looking combat save.
 await page.goto(`${PORT}/sea.html`, { waitUntil: "networkidle" });
 await page.waitForTimeout(900);
 const hudHull = await page.locator("#hud-hull").textContent();
 check(hudHull.startsWith("100"), `the sea undid the shipyard repair: HUD hull "${hudHull}"`);
 await page.close();
 
-/* ------------------------------------------- 7: both languages */
+/* ------------------------------------------- 3: a short purse buys part of the repair */
 
+const poorCaptain = hurtCaptain();
 page = await openPage({
-  ships: [hurtCaptain()],
-  world: seaWorld(hurtCaptain()),
-  gold: 5000,
-  locale: "en",
-  flag: "barcos:smoke-dock-8",
+  path: "index.html", ships: [poorCaptain], gold: 10, flag: "barcos:smoke-dock-3",
 });
-const english = await page.evaluate(() => ({
-  title: document.querySelector("#dock-dialog h2")?.textContent.trim() ?? "",
-  later: document.querySelector("#dock-later")?.textContent.trim() ?? "",
-  row: document.querySelector("#dock-list .dock-ship")?.textContent.replace(/\s+/g, " ").trim() ?? "",
-  button: document.querySelector("#dock-list button")?.textContent.trim() ?? "",
-}));
-check(/repair/i.test(english.title), `the English title is not translated: "${english.title}"`);
-check(/Not now/i.test(english.later), `the English close button is not translated: "${english.later}"`);
-check(/Hull/i.test(english.row), `the English hull line is not translated: "${english.row}"`);
-check(/Crew/i.test(english.row), `the English crew line is not translated: "${english.row}"`);
-check(/Repair/i.test(english.button), `the English repair button is not translated: "${english.button}"`);
+const poorButton = repairButton(page, poorCaptain.id);
+check(await poorButton.isEnabled(), "the repair button is disabled with a short but non-empty purse");
+await poorButton.click();
+await page.waitForTimeout(500);
+saved = await fleetOf(page);
+const partialHull = HURT.hull + ((100 - HURT.hull) * 10) / repairCost(poorCaptain);
+check(
+  Math.abs(saved.fleet.ships[0].condition.hull - partialHull) < 1e-9,
+  `the short purse did not buy a proportional repair: ${saved.fleet.ships[0].condition.hull} vs ${partialHull}`,
+);
+check(saved.game.gold === 0, `the short purse was not exhausted: ${saved.game.gold}`);
+// With an empty purse the button stays clickable on purpose: the model refuses and
+// nothing is charged, so the player sees why instead of a dead control.
+await repairButton(page, poorCaptain.id).click();
+await page.waitForTimeout(300);
+const afterEmpty = await fleetOf(page);
+check(afterEmpty.game.gold === 0, "an empty purse was charged by a second click");
+check(
+  Math.abs(afterEmpty.fleet.ships[0].condition.hull - partialHull) < 1e-9,
+  "a second click with an empty purse repaired more than the purse could pay for",
+);
 await page.close();
 
+/* ------------------------------------------- 4: the sea's own repair in port still works */
+
+// This is a different offer from the arrival: the R key inside the port (S22/S24). It
+// must keep working, so it is pinned here.
+const stale = hurtCaptain();
+stale.condition = { hull: 80, rigging: 61, crew: 57, morale: 70 };
+const live = { ...HURT, crew: 57 };
+const liveCombat = {
+  condition: { ...live },
+  crew: { ...HURT_CREW },
+  pieces: [{ shotsLeft: 25, reloadTimer: 0 }],
+};
 page = await openPage({
-  path: "index.html",
-  ships: [hurtCaptain()],
-  gold: 5000,
-  locale: "en",
-  flag: "barcos:smoke-dock-9",
+  ships: [stale], world: seaWorld(stale), gold: 10, combat: liveCombat,
+  flag: "barcos:smoke-dock-4",
 });
-const englishYard = await page.evaluate(() => ({
-  title: document.querySelector("#dock-dialog h2")?.textContent.trim() ?? "",
-  row: document.querySelector("#dock-list .dock-ship")?.textContent.replace(/\s+/g, " ").trim() ?? "",
+const cost = repairCost({ ...stale, condition: live });
+const panel = await page.locator("#port-cost").textContent();
+const share = ((100 * 10) / cost).toFixed(1).replace(".", ",");
+check(
+  panel.includes("10 doblones") && panel.includes(`${share} %`),
+  `the port quote ignores the live damage: "${panel}"`,
+);
+await page.keyboard.press("r");
+await page.waitForTimeout(500);
+saved = await fleetOf(page);
+const expectedHull = live.hull + ((100 - live.hull) * 10) / cost;
+const expectedCrew = live.crew + ((100 - live.crew) * 10) / cost;
+check(
+  Math.abs(saved.fleet.ships[0].condition.hull - expectedHull) < 1e-9,
+  `the port repair ignored the live hull: ${saved.fleet.ships[0].condition.hull}`,
+);
+check(
+  Math.abs(saved.fleet.ships[0].condition.crew - expectedCrew) < 1e-9,
+  `the port repair got the crew wrong: ${saved.fleet.ships[0].condition.crew}`,
+);
+await page.reload({ waitUntil: "networkidle" });
+await page.waitForTimeout(500);
+const reloaded = await page.evaluate(() => {
+  window.dispatchEvent(new Event("beforeunload"));
+  return JSON.parse(localStorage.getItem("barcos:fleet:v1")).ships[0].condition;
+});
+check(
+  Math.abs(reloaded.crew - expectedCrew) < 1e-9,
+  `the partial crew was lost on reload: ${reloaded.crew}`,
+);
+await page.close();
+
+/* ------------------------------------------- 5: both languages on the repair button */
+
+const englishCaptain = hurtCaptain();
+page = await openPage({
+  path: "index.html", ships: [englishCaptain], gold: 5000, locale: "en",
+  flag: "barcos:smoke-dock-5",
+});
+const english = await page.evaluate(() => ({
+  button: document.querySelector("[data-repair]")?.textContent.trim() ?? "",
+  title: document.querySelector("[data-repair]")?.title ?? "",
+  dialog: document.querySelector("#dock-dialog")?.classList.contains("is-hidden"),
 }));
-check(/repair/i.test(englishYard.title), `the English shipyard title is not translated: "${englishYard.title}"`);
-check(/Hull/i.test(englishYard.row), `the English shipyard row is not translated: "${englishYard.row}"`);
+check(/repair/i.test(english.button), `the English repair button is not translated: "${english.button}"`);
+check(/doubloons/i.test(english.title), `the English repair title is not translated: "${english.title}"`);
+check(english.dialog === true, "the English shipyard opened the repair dialog by itself");
 await page.close();
 
 await browser.close();
 
 if (errors.length) failures.push(`console errors: ${errors.join(" | ")}`);
-console.log(JSON.stringify({ rows: rows.length, note, english, failures }, null, 2));
+console.log(JSON.stringify({ english, failures }, null, 2));
 if (failures.length) {
   console.error("SMOKE FAILED:");
   for (const failure of failures) console.error(`- ${failure}`);
   process.exit(1);
 }
-console.log("SMOKE OK: the dock dialog asks once per arrival, lists the damage and repairs");
+console.log("SMOKE OK: arriving repairs nothing, and the fleet button repairs the hull the player picks");
