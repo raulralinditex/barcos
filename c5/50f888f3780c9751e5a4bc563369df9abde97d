@@ -1,0 +1,100 @@
+test/opening-broadside.test.js
+  s_f06c10fdae734f::t_ceafa55a4de6bd 1-261,263-267,270-273,276-288
+  s_f06c10fdae734f::t_2f524457a41d92 262,268-269,274-275
+odd/tasks/escala-y-configuracion.md
+  s_f06c10fdae734f::t_d6a3b5b0082b34 92-99
+  s_f06c10fdae734f::t_e7a12a3d2ff487 108-113
+  s_f06c10fdae734f::t_1afbc542112d38 148-149
+  s_f06c10fdae734f::t_1b11e37148bab4 150-165
+  s_f06c10fdae734f::t_aa3f50908c9aad 1,3
+  s_f06c10fdae734f::t_1037aa45847a97 84-91
+  s_f06c10fdae734f::t_ac91dd24e04d8b 66-69
+  s_f06c10fdae734f::t_1995156762cdcc 2,4-18,40-45,54-65
+  s_f06c10fdae734f::t_00cb51487ac91a 120-137
+  s_f06c10fdae734f::t_7971003dc95e93 114-119
+  s_f06c10fdae734f::t_6f281bed2f4c54 138-147
+  s_f06c10fdae734f::t_f22e057ee46207 166-172
+  s_f06c10fdae734f::t_860d8f3367d43b 100-103
+  s_f06c10fdae734f::t_f86cddded933a4 19-39,46-53,70-83
+  s_f06c10fdae734f::t_e25936f6774ab6 104-107
+  s_c6ded83af037ef::t_307c139f983bf1 179-192
+  s_c6ded83af037ef::t_37fc4c1c2e079d 193-195
+test/zone-damage.test.js
+  s_f06c10fdae734f::t_c6eaffa40158a9 16,71,73,80-81,87-99
+  s_f06c10fdae734f::t_07ac3724e182c2 1-15,17-70,72,74-79,82-86,100-145,151-192
+  s_f06c10fdae734f::t_b96e52665ad034 146-150
+test/safe-zone.test.js
+  s_f06c10fdae734f::t_11f1e9d5025c3a 1-31,38-42,45-104,107-116,121-128
+  s_f06c10fdae734f::t_0b108e081e4244 43-44,105-106,117-120
+  s_f06c10fdae734f::t_8b15b6bbc5fd0f 34-35
+  s_f06c10fdae734f::t_4a7ff6ddeaa53e 32-33,36-37
+test/flag.test.js
+  s_f06c10fdae734f::t_83de853f81e61a 1-85
+test/start-gold.test.js
+  s_f06c10fdae734f::t_a2fa57b2778a46 1-87
+odd/tasks/escoltas-a-tiro-y-precio-minimo.md
+  s_da4f60aa90c620::t_12f368abaee990 1-39
+test/side-state.test.js
+  s_f06c10fdae734f::t_414ec71b882e13 10
+  s_f06c10fdae734f::t_b5aa2123c8a3f8 120-122,128-129,131,134
+  s_f06c10fdae734f::t_39c8b74128c912 66-68
+  s_9d38d8fb706940::t_2aa28c6a597b96 82
+  s_273470a569a5b8::t_0c0982781d49cc 73-79,81
+test/ammo-switch.test.js
+  s_f06c10fdae734f::t_0bd174e823e142 20
+  s_f06c10fdae734f::t_d0cce19b0dddb0 1-19,21-89,92-93,95-116,121,123-139,143-145,147-207,212-256
+  s_f06c10fdae734f::t_35adcc58817930 90-91,94,117-120,122,140-142,146,208-211
+test/swivel.test.js
+  s_273470a569a5b8::t_36510e3c22127b 221
+test/range-circle.test.js
+  s_f06c10fdae734f::t_414ec71b882e13 157-158
+  s_f06c10fdae734f::t_4f43d6573c0fff 1-156,159-183
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.6",
+  "base_commit_sha": "c550f888f3780c9751e5a4bc563369df9abde97d",
+  "prompts": {},
+  "sessions": {
+    "s_273470a569a5b8": {
+      "agent_id": {
+        "tool": "pi",
+        "id": "01a1d098-627b-7272-80a7-a39aba728357",
+        "model": "claude-sonnet-5.5"
+      },
+      "human_author": "Raul Ripoll <raulral@ext.inditex.com>"
+    },
+    "s_9d38d8fb706940": {
+      "agent_id": {
+        "tool": "pi",
+        "id": "01a1d413-f644-73ba-8d97-286a0339ba8e",
+        "model": "gpt-6.1-terra"
+      },
+      "human_author": "Raul Ripoll <raulral@ext.inditex.com>"
+    },
+    "s_c6ded83af037ef": {
+      "agent_id": {
+        "tool": "pi",
+        "id": "01a1daee-b1ed-7761-bcc5-aec60ce861d8",
+        "model": "deepseek-v4.1-flash_high"
+      },
+      "human_author": "Raul Ripoll <raulral@ext.inditex.com>"
+    },
+    "s_da4f60aa90c620": {
+      "agent_id": {
+        "tool": "pi",
+        "id": "01a1d4b0-cdfc-7736-b408-a2614d2e15dc",
+        "model": "deepseek-v4.1-flash"
+      },
+      "human_author": "Raul Ripoll <raulral@ext.inditex.com>"
+    },
+    "s_f06c10fdae734f": {
+      "agent_id": {
+        "tool": "pi",
+        "id": "01a1d6ff-202c-776e-a594-1d85cdb28493",
+        "model": "claude-sonnet-5.5"
+      },
+      "human_author": "Raul Ripoll <raulral@ext.inditex.com>"
+    }
+  }
+}
