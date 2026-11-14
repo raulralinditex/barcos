@@ -1,0 +1,26 @@
+test/damage-trail.test.js
+  s_273470a569a5b8::t_0626fd707df0c5 1-108
+odd/tasks/barras-de-dano.md
+  s_273470a569a5b8::t_0626fd707df0c5 1-2,4-20,23-30
+  s_273470a569a5b8::t_12344e5917ad66 3,21-22,31-38
+src/model/damage-trail.js
+  s_273470a569a5b8::t_845f0390ab699a 1-82
+scripts/smoke-damage-trail.mjs
+  s_273470a569a5b8::t_c9ca859a7bf2fa 1-95
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.6",
+  "base_commit_sha": "a7f4f8219ce968ab05aa782f14b6a247f23f0629",
+  "prompts": {},
+  "sessions": {
+    "s_273470a569a5b8": {
+      "agent_id": {
+        "tool": "pi",
+        "id": "01a1d098-627b-7272-80a7-a39aba728357",
+        "model": "claude-sonnet-5.5"
+      },
+      "human_author": "Raul Ripoll <raulral@ext.inditex.com>"
+    }
+  }
+}
