@@ -15,8 +15,9 @@ import {
   damagedFleetShips,
   damagedShips,
   needsRepair,
+  damageShare,
   repairCost,
-  repairFee,
+  shipValue,
   repairFleetShip,
   repairReport,
   repairShip,
@@ -109,7 +110,7 @@ test("S23: an unknown ship id leaves the fleet untouched", () => {
 
 /* ---------------------------------------------------------------- S22 repair at the home port */
 
-test("S22: repairing a damaged ship restores hull, rigging and crew and charges the flat fee", () => {
+test("S22/S40: repairing a damaged ship restores hull, rigging and crew and charges its share", () => {
   const hurt = {
     ...ship(),
     condition: { hull: 35, rigging: 58, crew: 70, morale: 40 },
@@ -120,8 +121,8 @@ test("S22: repairing a damaged ship restores hull, rigging and crew and charges 
   const result = repairShip(hurt, purse);
 
   assert.equal(result.repaired, true);
-  assert.equal(result.spent, repairFee());
-  assert.equal(result.gold, purse - repairFee());
+  assert.equal(result.spent, repairCost(hurt));
+  assert.equal(result.gold, purse - repairCost(hurt));
   assert.deepEqual(result.ship.condition, { hull: 100, rigging: 100, crew: 100, morale: 100 });
   assert.deepEqual(result.ship.crewAlive, hurt.crew);
   // the rest of the hull is untouched: repairing is not a rebuild
@@ -130,12 +131,33 @@ test("S22: repairing a damaged ship restores hull, rigging and crew and charges 
   assert.deepEqual(result.ship.batteries, hurt.batteries);
 });
 
-test("S22: the fee is flat, so a wrecked hull and a scratched one pay the same", () => {
-  const wrecked = { ...ship(), condition: { hull: 5, rigging: 10, crew: 41, morale: 0 } };
+test("S40: the cost is proportional to the damage", () => {
+  const wrecked = { ...ship(), condition: { hull: 0, rigging: 0, crew: 0, morale: 0 } };
+  const half = { ...ship(), condition: { hull: 50, rigging: 50, crew: 50, morale: 50 } };
   const scratched = { ...ship(), condition: { hull: 96, rigging: 100, crew: 100, morale: 100 } };
 
-  assert.equal(repairCost(wrecked), repairCost(scratched));
-  assert.equal(repairCost(wrecked), REPAIR.fee);
+  assert.ok(repairCost(wrecked) > repairCost(half), "a wreck must cost more than a half-wreck");
+  assert.ok(repairCost(half) > repairCost(scratched), "half damage must cost more than a scratch");
+  // The worst segment decides: one shredded segment is enough to need the whole job.
+  assert.equal(repairCost(wrecked), Math.round(wrecked.paidGold * REPAIR.shareOfPrice));
+});
+
+test("S40: a full repair costs a declared share of the hull's value, 20 % by default", () => {
+  assert.equal(REPAIR.shareOfPrice, 0.2);
+  const wrecked = { ...ship(), paidGold: 5_000, condition: { hull: 0, rigging: 0, crew: 0, morale: 0 } };
+  assert.equal(repairCost(wrecked), 1_000, "20 % of a 5,000 hull");
+});
+
+test("S40: the cost follows the value of the hull, not the size of the damage alone", () => {
+  const damage = { hull: 50, rigging: 100, crew: 100, morale: 100 };
+  const cheap = repairCost({ ...ship(), paidGold: 1_000, condition: damage });
+  const dear = repairCost({ ...ship(), paidGold: 10_000, condition: damage });
+  assert.equal(dear, cheap * 10, `a ten times dearer hull should cost ten times more (${cheap} vs ${dear})`);
+});
+
+test("S40: a hull with no recorded price falls back to its hull price instead of charging nothing", () => {
+  const wrecked = { ...ship(), paidGold: 0, condition: { hull: 0, rigging: 0, crew: 0, morale: 0 } };
+  assert.ok(repairCost(wrecked) > 0, "an old save must still quote a repair");
 });
 
 test("S22: an undamaged ship needs no repair and pays nothing", () => {
@@ -150,16 +172,50 @@ test("S22: an undamaged ship needs no repair and pays nothing", () => {
   assert.equal(result.reason, "no-damage");
 });
 
-test("S22: without enough gold nothing changes and the player is told why", () => {
-  const hurt = { ...ship(), condition: { hull: 50, rigging: 50, crew: 50, morale: 50 } };
-  const result = repairShip(hurt, REPAIR.fee - 1);
+test("S45: the captain spends half the cost to repair half of every missing segment", () => {
+  const hurt = {
+    ...ship(), paidGold: 1000,
+    condition: { hull: 20, rigging: 40, crew: 60, morale: 80 },
+    crewAlive: { marino: 5, artillero: 1, soldado: 3 },
+  };
+  const cost = repairCost(hurt);
+  assert.equal(cost, 160);
+  const result = repairShip(hurt, cost / 2);
+  assert.equal(result.repaired, true);
+  assert.equal(result.partial, true);
+  assert.equal(result.fraction, 0.5);
+  assert.equal(result.spent, 80);
+  assert.equal(result.gold, 0);
+  assert.equal(result.missing, 80);
+  assert.deepEqual(result.ship.condition, { hull: 60, rigging: 70, crew: 80, morale: 90 });
+  assert.deepEqual(result.ship.crewAlive, { marino: 9, artillero: 3, soldado: 5 });
+  assert.deepEqual(hurt.condition, { hull: 20, rigging: 40, crew: 60, morale: 80 });
+});
 
-  assert.equal(result.repaired, false);
-  assert.equal(result.reason, "unaffordable");
-  assert.equal(result.spent, 0);
-  assert.equal(result.gold, REPAIR.fee - 1);
-  assert.deepEqual(result.ship.condition, hurt.condition);
-  assert.equal(result.missing, 1);
+test("S45: zero or invalid gold spends nothing and leaves the captain unchanged", () => {
+  const hurt = { ...ship(), paidGold: 1000, condition: { hull: 20, rigging: 40, crew: 60, morale: 80 } };
+  for (const gold of [0, -50, NaN, undefined]) {
+    const result = repairShip(hurt, gold);
+    assert.equal(result.repaired, false);
+    assert.equal(result.reason, "unaffordable");
+    assert.equal(result.spent, 0);
+    assert.equal(result.gold, 0);
+    assert.equal(result.missing, repairCost(hurt));
+    assert.deepEqual(result.ship, hurt);
+  }
+});
+
+test("S45: proportional crew replenishment rounds to whole men and caps at the bought complement", () => {
+  const hurt = {
+    ...ship(), paidGold: 1000,
+    condition: { hull: 0, rigging: 50, crew: 50, morale: 100 },
+    crewAlive: { marino: 11, artillero: 8, soldado: 1 },
+  };
+  const result = repairShip(hurt, 50);
+  assert.equal(result.fraction, 0.25);
+  assert.deepEqual(result.ship.condition, { hull: 25, rigging: 62.5, crew: 62.5, morale: 100 });
+  assert.deepEqual(result.ship.crewAlive, { marino: 11, artillero: 4, soldado: 2 });
+  assert.equal(result.gold, 0);
 });
 
 test("S22: repairing restores the bought crew, not the survivors", () => {
@@ -205,16 +261,17 @@ test("S24: the port list holds only the damaged ships that are not the captain",
   );
 });
 
-test("S24: repairing one fleet ship touches only that hull and charges the flat fee once", () => {
+test("S24: repairing one fleet ship touches only that hull and charges its share once", () => {
   const { fleet, captain, hurt, sound } = fleetOfThree();
   const purse = 5000;
+  const expected = repairCost(hurt);
 
   const result = repairFleetShip(fleet, hurt.id, purse);
 
   assert.equal(result.repaired, true);
   assert.equal(result.reason, "repaired");
-  assert.equal(result.spent, REPAIR.fee);
-  assert.equal(result.gold, purse - REPAIR.fee);
+  assert.equal(result.spent, expected);
+  assert.equal(result.gold, purse - expected);
 
   const repaired = result.fleet.ships.find((s) => s.id === hurt.id);
   assert.deepEqual(repaired.condition, { hull: 100, rigging: 100, crew: 100, morale: 100 });
@@ -235,18 +292,24 @@ test("S24: repairing one fleet ship touches only that hull and charges the flat 
   assert.equal(result.fleet.ships.length, 3);
 });
 
-test("S24: without enough gold the fleet repair changes nothing and reports the missing gold", () => {
-  const { fleet, hurt } = fleetOfThree();
-  const purse = REPAIR.fee - 30;
-
+test("S45: a fleet ship is partially repaired, persisted and charged only the available gold", () => {
+  const { fleet, hurt, captain, sound } = fleetOfThree();
+  const cost = repairCost(hurt);
+  const purse = cost / 2;
   const result = repairFleetShip(fleet, hurt.id, purse);
-
-  assert.equal(result.repaired, false);
-  assert.equal(result.reason, "unaffordable");
-  assert.equal(result.spent, 0);
-  assert.equal(result.gold, purse);
-  assert.equal(result.missing, 30);
-  assert.deepEqual(result.fleet, fleet, "an unaffordable repair changed the fleet");
+  assert.equal(result.repaired, true);
+  assert.equal(result.partial, true);
+  assert.equal(result.fraction, 0.5);
+  assert.equal(result.spent, purse);
+  assert.equal(result.gold, 0);
+  assert.equal(result.missing, cost - purse);
+  const reopened = deserializeFleet(serializeFleet(result.fleet));
+  const fixed = reopened.ships.find((entry) => entry.id === hurt.id);
+  assert.deepEqual(fixed.condition, { hull: 72.5, rigging: 75, crew: 80, morale: 85 });
+  assert.deepEqual(fixed.crewAlive, { marino: 9, artillero: 3, soldado: 5 });
+  assert.deepEqual(result.fleet.ships.find((entry) => entry.id === captain.id), captain);
+  assert.deepEqual(result.fleet.ships.find((entry) => entry.id === sound.id), sound);
+  assert.deepEqual(fleet.ships.find((entry) => entry.id === hurt.id), hurt);
 });
 
 test("S24: a sound fleet ship pays nothing", () => {
@@ -300,7 +363,7 @@ test("S25: the report lists only the damaged segments, the men and the flat fee"
   assert.equal(report.crew, 60);
   assert.equal(report.crewAlive, 11, "the survivors are counted as men, not as a share");
   assert.equal(report.crewBought, 22);
-  assert.equal(report.cost, REPAIR.fee, "the dialog shows the flat fee of S22");
+  assert.equal(report.cost, repairCost(hurt), "the dialog shows the proportional fee of S40");
 });
 
 test("S25: a sound ship has nothing to list and costs nothing", () => {
@@ -335,8 +398,8 @@ test("S25: the shipyard repairs the captain through the fleet entry and leaves t
   const result = repairFleetShip(fleet, captain.id, purse, { allowCaptain: true });
   assert.equal(result.repaired, true);
   assert.equal(result.reason, "repaired");
-  assert.equal(result.spent, REPAIR.fee);
-  assert.equal(result.gold, purse - REPAIR.fee);
+  assert.equal(result.spent, repairCost(captain));
+  assert.equal(result.gold, purse - result.spent);
 
   const repaired = result.fleet.ships.find((s) => s.id === captain.id);
   assert.deepEqual(repaired.condition, { hull: 100, rigging: 100, crew: 100, morale: 100 });
@@ -346,15 +409,20 @@ test("S25: the shipyard repairs the captain through the fleet entry and leaves t
   assert.equal(result.fleet.captainId, fleet.captainId);
 });
 
-test("S25: without enough gold the shipyard leaves the captain damaged and the purse intact", () => {
-  const { fleet, captain } = fleetOfThree();
-  const purse = REPAIR.fee - 50;
-
+test("S45: the shipyard partially repairs and persists the captain with its purse", () => {
+  const { fleet, captain, hurt } = fleetOfThree();
+  const cost = repairCost(captain);
+  const purse = cost / 2;
   const result = repairFleetShip(fleet, captain.id, purse, { allowCaptain: true });
-
-  assert.equal(result.repaired, false);
-  assert.equal(result.reason, "unaffordable");
-  assert.equal(result.missing, 50);
-  assert.equal(result.gold, purse);
-  assert.deepEqual(result.fleet, fleet);
+  assert.equal(result.repaired, true);
+  assert.equal(result.partial, true);
+  assert.equal(result.fraction, 0.5);
+  assert.equal(result.spent, purse);
+  assert.equal(result.missing, cost - purse);
+  assert.equal(result.gold, 0);
+  const reopened = deserializeFleet(serializeFleet(result.fleet));
+  assert.deepEqual(captainShip(reopened).condition, { hull: 90, rigging: 100, crew: 100, morale: 100 });
+  assert.deepEqual(result.fleet.ships.find((entry) => entry.id === hurt.id), hurt);
+  assert.deepEqual(reopened.ships.find((entry) => entry.id === hurt.id).condition, hurt.condition);
+  assert.deepEqual(captainShip(fleet), captain);
 });

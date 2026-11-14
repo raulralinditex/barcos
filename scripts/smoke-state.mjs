@@ -1,6 +1,6 @@
 import { chromium } from "playwright";
 import { buildShip, toRuntimeShip } from "../src/model/shipyard.js";
-import { REPAIR } from "../src/model/repair.js";
+import { repairCost } from "../src/model/repair.js";
 import { createEnemyCombatant } from "../src/model/combat.js";
 
 /**
@@ -68,6 +68,8 @@ async function newSea({ ship, world, gold = 5000, locale = "es" } = {}) {
       if (localStorage.getItem("barcos:smoke-seeded") === "1") return;
       localStorage.setItem("barcos:smoke-seeded", "1");
       localStorage.setItem("barcos:lang:v1", lang);
+      // S47: these checks are about firing by hand (Q/E) and about the bars, so the automatic fire stays off.
+      localStorage.setItem("barcos:autofire:v1", "0");
       const s = JSON.parse(shipJson);
       localStorage.setItem(
         "barcos:fleet:v1",
@@ -283,10 +285,11 @@ await page.close();
 page = await newSea({ ship: hurt, world: seaWorld(hurt), gold: 5000 });
 const portShown = await page.locator("#port-panel").isVisible();
 check(portShown, "the repair panel is hidden while docked");
+const expectedCost = repairCost(hurt);
 const costText = await page.locator("#port-cost").textContent();
 check(
-  costText.includes(String(REPAIR.fee)),
-  `the panel does not show the flat fee ${REPAIR.fee}: "${costText}"`,
+  costText.includes(String(expectedCost)),
+  `the panel does not show the repair cost ${expectedCost}: "${costText}"`,
 );
 
 await page.keyboard.press("r");
@@ -312,8 +315,8 @@ check(
   `the crew was not brought back to its complement: ${JSON.stringify(afterRepair.crewAlive)}`,
 );
 check(
-  afterRepair.gold === 5000 - REPAIR.fee,
-  `the flat fee was not charged: gold=${afterRepair.gold}`,
+  afterRepair.gold === 5000 - expectedCost,
+  `the repair cost was not charged: gold=${afterRepair.gold}, expected ${5000 - expectedCost}`,
 );
 
 const hudHull = await page.locator("#hud-hull").textContent();
@@ -329,11 +332,13 @@ const afterReload = await page.evaluate(() => {
 check(afterReload === 100, `the repair was lost on reload (hull=${afterReload})`);
 await page.close();
 
-/* ---------------------------------------------------------------- 7: no gold, no repair */
+/* ---------------------------------------------------------------- 7: a short purse buys a partial captain repair */
 
 const poor = build();
 poor.condition = { hull: 30, rigging: 30, crew: 30, morale: 30 };
 page = await newSea({ ship: poor, world: seaWorld(poor), gold: 10 });
+const captainOffer = await page.locator("#port-cost").textContent();
+check(/parcial/i.test(captainOffer) && /%/.test(captainOffer), `missing partial offer: "${captainOffer}"`);
 await page.keyboard.press("r");
 await page.waitForTimeout(400);
 const poorResult = await page.evaluate(() => {
@@ -341,10 +346,10 @@ const poorResult = await page.evaluate(() => {
   const game = JSON.parse(localStorage.getItem("barcos:game:v1"));
   return { hull: fleet.ships[0].condition.hull, gold: game.gold };
 });
-check(poorResult.hull === 30, `a repair happened without paying (hull=${poorResult.hull})`);
-check(poorResult.gold === 10, `gold was taken without a repair (gold=${poorResult.gold})`);
+check(Math.abs(poorResult.hull - (30 + 70 * 10 / repairCost(poor))) < 1e-9, `wrong partial hull: ${poorResult.hull}`);
+check(poorResult.gold === 0, `the partial repair did not spend the purse (gold=${poorResult.gold})`);
 const shortBanner = await page.locator("#banner").textContent();
-check(/doblones/i.test(shortBanner), `the player was not told the price: "${shortBanner}"`);
+check(/parcial/i.test(shortBanner) && /10 doblones/i.test(shortBanner), `missing partial price: "${shortBanner}"`);
 await page.close();
 
 /* ---------------------------------------------------------------- 8: an undamaged hull pays nothing */
@@ -376,6 +381,8 @@ async function newSeaFleet({ ships, gold = 5000, locale = "es" } = {}) {
       if (localStorage.getItem("barcos:smoke-seeded-fleet") === "1") return;
       localStorage.setItem("barcos:smoke-seeded-fleet", "1");
       localStorage.setItem("barcos:lang:v1", lang);
+      // S47: these checks are about firing by hand (Q/E) and about the bars, so the automatic fire stays off.
+      localStorage.setItem("barcos:autofire:v1", "0");
       const list = JSON.parse(shipsJson);
       localStorage.setItem(
         "barcos:fleet:v1",
@@ -399,7 +406,7 @@ const second = build();
 second.id = `${second.id}-consort`;
 second.name = "Consort";
 second.condition = { hull: 35, rigging: 60, crew: 70, morale: 55 };
-second.crewAlive = { marino: 10, artillero: 3, soldado: 8 };
+second.crewAlive = { marino: 24, artillero: 7, soldado: 18 };
 
 page = await newSeaFleet({ ships: [captain, second], gold: 5000 });
 const listed = await page.evaluate(() => {
@@ -416,8 +423,8 @@ check(
   `the wrong ship is listed: ${JSON.stringify(listed)}`,
 );
 check(
-  listed[0]?.text.includes(String(REPAIR.fee)),
-  `the fleet button does not show the flat fee: "${listed[0]?.text}"`,
+  listed[0]?.text.includes(String(repairCost(second))),
+  `the fleet button does not show the repair cost: "${listed[0]?.text}"`,
 );
 check(
   /Reparar/i.test(listed[0]?.text ?? ""),
@@ -456,8 +463,8 @@ check(
   `the fleet ship's crew was not brought back: ${JSON.stringify(fleetAfter.second.crewAlive)}`,
 );
 check(
-  fleetAfter.gold === 5000 - REPAIR.fee,
-  `the fee was not charged exactly once: gold=${fleetAfter.gold}`,
+  fleetAfter.gold === 5000 - repairCost(second),
+  `the repair cost was not charged exactly once: gold=${fleetAfter.gold}`,
 );
 check(
   fleetAfter.captain.condition.hull === 80,
@@ -488,13 +495,17 @@ const soundListed = await page.locator("#port-panel button[data-ship-id]").count
 check(soundListed === 0, `a sound fleet ship is offered for repair (${soundListed} buttons)`);
 await page.close();
 
-/* ---------------------------------------------------------------- 11: no gold, no fleet repair */
+/* ---------------------------------------------------------------- 11: partial repair of a sailing escort */
 
 const poorSecond = build();
 poorSecond.id = `${poorSecond.id}-poor`;
-poorSecond.condition = { hull: 20, rigging: 20, crew: 20, morale: 20 };
+poorSecond.condition = { hull: 20, rigging: 40, crew: 70, morale: 50 };
+poorSecond.crewAlive = { marino: 20, artillero: 6, soldado: 14 };
 page = await newSeaFleet({ ships: [captain, poorSecond], gold: 10 });
-await page.locator(`#port-panel button[data-ship-id="${poorSecond.id}"]`).click();
+const poorFleetButton = page.locator(`#port-panel button[data-ship-id="${poorSecond.id}"]`);
+const fleetOffer = await poorFleetButton.textContent();
+check(await poorFleetButton.isEnabled() && /parcial/i.test(fleetOffer) && /%/.test(fleetOffer), `missing fleet partial offer: "${fleetOffer}"`);
+await poorFleetButton.click();
 await page.waitForTimeout(500);
 const poorFleet = await page.evaluate(
   ([id, captainId]) => {
@@ -504,14 +515,35 @@ const poorFleet = await page.evaluate(
       hull: fleet.ships.find((s) => s.id === id).condition.hull,
       captainHull: fleet.ships.find((s) => s.id === captainId).condition.hull,
       gold: game.gold,
+      escort: game.combat?.escorts?.[id],
     };
   },
   [poorSecond.id, captain.id],
 );
-check(poorFleet.hull === 20, `a fleet ship was repaired without paying (hull=${poorFleet.hull})`);
-check(poorFleet.gold === 10, `gold was taken without a repair (gold=${poorFleet.gold})`);
+const partialHull = 20 + 80 * 10 / repairCost(poorSecond);
+check(Math.abs(poorFleet.hull - partialHull) < 1e-9, `wrong fleet partial hull: ${poorFleet.hull}`);
+check(poorFleet.gold === 0, `the fleet repair did not spend the purse (gold=${poorFleet.gold})`);
+check(poorFleet.captainHull === 80, `the captain changed: ${poorFleet.captainHull}`);
+check(Math.abs(poorFleet.escort?.condition.hull - partialHull) < 1e-9, `live escort not repaired: ${JSON.stringify(poorFleet.escort)}`);
 const poorBanner = await page.locator("#banner").textContent();
-check(/doblones/i.test(poorBanner), `the player was not told the fleet price: "${poorBanner}"`);
+check(/parcial/i.test(poorBanner) && /10 doblones/i.test(poorBanner), `missing partial fleet price: "${poorBanner}"`);
+await page.reload({ waitUntil: "networkidle" });
+await page.waitForTimeout(700);
+const escortReload = await page.evaluate((id) => JSON.parse(localStorage.getItem("barcos:fleet:v1")).ships.find((ship) => ship.id === id)?.condition.hull, poorSecond.id);
+check(Math.abs(escortReload - partialHull) < 1e-9, `escort repair lost after reload: ${escortReload}`);
+await page.close();
+
+/* ---------------------------------------------------------------- 12: zero gold blocks repair */
+page = await newSeaFleet({ ships: [captain, poorSecond], gold: 0 });
+const emptyButton = page.locator(`#port-panel button[data-ship-id="${poorSecond.id}"]`);
+check(await emptyButton.isDisabled(), "zero gold must disable the fleet repair");
+await page.keyboard.press("r");
+await page.waitForTimeout(400);
+const emptyResult = await page.evaluate(() => ({
+  fleet: JSON.parse(localStorage.getItem("barcos:fleet:v1")),
+  gold: JSON.parse(localStorage.getItem("barcos:game:v1")).gold,
+}));
+check(emptyResult.gold === 0 && emptyResult.fleet.ships[0].condition.hull === 80, "zero gold repaired the captain or changed the purse");
 await page.close();
 
 await browser.close();
@@ -529,4 +561,4 @@ if (failures.length) {
   for (const failure of failures) console.error(`- ${failure}`);
   process.exit(1);
 }
-console.log("SMOKE OK: state bars follow the hulls, repair works only in port for a flat fee");
+console.log("SMOKE OK: state bars follow the hulls, repair works only in port and is charged by damage");
