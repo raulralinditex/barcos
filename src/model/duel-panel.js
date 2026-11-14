@@ -74,20 +74,9 @@ export function duelRoster(input) {
   return [...own, ...enemy];
 }
 
-/**
- * Whether the panel should be on screen at all (S73, S85).
- *
- * The panel is a battle panel, so a battle is what it needs: at least one hostile in the
- * roster. Listing our own hulls is not enough, because the captain is `fighting` from the
- * moment she puts to sea — that is what makes her guns work — and counting her alone left
- * the panel on screen over an empty sea, which is exactly what the player reported.
- *
- * Our hulls still come first in the roster, so when the panel does open both sides read
- * side by side, which is what S73 was for.
- */
+/** Whether the panel should be on screen at all (S73): somebody is in the fight. */
 export function duelVisible(roster) {
-  if (!Array.isArray(roster)) return false;
-  return roster.some((entry) => entry?.side === "theirs");
+  return Array.isArray(roster) && roster.length > 0;
 }
 
 /**

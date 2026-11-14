@@ -93,9 +93,17 @@ const num = (text) =>
   Number.parseFloat(String(text).replace(/\./g, "").replace(",", ".").replace(/[^\d.]/g, ""));
 
 const targetPanel = () =>
-  page.locator("#target-panel").evaluate((el) => !el.classList.contains("is-hidden"));
+  page.locator("#duel-panel").evaluate((el) => !el.classList.contains("is-hidden"));
+// S73 replaced the single-enemy panel with the duel roster: the nearest hostile's hull
+// bar is the first `is-theirs` row, and its fill carries the same 0..100 % it always did.
 const targetHull = () =>
-  page.locator("#target-hull").evaluate((el) => Number.parseFloat(el.style.width) || 0);
+  page
+    .locator('.duel-row.is-theirs .duel-bar-hull .duel-fill-hull')
+    .first()
+    .evaluate((el) => Number.parseFloat(el.style.width) || 0)
+    .catch(() => 0);
+const targetNameOf = () =>
+  page.locator(".duel-row.is-theirs .duel-name").first().textContent();
 const playerRounds = () => page.locator("#hud-rounds").textContent();
 const banner = () => page.locator("#banner").textContent();
 const savedEncounters = () =>
@@ -110,7 +118,7 @@ for (let i = 0; i < 20 && !engaged; i += 1) {
   await page.waitForTimeout(400);
   engaged = await targetPanel();
 }
-const targetName = engaged ? await page.locator("#target-name").textContent() : null;
+const targetName = engaged ? await targetNameOf() : null;
 
 // --- 2. the empty side must not fire ---------------------------------------
 await page.keyboard.press("q");

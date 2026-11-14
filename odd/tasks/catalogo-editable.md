@@ -87,3 +87,5 @@ S86. Reparar deja de ser automático y pasa a ser un botón por nave. Pedido (ve
 - El diálogo de reparación al abrir el Astillero ya no se abre solo. La forma de reparar es el botón de cada nave.
 - Decisión del usuario: `src/model/auto-repair.js` y `test/auto-repair.test.js` se **borran**, porque el módulo quedó sin consumidores y su regla ya no existe. Eso retira 6 tests de S49; el usuario lo autorizó explícitamente ("Borrar módulo y test").
 - Evidencia: `scripts/smoke-manual-repair.mjs` con RED observado (sin el manejador del botón: "the repair button did not repair the captain (40)") y GREEN. `npm test` 605/605 (611 menos los 6 de S49).
+
+L52: Reversión de S85 aplicada. Los paneles de combate se muestran siempre otra vez: el panel de duelo vuelve a abrirse con cualquier nave peleando (S73), las barras de condición vuelven a dibujarse fuera de combate y las filas del panel del buque pierden su marca de "sólo en combate". Se restaura el test de S73 que la reversión deja válido otra vez. `npm test` 605/605; `scripts/smoke-combat.mjs` verde.

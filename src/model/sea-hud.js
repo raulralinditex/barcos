@@ -67,17 +67,3 @@ export function hasEnemyInGunshot(escort, enemies, radius) {
   return false;
 }
 
-/**
- * Whether the combat panels belong on screen (S85).
- *
- * The player asked for the battle panels only during a battle: the duel roster, the
- * condition bars over the hulls and the rows of the ship panel that only matter under
- * fire. Anything that is already gated on a fight answers this; anything that is not,
- * keeps showing, because the sea is readable without a battle.
- *
- * `engaged` is the same fact the duel panel already uses: a hostile in the fight. It is
- * passed in rather than read here, so this stays pure and testable.
- */
-export function combatPanelsVisible(engaged) {
-  return Boolean(engaged);
-}

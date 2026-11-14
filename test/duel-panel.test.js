@@ -125,21 +125,9 @@ test("S73: with nobody fighting the panel is empty and hidden", () => {
   assert.equal(duelVisible(null), false);
 });
 
-test("S85: the panel needs an enemy, not just our own hulls", () => {
-  // The captain is `fighting` from the moment she puts to sea, so counting her alone kept
-  // the panel on screen over an empty sea (S85). A battle panel needs a battle.
-  const alone = duelRoster({ ours: [hull("cap", 0, 0)], theirs: [], ship });
-  assert.equal(duelVisible(alone), false, "our own hulls alone must not open the panel");
-
-  const engaged = duelRoster({
-    ours: [hull("cap", 0, 0)],
-    theirs: [hull("enemy", 0, 200)],
-    engageRadiusM: 620,
-    ship,
-  });
-  assert.equal(duelVisible(engaged), true, "an enemy in the fight must open the panel");
-  // And both sides are listed together, which is what S73 asked for.
-  assert.deepEqual(engaged.map((entry) => entry.side), ["ours", "theirs"]);
+test("S73: with somebody fighting the panel shows", () => {
+  const roster = duelRoster({ ours: [hull("cap", 0, 0)], theirs: [], ship });
+  assert.equal(duelVisible(roster), true);
 });
 
 test("S73: a hull with no position is listed last, not dropped", () => {
