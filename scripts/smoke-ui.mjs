@@ -52,10 +52,7 @@ const restored = await read();
 
 await page.click("#launch-btn");
 await page.waitForTimeout(250);
-const dialogOpen = await page.locator("#sail-dialog").evaluate((el) => el.open);
-const dialogTitle = await page.locator("#sail-title").textContent();
-const dialogStats = await page.locator(".sail-stats div").count();
-await page.screenshot({ path: "/tmp/shipyard-dialog.png" });
+const addedCaptain = await page.locator(".fleet-item.is-captain .fleet-name").textContent();
 
 const stored = await page.evaluate(() => {
   const raw = localStorage.getItem("barcos:fleet:v1");
@@ -68,7 +65,7 @@ const stored = await page.evaluate(() => {
 
 console.log(JSON.stringify({
   errors, initial, flagship: { ...flagship, priceOver }, restored,
-  dialog: { dialogOpen, dialogTitle, dialogStats }, stored,
+  addedCaptain, stored,
 }, null, 2));
 
 await browser.close();
