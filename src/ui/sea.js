@@ -65,7 +65,7 @@ import {
   squadronStatus,
 } from "../model/squadron.js";
 import { createEscort } from "../model/formation.js";
-import { hasEnemyInGunshot, hullBarShare, timeScaleOnEngage } from "../model/sea-hud.js";
+import { combatPanelsVisible, hasEnemyInGunshot, hullBarShare, timeScaleOnEngage } from "../model/sea-hud.js";
 import { flagColours, flagFor } from "../model/flag.js";
 import { conditionShare, duelRoster, duelVisible } from "../model/duel-panel.js";
 import {
@@ -892,6 +892,8 @@ function drawBarsFor(ctx, combatant, x, y, distanceM, heading, scale, widthShare
  */
 function drawShipBars(ctx) {
   if (!world) return;
+  // Outside a fight the sea shows no battle furniture at all (S85).
+  if (!combatPanelsVisible(inCombat())) return;
 
   const targets = [];
   for (const encounter of world.encounters) {
@@ -961,6 +963,15 @@ function drawShipBars(ctx) {
       hullBarShare(ship.toughness, referenceToughness),
     );
   }
+}
+
+/** Whether a hostile is in the fight right now, which is what gates the combat panels (S85). */
+function inCombat() {
+  const status = playerCombat?.status;
+  if (status !== "fighting") return false;
+  return world.encounters.some(
+    (encounter) => encounter.type === "enemy" && encounter.combat?.status === "fighting",
+  );
 }
 
 function drawEncounters(ctx) {
@@ -2011,6 +2022,13 @@ function updateHud() {
   els.speed.textContent = `${fmtOne.format(world.ship.currentSpeedKn)} kn`;
   const degrees = ((world.ship.heading * 180) / Math.PI + 360) % 360;
   els.heading.textContent = `${String(Math.round(degrees)).padStart(3, "0")}°`;
+
+  // The rows that only matter under fire come and go with the fight (S85). The rest of
+  // the panel — gold, zone, sail, speed, heading — is navigation and always shows.
+  const fighting = combatPanelsVisible(inCombat());
+  for (const row of document.querySelectorAll(".hud-combat-row")) {
+    row.classList.toggle("is-hidden", !fighting);
+  }
 
   if (!playerCombat) return;
   const { condition } = playerCombat;

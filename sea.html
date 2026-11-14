@@ -17,21 +17,19 @@
         <div><dt data-i18n="sea.sail">Velamen</dt><dd id="hud-throttle">0 %</dd></div>
         <div><dt data-i18n="sea.speed">Velocidad</dt><dd id="hud-speed">0 kn</dd></div>
         <div><dt data-i18n="sea.heading">Rumbo</dt><dd id="hud-heading">000°</dd></div>
-        <div><dt data-i18n="sea.hull">Casco</dt><dd id="hud-hull">100 %</dd></div>
-        <div><dt data-i18n="sea.rigging">Aparejo</dt><dd id="hud-rigging">100 %</dd></div>
-        <div><dt data-i18n="sea.crew">Tripulación</dt><dd id="hud-crew">100 %</dd></div>
-        <div><dt data-i18n="sea.rounds">Munición B/E</dt><dd id="hud-rounds">0/0</dd></div>
+        <div class="hud-combat-row"><dt data-i18n="sea.hull">Casco</dt><dd id="hud-hull">100 %</dd></div>
+        <div class="hud-combat-row"><dt data-i18n="sea.rigging">Aparejo</dt><dd id="hud-rigging">100 %</dd></div>
+        <div class="hud-combat-row"><dt data-i18n="sea.crew">Tripulación</dt><dd id="hud-crew">100 %</dd></div>
+        <div class="hud-combat-row"><dt data-i18n="sea.rounds">Munición B/E</dt><dd id="hud-rounds">0/0</dd></div>
+        <div class="hud-combat-row"><dt data-i18n="sea.ammo">Cargado</dt><dd id="hud-ammo">—</dd></div>
       </dl>
     </div>
 
-    <div id="target-panel" class="hud hud-target is-hidden">
-      <div class="hud-title" id="target-name">—</div>
-      <div class="target-distance" id="target-distance">—</div>
-      <div class="target-bars">
-        <div class="tbar"><span data-i18n="sea.hull">Casco</span><div class="tbar-track"><div class="tbar-fill tbar-hull" id="target-hull"></div></div></div>
-        <div class="tbar"><span data-i18n="sea.rigging">Aparejo</span><div class="tbar-track"><div class="tbar-fill tbar-rigging" id="target-rigging"></div></div></div>
-        <div class="tbar"><span data-i18n="sea.crew">Tripulación</span><div class="tbar-track"><div class="tbar-fill tbar-crew" id="target-crew"></div></div></div>
-      </div>
+    <!-- The duel panel (S73): every engaged hull, ours and theirs, each with her three
+         condition bars, so both sides of the fight read side by side. -->
+    <div id="duel-panel" class="hud hud-duel is-hidden">
+      <div class="hud-title" data-i18n="sea.duel.title">El combate</div>
+      <div id="duel-roster" class="duel-roster"></div>
     </div>
 
     <div id="gameover-overlay" class="gameover-overlay is-hidden">
@@ -43,7 +41,6 @@
     </div>
 
     <div class="hud hud-actions">
-      <a class="btn btn-sea" href="./index.html" data-i18n="sea.back">⚓ Volver al astillero</a>
       <div class="hud-help" data-i18n-html="sea.help"></div>
     </div>
 
@@ -53,16 +50,6 @@
       <p class="port-cost" id="port-cost">—</p>
       <div class="port-fleet" id="port-fleet"></div>
     </div>
-
-    <dialog id="dock-dialog" class="dock-dialog">
-      <h2 data-i18n="sea.dock.title">¿Reparamos el barco?</h2>
-      <p class="dock-lead" data-i18n="sea.dock.lead">Esto es lo que hay que arreglar antes de volver a zarpar.</p>
-      <div class="dock-list" id="dock-list"></div>
-      <p class="dock-note is-hidden" id="dock-note"></p>
-      <div class="dock-actions">
-        <button id="dock-later" class="btn" type="button" data-i18n="sea.dock.later">Ahora no</button>
-      </div>
-    </dialog>
 
     <div class="hud hud-wind" id="wind-panel">
       <div class="wind-head">
@@ -79,7 +66,7 @@
 
     <canvas id="minimap" width="170" height="170"></canvas>
 
-    <div id="time-badge" class="hud hud-time is-hidden" aria-live="polite" data-i18n="sea.time.badge">×2</div>
+    <div id="time-badge" class="hud hud-time is-hidden" aria-live="polite">×1</div>
 
     <div id="banner" class="sea-banner" aria-live="polite"></div>
 
