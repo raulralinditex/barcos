@@ -40,7 +40,6 @@ import { minimumShipPrice, normaliseGold, priceShip } from "../model/economy.js"
 import { bootSettings } from "../model/settings-storage.js";
 import { bootCatalogue } from "../model/catalogue-storage.js";
 import { withShipSailing } from "../model/fleet.js";
-import { normaliseAutoFire, serialiseAutoFire } from "../model/autofire.js";
 import { nextImageIndex, shipImagePaths } from "../model/ship-image.js";
 import {
   addShip,
@@ -69,7 +68,6 @@ const SHIP_KEY = "barcos:current-ship:v1";
 const FLEET_KEY = "barcos:fleet:v1";
 const COUNTRY_KEY = "barcos:country:v1";
 /** Automatic fire (S47): a preference, so erasing the game does not touch it. */
-const AUTOFIRE_KEY = "barcos:autofire:v1";
 
 /**
  * The shipyard opens with a ship the 12,000 budget actually buys, so the player can
@@ -146,7 +144,6 @@ function applyStaticTranslations() {
   for (const node of document.querySelectorAll("[data-i18n-html]")) {
     node.innerHTML = t(node.dataset.i18nHtml);
   }
-  renderAutoFire();
 }
 
 const els = {
@@ -192,7 +189,6 @@ const els = {
   fortHull: $("#fort-hull"),
   fortCrew: $("#fort-crew"),
   fortDetail: $("#fort-detail"),
-  autofireCheck: $("#autofire-check"),
   purchaseNotice: $("#purchase-notice"),
   fleetList: $("#fleet-list"),
   fleetCount: $("#fleet-count"),
@@ -1098,28 +1094,9 @@ document.querySelectorAll(".tab").forEach((tab) => {
 });
 
 els.launchBtn.addEventListener("click", launch);
-/** The automatic-fire check: restore the stored choice, save every change (S47). */
-function renderAutoFire() {
-  if (!els.autofireCheck) return;
-  let stored = null;
-  try {
-    stored = localStorage.getItem(AUTOFIRE_KEY);
-  } catch {
-    stored = null;
-  }
-  els.autofireCheck.checked = normaliseAutoFire(stored);
-  els.autofireCheck.closest("label")?.setAttribute("title", t("shipyard.autofireHint"));
-}
 
-if (els.autofireCheck) {
-  els.autofireCheck.addEventListener("change", () => {
-    try {
-      localStorage.setItem(AUTOFIRE_KEY, serialiseAutoFire(els.autofireCheck.checked));
-    } catch {
-      /* storage disabled: the choice lasts for this screen only */
-    }
-  });
-}
+// The automatic-fire switch moved to the settings screen (S88), where every other
+// design number lives. Nothing on this screen owns it any more.
 
 els.setSailBtn.addEventListener("click", () => {
   // A yard in enemy hands takes the sailing with her (S74): the player has to win it

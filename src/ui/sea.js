@@ -57,6 +57,7 @@ import { ARRIVAL_NOTICE_KEY } from "../model/arrival-notice.js";
 import { normaliseGold } from "../model/economy.js";
 import { bootSettings } from "../model/settings-storage.js";
 import { bootCatalogue } from "../model/catalogue-storage.js";
+import { AUTOFIRE } from "../model/settings.js";
 import { burnSupply, supplySeconds } from "../model/game-time.js";
 import {
   closestTarget,
@@ -2153,11 +2154,15 @@ function boot() {
   bootCatalogue();
 
   // The shipyard's automatic-fire check (S47): on unless the player turned it off.
+  // The automatic-fire switch is a setting now (S88), so it arrives with the other
+  // settings. The old key is still honoured for a save written before the move.
+  let legacyAutoFire = null;
   try {
-    ui.autoFire = normaliseAutoFire(localStorage.getItem("barcos:autofire:v1"));
+    legacyAutoFire = localStorage.getItem("barcos:autofire:v1");
   } catch {
-    ui.autoFire = normaliseAutoFire(null);
+    legacyAutoFire = null;
   }
+  ui.autoFire = legacyAutoFire === null ? Boolean(AUTOFIRE.enabled) : normaliseAutoFire(legacyAutoFire);
 
   const savedGame = loadSavedGame();
   const savedWorld = savedGame?.world ? deserializeWorld(savedGame.world) : null;

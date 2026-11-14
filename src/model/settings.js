@@ -22,6 +22,7 @@ import { TURNING } from "./turning.js";
 import { ESCORT } from "./formation.js";
 import { TRAIL } from "./damage-trail.js";
 import { BAR_SCALE } from "./sea-hud.js";
+import { AUTOFIRE_DEFAULT } from "./autofire.js";
 
 /**
  * The editable fields, grouped by the block they belong to.
@@ -110,6 +111,9 @@ export const SETTINGS_FIELDS = [
 
   { group: "bars", key: "minShare", label: "settings.bars.minShare", scale: "percent", min: 0, max: 1, step: 0.05, target: "bars", targetKey: "minShare" },
 
+  // S88: the automatic-fire switch was a checkbox in the fleet panel; it is a setting now.
+  { group: "combat", key: "autofire", label: "settings.combat.autofire", scale: "factor", min: 0, max: 1, step: 1, target: "autofire", targetKey: "enabled" },
+
   { group: "sales", key: "share", label: "settings.sales.share", scale: "percent", min: 0, max: 1, step: 0.05, target: "sales", targetKey: "share" },
 
   // Minimum 2500: the cheapest playable hull of the dearest country (Portugal) costs 2036,
@@ -122,7 +126,10 @@ export const SETTINGS_FIELDS = [
 ];
 
 /** The live constant blocks, so a group id resolves to the object it writes to. */
-export const SETTINGS_BLOCKS = { wind: WIND, world: WORLD, combat: COMBAT, repair: REPAIR, prices: PRICES, gunnery: GUNNERY, gunners: GUNNERY.gunnersPerGun, zones: ZONE_DAMAGE, loot: LOOT, sales: SALES, time: GAME_TIME, fort: FORT, start: START, turning: TURNING, escort: ESCORT, trail: TRAIL, bars: BAR_SCALE };
+/** The automatic-fire switch as a live block, so it is a setting like any other (S88). */
+export const AUTOFIRE = { enabled: AUTOFIRE_DEFAULT ? 1 : 0 };
+
+export const SETTINGS_BLOCKS = { wind: WIND, world: WORLD, combat: COMBAT, repair: REPAIR, prices: PRICES, gunnery: GUNNERY, gunners: GUNNERY.gunnersPerGun, zones: ZONE_DAMAGE, loot: LOOT, sales: SALES, time: GAME_TIME, fort: FORT, start: START, turning: TURNING, escort: ESCORT, trail: TRAIL, bars: BAR_SCALE, autofire: AUTOFIRE };
 
 /**
  * The design constant blocks S79 promises to expose, by name.

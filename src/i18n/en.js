@@ -368,6 +368,7 @@ export const en = {
   "settings.combat.arcHalf": "Broadside arc, each way",
   "settings.combat.referenceArqueo": "Reference tonnage for damage",
   "settings.combat.casualtyPoints": "Crew damage per casualty",
+  "settings.combat.autofire": "The captain fires by herself",
   "settings.fort.gunsPerVictories": "Victories per new shipyard gun",
   "settings.fort.shotsPerGun": "Rounds per shipyard gun",
   "settings.repair.restored": "Condition a repaired segment comes back with",
