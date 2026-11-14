@@ -1,0 +1,68 @@
+test/purse.test.js
+  s_fbb00885ed79f8::t_e4afd620771924 1-78
+scripts/smoke-purse.mjs
+  s_fbb00885ed79f8::t_96989e1db21644 1-142
+odd/tasks/estado-flota-y-reparacion-parcial.md
+  s_273470a569a5b8::t_c4b123bd71e12e 3,44-45,68-75
+  s_273470a569a5b8::t_74fbc37f7088c2 1-2,4-31,38-39,41,46-55
+  s_273470a569a5b8::t_fdea9e0398fd8b 40,42-43,62-67
+  s_273470a569a5b8::t_9f0ae197867b6a 32-37,56-61
+src/model/fleet.js
+  s_fbb00885ed79f8::t_2ac0e9435b4dc1 115-118
+  s_fbb00885ed79f8::t_767841b115c21b 38-59
+scripts/smoke-fleet.mjs
+  s_95f2af011bc7e7::t_6fcf706923bee1 88
+  s_0f5026df9808a9::t_4939fad06fad08 55,63,99-102
+src/model/economy.js
+  s_fbb00885ed79f8::t_20a318c43af239 22-34
+src/model/ship-model.js
+  s_9d38d8fb706940::t_e48140f180e03a 19,229
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.6",
+  "base_commit_sha": "dfadeb301258fe5170d82f0ccb50c51e08bbbce0",
+  "prompts": {},
+  "sessions": {
+    "s_0f5026df9808a9": {
+      "agent_id": {
+        "tool": "pi",
+        "id": "01a1d0ec-bbab-72bd-a221-e93abbdb895d",
+        "model": "gpt-6.1-terra"
+      },
+      "human_author": "Raul Ripoll <raulral@ext.inditex.com>"
+    },
+    "s_273470a569a5b8": {
+      "agent_id": {
+        "tool": "pi",
+        "id": "01a1d098-627b-7272-80a7-a39aba728357",
+        "model": "claude-sonnet-5.5"
+      },
+      "human_author": "Raul Ripoll <raulral@ext.inditex.com>"
+    },
+    "s_95f2af011bc7e7": {
+      "agent_id": {
+        "tool": "pi",
+        "id": "01a1d1c6-aa34-7262-927f-c33fba016b2b",
+        "model": "gpt-6.1-terra"
+      },
+      "human_author": "Raul Ripoll <raulral@ext.inditex.com>"
+    },
+    "s_9d38d8fb706940": {
+      "agent_id": {
+        "tool": "pi",
+        "id": "01a1d413-f644-73ba-8d97-286a0339ba8e",
+        "model": "gpt-6.1-terra"
+      },
+      "human_author": "Raul Ripoll <raulral@ext.inditex.com>"
+    },
+    "s_fbb00885ed79f8": {
+      "agent_id": {
+        "tool": "pi",
+        "id": "01a1ccee-391a-73a4-b55a-66013b3f51e8",
+        "model": "claude-sonnet-5.5"
+      },
+      "human_author": "Raul Ripoll <raulral@ext.inditex.com>"
+    }
+  }
+}
