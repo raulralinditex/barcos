@@ -1,0 +1,43 @@
+scripts/smoke-time.mjs
+  s_fbb00885ed79f8::t_71e2d98925239d 7-11,93,97-119,123-127,137-140,148,154
+test/game-time.test.js
+  s_f06c10fdae734f::t_247833415dd8fa 81-82,85
+  s_f06c10fdae734f::t_b2893c99a05013 1-80,83-84,86-138
+odd/tasks/tiempo.md
+  s_273470a569a5b8::t_38ee69bdd018b3 1,3,8-12,25-29
+src/model/game-time.js
+  s_f06c10fdae734f::t_8d2d33e9cb8d48 1-64,72-77
+  s_f06c10fdae734f::t_247833415dd8fa 65-71
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.6",
+  "base_commit_sha": "57954d8bbbbdd5bd34d9f76be45cac9ddd8f664b",
+  "prompts": {},
+  "sessions": {
+    "s_273470a569a5b8": {
+      "agent_id": {
+        "tool": "pi",
+        "id": "01a1d098-627b-7272-80a7-a39aba728357",
+        "model": "claude-sonnet-5.5"
+      },
+      "human_author": "Raul Ripoll <raulral@ext.inditex.com>"
+    },
+    "s_f06c10fdae734f": {
+      "agent_id": {
+        "tool": "pi",
+        "id": "01a1d6ff-202c-776e-a594-1d85cdb28493",
+        "model": "claude-sonnet-5.5"
+      },
+      "human_author": "Raul Ripoll <raulral@ext.inditex.com>"
+    },
+    "s_fbb00885ed79f8": {
+      "agent_id": {
+        "tool": "pi",
+        "id": "01a1ccee-391a-73a4-b55a-66013b3f51e8",
+        "model": "claude-sonnet-5.5"
+      },
+      "human_author": "Raul Ripoll <raulral@ext.inditex.com>"
+    }
+  }
+}
