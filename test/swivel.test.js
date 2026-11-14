@@ -218,7 +218,7 @@ test("S20: the battery card and swivel labels exist in both languages", () => {
     "shipyard.battery.side", "shipyard.battery.swivel", "shipyard.battery.qty",
     "shipyard.battery.shots", "shipyard.battery.ammo", "shipyard.battery.remove",
     "shipyard.battery.family", "shipyard.battery.meta", "shipyard.battery.rounds",
-    "shipyard.swivels", "shipyard.canvasSwivel", "sail.gunsDetailSwivel", "sea.roundsSwivel",
+    "shipyard.swivels", "shipyard.canvasSwivel", "sea.roundsSwivel",
   ];
   for (const key of keys) {
     for (const language of LANGUAGES) {

@@ -7,6 +7,7 @@ import {
   createEnemyCombatant,
   createPlayerCombatant,
   damageDealt,
+  effectiveRangeM,
   fireBroadside,
   loadedShare,
   readyDamage,
@@ -62,15 +63,23 @@ test("S21: every gun loaded means a full reload bar", () => {
 
 test("S21: the reload bar is the share of that side's guns that are ready", () => {
   const combatant = createPlayerCombatant(runtimeShip());
-  // five guns per side: three minions and two falcons
-  fireBroadside(combatant, "babor", 200, seededRnd(1));
+  // five guns per side: three minions and two falcons. Fired at 100 m, inside the
+  // hailshot range, so the whole beam fires and its reload bar is the one being read (S68).
+  fireBroadside(combatant, "babor", 100, seededRnd(1));
   assert.equal(loadedShare(combatant, "babor"), 0);
   // the other beam is untouched
   assert.equal(loadedShare(combatant, "estribor"), 1);
 
-  // the falcons reload faster than the minions: part of the side comes back first
-  tickCombatant(combatant, pieceById("falcon").reloadS / COMBAT.timeScale + 0.01);
+  // The crew is ample (ten gunners for five guns reloading), so every gun on the beam reloads
+  // with the same 1.3 bonus (S53). The falcons still reload faster than the minions: part of
+  // the side comes back first, and the rest follows.
+  const bonus = 1.3;
+  const falcon = pieceById("falcon").reloadS / bonus / COMBAT.timeScale;
+  const minion = pieceById("minion").reloadS / bonus / COMBAT.timeScale;
+  tickCombatant(combatant, falcon + 0.01);
   assert.equal(loadedShare(combatant, "babor"), 2 / 5);
+  tickCombatant(combatant, minion - falcon + 0.01);
+  assert.equal(loadedShare(combatant, "babor"), 1);
 });
 
 test("S21: a side with no guns reports nothing rather than a divide by zero", () => {
@@ -108,17 +117,21 @@ test("S21: a reloading side has no ready damage until its guns come back", () =>
 
 test("S21: ready damage is the expected value of the volley, not a lucky roll", () => {
   const combatant = createPlayerCombatant(runtimeShip());
+  // Measured at 100 m, inside the hailshot range, so the whole beam counts (S68). Each
+  // gun is read against the range its own round carries.
+  const distance = 100;
   const expected = combatant.pieces
     .filter((p) => p.side === "babor")
     .reduce((sum, p) => {
       const piece = pieceById(p.pieceId);
       const ammo = ammoById(p.ammoId);
-      const falloff = 1 - 0.5 * (200 / piece.rangeM);
+      const range = effectiveRangeM(piece, p.ammoId);
+      const falloff = 1 - 0.5 * (distance / range);
       const total = piece.shotKg * ammo.massFactor * COMBAT.damageScale * falloff;
-      const p0 = COMBAT.baseAccuracy * (1 - Math.pow(200 / piece.rangeM, 1.6));
+      const p0 = COMBAT.baseAccuracy * (1 - Math.pow(distance / range, 1.6));
       return sum + p0 * total;
     }, 0);
-  assert.ok(Math.abs(readyDamage(combatant, "babor", 200) - expected) < 1e-9);
+  assert.ok(Math.abs(readyDamage(combatant, "babor", distance) - expected) < 1e-9);
 });
 
 test("S21: damage dealt is remembered per side and adds up", () => {
