@@ -147,6 +147,8 @@ async function fireAt(enemyY, key) {
     ([shipJson, worldJson]) => {
       const ship = JSON.parse(shipJson);
       localStorage.setItem("barcos:lang:v1", "es");
+      // S47: these checks are about firing by hand (Q/E) and about the bars, so the automatic fire stays off.
+      localStorage.setItem("barcos:autofire:v1", "0");
       localStorage.setItem("barcos:fleet:v1", JSON.stringify({ v: 1, ships: [ship], captainId: ship.id }));
       localStorage.setItem("barcos:game:v1", JSON.stringify({ gold: 1000, world: worldJson }));
     },

@@ -144,23 +144,26 @@ test("S6: coastal water is the safe zone, so its corsairs carry light guns", () 
 
 test("S4: only the facing side, loaded, in range and with rounds can fire", () => {
   const combatant = createPlayerCombatant(starterRuntimeShip());
-  // at 300 m every babor gun (3 minions + 2 falcons) covers the target
+  // The falcons are loaded with hailshot, which does not carry as far as iron (S68): at
+  // 300 m only the three iron minions reach the target.
   const ready = firingPieces(combatant, "babor", 300);
-  assert.equal(ready.length, 5);
-  // at 335 m only the minions reach it
-  const farReady = firingPieces(combatant, "babor", 335);
-  assert.equal(farReady.length, 3);
-  assert.ok(farReady.every((p) => p.pieceId === "minion"));
+  assert.equal(ready.length, 3);
+  assert.ok(ready.every((p) => p.pieceId === "minion"));
+  // Inside the hailshot range the whole beam answers, falcons included.
+  assert.equal(firingPieces(combatant, "babor", 100).length, 5);
+  // Beyond the minions' own reach nothing does.
+  assert.equal(firingPieces(combatant, "babor", 400).length, 0);
   assert.equal(firingPieces(combatant, "estribor", 100).length, 5);
 });
 
 test("S4: a broadside spends one round per gun and starts its reload clock", () => {
   const combatant = createPlayerCombatant(starterRuntimeShip());
-  const { volley } = fireBroadside(combatant, "babor", 200, seededRnd(1));
+  // Inside the hailshot range, so the whole beam fires (S68).
+  const { volley } = fireBroadside(combatant, "babor", 100, seededRnd(1));
   assert.equal(volley.length, 5);
   for (const p of combatant.pieces.filter((x) => x.side === "babor")) {
     const piece = pieceById(p.pieceId);
-    const expected = piece.reloadS / COMBAT.timeScale; // gunners match need: factor 1
+    const expected = piece.reloadS / 1.3 / COMBAT.timeScale; // surplus crew reaches the cap
     assert.ok(Math.abs(p.reloadTimer - expected) < 1e-9);
     assert.equal(p.shotsLeft, p.pieceId === "minion" ? 24 : 29);
   }
@@ -188,11 +191,18 @@ test("S4: hit probability falls with distance and is zero beyond range", () => {
   assert.ok(hitProbability(minion, 10) <= COMBAT.baseAccuracy);
 });
 
-test("S4: fewer gunners than needed slow the reload; none silence the guns", () => {
+test("S53: fewer gunners remove guns rather than slow them; none silence the guns", () => {
   const combatant = createPlayerCombatant(starterRuntimeShip());
-  assert.equal(reloadFactor(combatant), 1); // 10 guns need 5, has 10
+  // Ten gunners for a ten-gun battery that asks five: spare crew, so the cap applies
+  // whether or not any clock is running (S56).
+  assert.equal(reloadFactor(combatant), 1 / 1.3);
   combatant.crew.artillero = 2;
-  assert.equal(reloadFactor(combatant), 2.5);
+  assert.equal(firingPieces(combatant, "babor", 100).length, 2);
+  assert.equal(firingPieces(combatant, "estribor", 100).length, 2);
+  fireBroadside(combatant, "babor", 100, () => 0);
+  // Firing one beam does not shrink the denominator: with the just complement there is
+  // no acceleration (S56). Spare gunners would give up to x1.3, as test/gunnery covers.
+  assert.equal(reloadFactor(combatant), 1);
   combatant.crew.artillero = 0;
   assert.equal(reloadFactor(combatant), Infinity);
   assert.equal(firingPieces(combatant, "babor", 100).length, 0);
