@@ -52,7 +52,7 @@ const storage = () =>
 const emptyCount = await fleetCount();
 check(emptyCount === "sin naves", `a fresh shipyard should own no ships, got: ${emptyCount}`);
 
-/** Launch the currently configured ship under `name`, closing the dialog after. */
+/** Add the currently configured ship under `name`. */
 async function launchShip(name) {
   await page.fill("#ship-name", name);
   await page.waitForTimeout(150);
@@ -60,10 +60,7 @@ async function launchShip(name) {
   if (disabled) throw new Error(`the default loadout does not build for ${name}`);
   await page.click("#launch-btn");
   await page.waitForTimeout(300);
-  const title = await page.locator("#sail-title").textContent();
-  await page.click("#sail-back");
-  await page.waitForTimeout(200);
-  return title;
+  return page.locator(".fleet-item.is-captain .fleet-name").textContent();
 }
 
 // --- first ship becomes the captain ---------------------------------------
@@ -88,7 +85,7 @@ const captainTag = await page.locator(".fleet-item.is-captain .fleet-name").text
 check(captainTag === "Avispa", `the new hull should be captain, got ${captainTag}`);
 
 // --- the player can choose which ship to captain --------------------------
-await page.locator('.fleet-ship[data-captain]').first().click();
+await page.locator('.fleet-captain-button[data-captain]').first().click();
 await page.waitForTimeout(250);
 const newCaptain = await page.locator(".fleet-item.is-captain .fleet-name").textContent();
 check(newCaptain === "Golden Hind", `expected to re-promote Golden Hind, got ${newCaptain}`);
@@ -99,7 +96,10 @@ check(savedFleet.captainId !== null, "the fleet was never persisted with a capta
 const captainIdInSave = savedFleet.captainId;
 const captainShipInSave = savedFleet.ships.find((s) => s.id === captainIdInSave);
 
-await page.goto("http://localhost:8765/sea.html", { waitUntil: "networkidle" });
+await Promise.all([
+  page.waitForURL("**/sea.html"),
+  page.click("#set-sail-btn"),
+]);
 await page.waitForTimeout(900);
 const seaTitle = await page.locator("#hud-ship-name").textContent();
 check(

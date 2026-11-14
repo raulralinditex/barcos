@@ -35,6 +35,28 @@ export function setCaptain(fleet, shipId) {
   return { ships, captainId: shipId };
 }
 
+/**
+ * Mark one hull to sail with the captain, or leave it in port (S35). The flag lives on
+ * the fleet entry, so it is saved with the fleet and survives a reload. The captain is
+ * never unmarked: she is the ship the player sails.
+ */
+export function withShipSailing(fleet, shipId, sails) {
+  const ships = fleet?.ships ?? [];
+  if (!ships.some((ship) => ship.id === shipId)) return { ...fleet, ships };
+  if (shipId === fleet?.captainId) return { ...fleet, ships };
+  return {
+    ships: ships.map((ship) => (ship.id === shipId ? { ...ship, sails: Boolean(sails) } : ship)),
+    captainId: fleet?.captainId ?? null,
+  };
+}
+
+/** The hulls that put to sea: the captain and every other marked hull (S35). */
+export function sailingShips(fleet) {
+  const ships = fleet?.ships ?? [];
+  const captain = captainShip(fleet);
+  return ships.filter((ship) => ship.id === captain?.id || ship.sails !== false);
+}
+
 /** The ship the player actually sails. Null for an empty fleet. */
 export function captainShip(fleet) {
   const ships = fleet?.ships ?? [];
@@ -90,7 +112,10 @@ function normaliseShip(ship) {
   }
   const crewAlive =
     ship.crewAlive && typeof ship.crewAlive === "object" ? { ...ship.crewAlive } : { ...(ship.crew ?? {}) };
-  return { ...ship, condition, crewAlive };
+  // A hull is marked to sail unless the save says otherwise (S35): a fleet written
+  // before the checks existed sails with everything, which is what it always did.
+  const sails = ship.sails !== false;
+  return { ...ship, condition, crewAlive, sails };
 }
 
 /**

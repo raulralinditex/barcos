@@ -19,6 +19,19 @@ import {
   pieceById,
 } from "../data/naval-data.js";
 
+/**
+ * A purse that can never be negative (S32).
+ *
+ * Gold only ever grows with treasure and only ever shrinks with a purchase the
+ * player could afford, so a negative balance is always a corrupted or hand-edited
+ * save. Both screens clamp through this single function instead of each one
+ * deciding on its own, and anything that is not a finite number becomes zero so a
+ * broken save cannot turn the purse into NaN.
+ */
+export function normaliseGold(value) {
+  return Number.isFinite(value) && value > 0 ? value : 0;
+}
+
 /** Gold for the hull alone, scaled by its arqueo range. */
 export function hullPrice(hullId) {
   const hull = hullById(hullId);

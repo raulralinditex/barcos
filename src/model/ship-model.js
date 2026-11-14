@@ -16,6 +16,7 @@
  */
 
 import { CONVENTIONS, crewRoleById, pieceById } from "../data/naval-data.js";
+import { gunnersRequired } from "./gunnery.js";
 
 /** Shot mass in kg carried by one piece of a battery entry. */
 export function shotMassKg(pieceId, shotsPerPiece) {
@@ -225,7 +226,7 @@ export function validateShip(input, budget = computeBudget(input)) {
   }
 
   const pieces = totalPieces(batteries);
-  const neededGunners = Math.ceil(pieces / 2);
+  const neededGunners = Math.ceil(gunnersRequired(batteries) - 1e-10);
   if (pieces > 0 && counts.artillero < neededGunners) {
     issues.push(
       issue(WARN, pieces === 1 ? "under-gunned-crew.one" : "under-gunned-crew.many", {
