@@ -1,0 +1,103 @@
+src/i18n/es.js
+  s_c6ded83af037ef::t_3b4198c7650141 135-139
+odd/tasks/catalogo-editable.md
+  s_c6ded83af037ef::t_54a7e7d4c186af 78-89
+  s_2e5c92d95c4b37::t_bdcc6efc49990b 56,76-77
+  s_c6ded83af037ef::t_b27966208709d1 1-55,57-66,68
+  s_c6ded83af037ef::t_e776d1062de80c 67
+  s_c6ded83af037ef::t_d8b8a5e90bb96e 69-75
+src/ui/styles.css
+  s_c6ded83af037ef::t_fe2a31b4111d69 2015-2037
+src/ui/sea.js
+  s_c6ded83af037ef::t_586b826368dfa7 55
+  s_c6ded83af037ef::t_0ee51690a74cd2 451-457,463,465,2129
+index.html
+  s_fbb00885ed79f8::t_556872351e150f 49
+  s_fbb00885ed79f8::t_77f94b6dd7e6e1 62,64-66
+  s_273470a569a5b8::t_669599e1af5eb6 29-35
+  s_f06c10fdae734f::t_2b910b00787651 37-47
+  s_95f2af011bc7e7::t_0eba4da04181a3 80-84,166
+  s_fbb00885ed79f8::t_c6ffbd2dfb0668 85-89
+  s_fbb00885ed79f8::t_49ee9898c607f9 63
+  s_0f5026df9808a9::t_3d6e7cfd2642a8 162,169,184,190
+  s_c6ded83af037ef::t_f0d7c1adf3b6e3 174
+  s_c6ded83af037ef::t_04f8ae7dc21a43 36
+src/i18n/en.js
+  s_c6ded83af037ef::t_3b4198c7650141 138-142
+scripts/smoke-refit-boot.mjs
+  s_2e5c92d95c4b37::t_286435c2f29412 60-61
+  s_2e5c92d95c4b37::t_d782af3b5dcaee 1-59,62-79
+scripts/smoke-manual-repair.mjs
+  s_c6ded83af037ef::t_1567df008ec3b2 1-122
+src/ui/app.js
+  s_2e5c92d95c4b37::t_364a2c42fdbb81 1617-1619
+  s_2e5c92d95c4b37::t_a1bf59326b69f9 1245-1255,1311,1602-1603
+  s_c6ded83af037ef::t_377d8fd941740a 1232-1235,1257-1281
+src/model/refit.js
+  s_273470a569a5b8::t_8af2f972303c25 33-39,48
+  s_95f2af011bc7e7::t_678d1a9dc95ca1 1-32,40-47,49-72
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.6",
+  "base_commit_sha": "d99e0a2be54f9f5cf87ec9bb991848ecb7f0ea66",
+  "prompts": {},
+  "sessions": {
+    "s_0f5026df9808a9": {
+      "agent_id": {
+        "tool": "pi",
+        "id": "01a1d0ec-bbab-72bd-a221-e93abbdb895d",
+        "model": "gpt-6.1-terra"
+      },
+      "human_author": "Raul Ripoll <raulral@ext.inditex.com>"
+    },
+    "s_273470a569a5b8": {
+      "agent_id": {
+        "tool": "pi",
+        "id": "01a1d098-627b-7272-80a7-a39aba728357",
+        "model": "claude-sonnet-5.5"
+      },
+      "human_author": "Raul Ripoll <raulral@ext.inditex.com>"
+    },
+    "s_2e5c92d95c4b37": {
+      "agent_id": {
+        "tool": "pi",
+        "id": "01a1db75-41c4-7429-af40-2b62a71b1447",
+        "model": "gpt-6.1-terra"
+      },
+      "human_author": "Raul Ripoll <raulral@ext.inditex.com>"
+    },
+    "s_95f2af011bc7e7": {
+      "agent_id": {
+        "tool": "pi",
+        "id": "01a1d1c6-aa34-7262-927f-c33fba016b2b",
+        "model": "gpt-6.1-terra"
+      },
+      "human_author": "Raul Ripoll <raulral@ext.inditex.com>"
+    },
+    "s_c6ded83af037ef": {
+      "agent_id": {
+        "tool": "pi",
+        "id": "01a1daee-b1ed-7761-bcc5-aec60ce861d8",
+        "model": "deepseek-v4.1-flash_high"
+      },
+      "human_author": "Raul Ripoll <raulral@ext.inditex.com>"
+    },
+    "s_f06c10fdae734f": {
+      "agent_id": {
+        "tool": "pi",
+        "id": "01a1d6ff-202c-776e-a594-1d85cdb28493",
+        "model": "claude-sonnet-5.5"
+      },
+      "human_author": "Raul Ripoll <raulral@ext.inditex.com>"
+    },
+    "s_fbb00885ed79f8": {
+      "agent_id": {
+        "tool": "pi",
+        "id": "01a1ccee-391a-73a4-b55a-66013b3f51e8",
+        "model": "claude-sonnet-5.5"
+      },
+      "human_author": "Raul Ripoll <raulral@ext.inditex.com>"
+    }
+  }
+}
