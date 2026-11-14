@@ -1,0 +1,24 @@
+src/model/catalogue.js
+  s_c6ded83af037ef::t_c6003bbdaefa4b 1-286
+test/catalogue.test.js
+  s_c6ded83af037ef::t_5e82308c8e7ede 200-235
+  s_c6ded83af037ef::t_599d5305f12819 1-199
+src/model/catalogue-storage.js
+  s_c6ded83af037ef::t_d6fe7a2431c98b 1-79
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.6",
+  "base_commit_sha": "8d093734dd7b38d4133528bee3dbf31e4692d246",
+  "prompts": {},
+  "sessions": {
+    "s_c6ded83af037ef": {
+      "agent_id": {
+        "tool": "pi",
+        "id": "01a1daee-b1ed-7761-bcc5-aec60ce861d8",
+        "model": "deepseek-v4.1-flash_high"
+      },
+      "human_author": "Raul Ripoll <raulral@ext.inditex.com>"
+    }
+  }
+}
