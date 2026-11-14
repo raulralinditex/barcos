@@ -7,10 +7,12 @@
 
 import {
   AMMO,
+  COUNTRIES,
   CREW_ROLES,
+  DEFAULT_COUNTRY,
   HULLS,
   PIECES,
-  STARTING_GOLD,
+  START,
   ammoById,
   hullById,
   pieceById,
@@ -27,7 +29,19 @@ import {
   localisedPieces,
   familyLabel,
 } from "../i18n/terms.js";
-import { minimumShipPrice, priceShip } from "../model/economy.js";
+import {
+  availableHulls,
+  availablePieces,
+  canChangeCountry,
+  normaliseCountry,
+  reconcileLoadout,
+} from "../model/country.js";
+import { minimumShipPrice, normaliseGold, priceShip } from "../model/economy.js";
+import { bootSettings } from "../model/settings-storage.js";
+import { bootCatalogue } from "../model/catalogue-storage.js";
+import { withShipSailing } from "../model/fleet.js";
+import { normaliseAutoFire, serialiseAutoFire } from "../model/autofire.js";
+import { nextImageIndex, shipImagePaths } from "../model/ship-image.js";
 import {
   addShip,
   captainShip,
@@ -38,16 +52,24 @@ import {
 } from "../model/fleet.js";
 import {
   damagedShips,
+  priceWithPurse,
   repairCost,
   repairFleetShip,
   repairReport,
 } from "../model/repair.js";
 import { buildShip, toRuntimeShip } from "../model/shipyard.js";
+import { applyRefit, configFromShip, quoteRefit } from "../model/refit.js";
+import { canSellShip, salePrice, sellShip } from "../model/sale.js";
+import { FORT } from "../model/fort.js";
+import { ARRIVAL_NOTICE_KEY, parseArrivalNotice } from "../model/arrival-notice.js";
 
 const STORAGE_KEY = "barcos:config:v1";
 const GAME_KEY = "barcos:game:v1";
 const SHIP_KEY = "barcos:current-ship:v1";
 const FLEET_KEY = "barcos:fleet:v1";
+const COUNTRY_KEY = "barcos:country:v1";
+/** Automatic fire (S47): a preference, so erasing the game does not touch it. */
+const AUTOFIRE_KEY = "barcos:autofire:v1";
 
 /**
  * The shipyard opens with a ship the 12,000 budget actually buys, so the player can
@@ -70,7 +92,8 @@ const DEFAULT_LOADOUT = {
 };
 
 const state = {
-  gold: STARTING_GOLD,
+  gold: START.gold,
+  country: DEFAULT_COUNTRY,
   hullId: DEFAULT_LOADOUT.hullId,
   batteries: DEFAULT_LOADOUT.batteries.map((entry) => ({ ...entry })),
   crew: { ...DEFAULT_LOADOUT.crew },
@@ -123,14 +146,20 @@ function applyStaticTranslations() {
   for (const node of document.querySelectorAll("[data-i18n-html]")) {
     node.innerHTML = t(node.dataset.i18nHtml);
   }
+  renderAutoFire();
 }
 
 const els = {
   goldValue: $("#gold-value"),
   goldDelta: $("#gold-delta"),
   hullList: $("#hull-list"),
+  countrySelect: $("#country-select"),
+  countryNote: $("#country-note"),
   shipName: $("#ship-name"),
   canvas: $("#ship-canvas"),
+  shipFigure: $("#ship-figure"),
+  shipPhoto: $("#ship-photo"),
+  shipPhotoCaption: $("#ship-photo-caption"),
   gunsBabor: $("#guns-babor"),
   gunsEstribor: $("#guns-estribor"),
   gunsTotal: $("#guns-total"),
@@ -152,13 +181,19 @@ const els = {
   supplyList: $("#supply-list"),
   verdictIssues: $("#verdict-issues"),
   priceTotal: $("#price-total"),
+  priceLabel: $("#price-label"),
   priceBlock: $(".price"),
+  refitBanner: $("#refit-banner"),
+  refitMode: $("#refit-mode"),
+  newShipBtn: $("#new-ship-btn"),
   launchBtn: $("#launch-btn"),
-  sailDialog: $("#sail-dialog"),
-  sailTitle: $("#sail-title"),
-  sailBody: $("#sail-body"),
-  sailBack: $("#sail-back"),
-  sailGo: $("#sail-go"),
+  setSailBtn: $("#set-sail-btn"),
+  fortState: $("#fort-state"),
+  fortHull: $("#fort-hull"),
+  fortCrew: $("#fort-crew"),
+  fortDetail: $("#fort-detail"),
+  autofireCheck: $("#autofire-check"),
+  purchaseNotice: $("#purchase-notice"),
   fleetList: $("#fleet-list"),
   fleetCount: $("#fleet-count"),
   eraseBtn: $("#erase-btn"),
@@ -187,6 +222,7 @@ function saveConfig() {
     localStorage.setItem(
       STORAGE_KEY,
       JSON.stringify({
+        country: state.country,
         hullId: state.hullId,
         batteries: state.batteries,
         crew: state.crew,
@@ -198,16 +234,33 @@ function saveConfig() {
         shipName: state.shipName,
       }),
     );
+    // The country has its own key (S26), so it survives even if the config is lost.
+    localStorage.setItem(COUNTRY_KEY, state.country);
   } catch {
     /* storage disabled: the game still works for this session */
   }
 }
 
+/** The country the player chose, from its own key and then from the saved config. */
+function loadCountry(saved) {
+  try {
+    const stored = localStorage.getItem(COUNTRY_KEY);
+    if (stored) return normaliseCountry(stored);
+  } catch {
+    /* storage disabled */
+  }
+  return normaliseCountry(saved?.country);
+}
+
 function loadConfig() {
   try {
     const raw = localStorage.getItem(STORAGE_KEY);
-    if (!raw) return;
+    if (!raw) {
+      state.country = loadCountry(null);
+      return;
+    }
     const saved = JSON.parse(raw);
+    state.country = loadCountry(saved);
     if (saved.hullId && hullById(saved.hullId)) state.hullId = saved.hullId;
     if (Array.isArray(saved.batteries)) state.batteries = saved.batteries;
     if (saved.crew && typeof saved.crew === "object") state.crew = saved.crew;
@@ -215,6 +268,8 @@ function loadConfig() {
       if (Number.isFinite(saved[key])) state[key] = saved[key];
     }
     if (typeof saved.shipName === "string") state.shipName = saved.shipName;
+    // A save written under another country must not leave an illegal loadout.
+    applyCountryToLoadout();
   } catch {
     /* a corrupted save must never block the shipyard */
   }
@@ -224,7 +279,8 @@ function loadConfig() {
 function loadGold() {
   try {
     const game = JSON.parse(localStorage.getItem(GAME_KEY));
-    if (game && Number.isFinite(game.gold)) state.gold = game.gold;
+    // A corrupted or hand-edited save must not open the shop with a debt (S32).
+    if (game && game.gold !== undefined) state.gold = normaliseGold(game.gold);
   } catch {
     /* keep the starting purse */
   }
@@ -245,9 +301,64 @@ function currentConfig() {
   };
 }
 
+/* ---------------------------------------------------------------- country (S26) */
+
+/**
+ * Bring the half-built loadout into the active country's catalogue. Called on boot
+ * and on every country change, so no illegal hull or piece can stay on screen.
+ */
+function applyCountryToLoadout() {
+  const reconciled = reconcileLoadout(currentConfig(), state.country);
+  state.hullId = reconciled.hullId;
+  state.batteries = reconciled.batteries;
+  return reconciled;
+}
+
+/** The country's catalogue: what the shipyard is allowed to sell right now. */
+const countryHulls = () => availableHulls(state.country);
+const countryPieces = () => availablePieces(state.country);
+
+/**
+ * The country selector. It is only usable while the fleet is empty (S26): a player
+ * who already owns a ship keeps the country they bought it in.
+ */
+function renderCountry() {
+  if (!els.countrySelect) return;
+  const editable = canChangeCountry(fleet);
+
+  els.countrySelect.innerHTML = COUNTRIES.map(
+    (id) => `<option value="${id}">${t(`shipyard.country.${id}`)}</option>`,
+  ).join("");
+  els.countrySelect.value = state.country;
+  els.countrySelect.disabled = !editable;
+
+  if (els.countryNote) {
+    els.countryNote.textContent = editable
+      ? t("shipyard.country.hint")
+      : t("shipyard.country.locked", { country: t(`shipyard.country.${state.country}`) });
+    els.countryNote.classList.toggle("is-locked", !editable);
+  }
+}
+
+function changeCountry(next) {
+  const country = normaliseCountry(next);
+  if (country === state.country) return;
+  if (!canChangeCountry(fleet)) return;
+  state.country = country;
+  applyCountryToLoadout();
+  renderHulls();
+  renderPieceSelect();
+  render();
+  renderCountry();
+}
+
+if (els.countrySelect) {
+  els.countrySelect.addEventListener("change", (event) => changeCountry(event.target.value));
+}
+
 function renderHulls() {
   els.hullList.innerHTML = "";
-  for (const hull of HULLS) {
+  for (const hull of countryHulls()) {
     const min = minimumShipPrice(hull.id);
     const card = document.createElement("button");
     card.type = "button";
@@ -255,6 +366,7 @@ function renderHulls() {
     card.setAttribute("role", "option");
     card.setAttribute("aria-selected", String(hull.id === state.hullId));
     card.dataset.hullId = hull.id;
+    card.disabled = refitId !== null;
     card.innerHTML = `
       <span class="hull-card-name">${localisedHull(hull, t).name}</span>
       <span class="hull-card-meta">${t("shipyard.hullMeta", { country: localisedHull(hull, t).country, min: hull.arqueo[0], max: hull.arqueo[1] })}</span>
@@ -274,7 +386,7 @@ function renderHulls() {
 function renderPieceSelect() {
   const current = els.pieceSelect.value;
   els.pieceSelect.innerHTML = "";
-  for (const piece of PIECES) {
+  for (const piece of countryPieces()) {
     const option = document.createElement("option");
     option.value = piece.id;
     option.textContent = `${localisedPiece(piece, t).name} · ${fmtOne.format(piece.shotKg)} kg · ${piece.rangeM} m`;
@@ -527,11 +639,11 @@ function renderStats(ship) {
   const { budget, hull } = ship;
   els.statDraft.textContent = `${fmtTwo.format(budget.draftM)} m`;
   els.statDraft.classList.toggle("bad", budget.draftM > hull.draftRefM + 0.9);
-  els.statSpeed.textContent = t("sail.knots", { value: fmtTwo.format(budget.speedKn) });
+  els.statSpeed.textContent = t("shipyard.knots", { value: fmtTwo.format(budget.speedKn) });
   els.statLoad.textContent = `${fmtOne.format(budget.loadFraction * 100)} %`;
   els.statCargoRoom.textContent = kg(Math.max(budget.cargoMaxKg, 0));
   els.statCargoRoom.classList.toggle("bad", budget.cargoMaxKg < 0);
-  els.statPeople.textContent = t("sail.peopleCount", { value: fmtInt.format(budget.people) });
+  els.statPeople.textContent = t("shipyard.peopleCount", { value: fmtInt.format(budget.people) });
   els.statUpkeep.textContent = t("shipyard.upkeepPerDay", { value: fmtOne.format(ship.upkeep) });
 }
 
@@ -561,21 +673,29 @@ function renderVerdict(ship) {
     const row = document.createElement("div");
     row.className = `issue issue-${issue.level}`;
     const mark = issue.level === "error" ? "!" : issue.level === "warn" ? "▲" : "✓";
-    row.innerHTML = `<span class="issue-mark">${mark}</span><span>${issueMessage(issue, t)}</span>`;
+    // The "ready" row carries its own translated message; model issues carry a code.
+    const text = refitId !== null && issue.code === "unaffordable"
+      ? t("shipyard.refit.unaffordable", issue.params)
+      : issue.message ?? issueMessage(issue, t);
+    row.innerHTML = `<span class="issue-mark">${mark}</span><span>${text}</span>`;
     els.verdictIssues.appendChild(row);
   }
 }
 
-function renderPrice(ship) {
-  els.priceTotal.textContent = gold(ship.price.total);
-  els.priceBlock.classList.toggle("over", ship.price.total > state.gold);
+function renderPrice(ship, quote = null) {
+  const cost = quote ? quote.net : ship.price.total;
+  els.priceLabel.textContent = quote
+    ? t(cost < 0 ? "shipyard.refit.refund" : "shipyard.refit.cost")
+    : t("shipyard.total");
+  els.priceTotal.textContent = gold(quote ? Math.abs(cost) : cost);
+  els.priceBlock.classList.toggle("over", cost > state.gold);
 
-  const diff = state.gold - ship.price.total;
+  const diff = state.gold - cost;
   if (diff >= 0) {
-    els.goldDelta.textContent = `restan ${gold(diff)}`;
+    els.goldDelta.textContent = quote ? t("shipyard.refit.remaining", { gold: gold(diff) }) : `restan ${gold(diff)}`;
     els.goldDelta.className = "purse-delta pos";
   } else {
-    els.goldDelta.textContent = `faltan ${gold(-diff)}`;
+    els.goldDelta.textContent = quote ? t("shipyard.refit.missing", { gold: gold(-diff) }) : `faltan ${gold(-diff)}`;
     els.goldDelta.className = "purse-delta neg";
   }
 }
@@ -731,17 +851,141 @@ function drawShip(ship) {
 /* ---------------------------------------------------------------- render */
 
 let lastShip = null;
+let lastAddedName = null;
+let lastNoticeKey = "shipyard.added";
+let arrivalNotice = null;
+let refitId = null;
+
+function renderArrivalNotice() {
+  if (!arrivalNotice) return;
+  els.purchaseNotice.textContent = t(arrivalNotice.short ? "sea.banner.autoRepairShort" : "sea.banner.autoRepair", {
+    count: gold(arrivalNotice.count), gold: gold(arrivalNotice.gold),
+  });
+}
+
+/**
+ * The historical picture of the selected hull (S34).
+ *
+ * A missing or broken image is normal: the figure hides itself and the silhouette
+ * below keeps doing the work. The credit is shown whenever a picture is shown,
+ * because these are other people's work.
+ */
+let credits = null;
+
+async function loadCredits() {
+  // The pictures are an optional extra: no bundle means no pictures, silently, because
+  // a missing optional asset is not an error the player should see (S34).
+  try {
+    const response = await fetch("./assets/ships/credits.json", { cache: "no-cache" });
+    if (!response.ok) return;
+    const parsed = await response.json();
+    credits = parsed && typeof parsed === "object" ? parsed : null;
+  } catch {
+    credits = null;
+  }
+}
+
+/**
+ * The hull picture opens whole on a click and closes on another click, on Escape or on
+ * a click anywhere else (S41). It is plain state on the figure, so the CSS does the rest.
+ */
+function setPictureZoom(open) {
+  if (!els.shipFigure) return;
+  els.shipFigure.classList.toggle("is-zoomed", open);
+}
+
+if (els.shipPhoto && els.shipFigure) {
+  document.addEventListener("click", (event) => {
+    const zoomed = els.shipFigure.classList.contains("is-zoomed");
+    if (event.target !== els.shipPhoto) {
+      if (zoomed) setPictureZoom(false);
+      return;
+    }
+    // The first click opens the picture full size, which is what the player expects. Once
+    // it is open, a click turns the page to the hull's next picture (S76): a hull with one
+    // picture simply stays where it is.
+    if (!zoomed) {
+      setPictureZoom(true);
+      return;
+    }
+    const count = shipImagePaths(credits, pictureHullId).length;
+    pictureIndex = nextImageIndex(pictureIndex, count);
+    const hull = lastShip?.hull;
+    if (hull) renderHullPicture(hull);
+  });
+  document.addEventListener("keydown", (event) => {
+    if (event.key === "Escape") setPictureZoom(false);
+  });
+}
+
+/** Which of a hull's pictures is on screen (S76). Reset when the hull changes. */
+let pictureIndex = 0;
+/** The hull whose picture is showing, so a redraw does not reset the rotation. */
+let pictureHullId = null;
+
+function renderHullPicture(hull) {
+  if (!els.shipPhoto || !els.shipFigure) return;
+
+  const hide = () => {
+    setPictureZoom(false);
+    els.shipFigure.classList.add("is-hidden");
+    els.shipPhoto.removeAttribute("src");
+  };
+
+  const pictures = shipImagePaths(credits, hull?.id);
+  if (pictures.length === 0) {
+    // No picture, or one whose licence was never recorded: show nothing rather than an
+    // unattributed image. The silhouette below carries the hull.
+    hide();
+    return;
+  }
+
+  // A different hull starts from her first picture (S76).
+  if (pictureHullId !== hull.id) {
+    pictureHullId = hull.id;
+    pictureIndex = 0;
+  }
+  const at = Math.min(pictureIndex, pictures.length - 1);
+  const picture = pictures[at];
+
+  // Reloading the same picture on every keystroke would flicker: keep the src.
+  const key = `${hull.id}:${at}`;
+  if (els.shipPhoto.dataset.pictureKey !== key) {
+    els.shipPhoto.dataset.pictureKey = key;
+    els.shipPhoto.dataset.hullId = hull.id;
+    els.shipPhoto.alt = t("shipyard.hullPhoto", { name: localisedHull(hull, t).name });
+    els.shipPhoto.onerror = hide;
+    els.shipPhoto.src = picture.path;
+    els.shipFigure.classList.remove("is-hidden");
+  }
+
+  if (els.shipPhotoCaption) {
+    els.shipPhotoCaption.textContent = t("shipyard.hullPhotoCredit", {
+      author: picture.author,
+      license: picture.license,
+    });
+    els.shipPhotoCaption.classList.remove("is-hidden");
+  }
+}
 
 function render() {
-  const ship = buildShip(currentConfig(), state.gold);
+  const refitShip = fleet.ships.find((entry) => entry.id === refitId);
+  const quote = refitShip ? quoteRefit(refitShip, currentConfig(), state.gold) : null;
+  const ship = quote
+    ? { ...quote.built, issues: quote.issues, errors: quote.errors, warnings: quote.warnings, feasible: quote.feasible }
+    : buildShip(currentConfig(), state.gold);
   if (!ship) return;
   lastShip = ship;
+  els.refitBanner.classList.toggle("is-hidden", !refitShip);
+  els.refitMode.textContent = refitShip ? t("shipyard.refit.mode", { name: refitShip.name }) : "";
+  els.launchBtn.textContent = t(refitShip ? "shipyard.refit.save" : "shipyard.launch");
 
+  renderHullPicture(ship.hull);
   renderGuns(ship);
   renderMassBar(ship);
   renderStats(ship);
   renderVerdict(ship);
-  renderPrice(ship);
+  renderPrice(ship, quote);
   renderBatteries();
   renderCrew();
   renderSupply(ship);
@@ -755,6 +999,7 @@ function render() {
       card.querySelector(".hull-card-name")?.textContent === localisedHull(ship.hull, t).name;
     card.classList.toggle("is-active", isActive);
     card.setAttribute("aria-selected", String(isActive));
+    card.disabled = Boolean(refitShip);
   }
 
   saveConfig();
@@ -765,6 +1010,25 @@ function render() {
 function launch() {
   const ship = lastShip;
   if (!ship || !ship.feasible) return;
+
+  const target = fleet.ships.find((entry) => entry.id === refitId);
+  if (target) {
+    const name = state.shipName.trim() || target.name;
+    const result = applyRefit(target, { ...currentConfig(), name }, state.gold);
+    if (!result.applied) return;
+    fleet = { ...fleet, ships: fleet.ships.map((entry) => entry.id === target.id ? result.ship : entry) };
+    state.gold = result.gold;
+    saveFleet();
+    savePurse(result.ship, target.id === fleet.captainId, { refit: true });
+    refitId = null;
+    arrivalNotice = null;
+    lastAddedName = name;
+    lastNoticeKey = "shipyard.refit.saved";
+    els.purchaseNotice.textContent = t(lastNoticeKey, { name });
+    renderFleet();
+    render();
+    return;
+  }
 
   const name = state.shipName.trim() || defaultShipName(ship.hull);
   const runtime = toRuntimeShip(ship, { name });
@@ -785,35 +1049,11 @@ function launch() {
   }
 
   renderFleet();
-  renderPrice(ship);
-  els.goldValue.textContent = gold(state.gold);
-
-  const hullText = localisedHull(ship.hull, t);
-  els.sailTitle.textContent = `${name} — ${hullText.name}`;
-  els.sailBody.innerHTML = `
-    <dl class="sail-stats">
-      <div><dt>${t("sail.hull")}</dt><dd>${hullText.name}</dd></div>
-      <div><dt>${t("sail.country")}</dt><dd>${hullText.country}</dd></div>
-      <div><dt>${t("sail.length")}</dt><dd>${fmtOne.format(ship.hull.lengthM)} m</dd></div>
-      <div><dt>${t("sail.displacement")}</dt><dd>${kg(ship.hull.displacementKg)}</dd></div>
-      <div><dt>${t("sail.realMass")}</dt><dd>${kg(ship.budget.realMassKg)}</dd></div>
-      <div><dt>${t("sail.draft")}</dt><dd>${fmtTwo.format(ship.budget.draftM)} m</dd></div>
-      <div><dt>${t("sail.speed")}</dt><dd>${t("sail.knots", { value: fmtTwo.format(ship.budget.speedKn) })}</dd></div>
-      <div><dt>${t("sail.people")}</dt><dd>${t("sail.peopleCount", { value: fmtInt.format(ship.budget.people) })}</dd></div>
-      <div><dt>${t("sail.guns")}</dt><dd>${t(ship.guns.sides.swivel > 0 ? "sail.gunsDetailSwivel" : "sail.gunsDetail", { total: ship.guns.total, babor: ship.guns.sides.babor, estribor: ship.guns.sides.estribor, swivel: ship.guns.sides.swivel })}</dd></div>
-      <div><dt>${t("sail.provisions")}</dt><dd>${t("sail.days", { days: state.days })}</dd></div>
-      <div><dt>${t("sail.cargo")}</dt><dd>${kg(state.cargoKg)}</dd></div>
-      <div><dt>${t("sail.cost")}</dt><dd>${t("sail.doblones", { value: gold(ship.price.total) })}</dd></div>
-      <div><dt>${t("sail.upkeep")}</dt><dd>${t("sail.upkeepPerDay", { value: fmtOne.format(ship.upkeep) })}</dd></div>
-      <div><dt>${t("sail.purseLeft")}</dt><dd>${t("sail.doblones", { value: gold(state.gold) })}</dd></div>
-    </dl>
-    <p>${
-      ship.warnings.length
-        ? t("sail.warnings", { count: ship.warnings.length, codes: ship.warnings.map((w) => w.code).join(", ") })
-        : t("sail.clean")
-    }</p>
-  `;
-  els.sailDialog.showModal();
+  render();
+  arrivalNotice = null;
+  lastAddedName = name;
+  lastNoticeKey = "shipyard.added";
+  els.purchaseNotice.textContent = t(lastNoticeKey, { name });
 }
 
 function defaultShipName(hull) {
@@ -825,7 +1065,8 @@ function defaultShipName(hull) {
 els.addBattery.addEventListener("click", () => {
   const pieceId = els.pieceSelect.value;
   const piece = pieceById(pieceId);
-  if (!piece) return;
+  // The shop only sells the active country's ordnance (S26), whatever the picker says.
+  if (!piece || !countryPieces().some((entry) => entry.id === piece.id)) return;
   const side = piece.swivel
     ? "swivel"
     : state.batteries.filter((b) => b.side === "babor").length
@@ -857,8 +1098,44 @@ document.querySelectorAll(".tab").forEach((tab) => {
 });
 
 els.launchBtn.addEventListener("click", launch);
-els.sailBack.addEventListener("click", () => els.sailDialog.close());
-els.sailGo.addEventListener("click", () => {
+/** The automatic-fire check: restore the stored choice, save every change (S47). */
+function renderAutoFire() {
+  if (!els.autofireCheck) return;
+  let stored = null;
+  try {
+    stored = localStorage.getItem(AUTOFIRE_KEY);
+  } catch {
+    stored = null;
+  }
+  els.autofireCheck.checked = normaliseAutoFire(stored);
+  els.autofireCheck.closest("label")?.setAttribute("title", t("shipyard.autofireHint"));
+}
+
+if (els.autofireCheck) {
+  els.autofireCheck.addEventListener("change", () => {
+    try {
+      localStorage.setItem(AUTOFIRE_KEY, serialiseAutoFire(els.autofireCheck.checked));
+    } catch {
+      /* storage disabled: the choice lasts for this screen only */
+    }
+  });
+}
+
+els.setSailBtn.addEventListener("click", () => {
+  // A yard in enemy hands takes the sailing with her (S74): the player has to win it
+  // back before putting to sea again.
+  const game = (() => {
+    try {
+      return JSON.parse(localStorage.getItem(GAME_KEY) ?? "null");
+    } catch {
+      return null;
+    }
+  })();
+  const fort = game?.fort;
+  if (fort && (fort.status === "surrendered" || fort.status === "sunk")) {
+    els.purchaseNotice.textContent = t("shipyard.fort.closed");
+    return;
+  }
   saveConfig();
   window.location.href = "./sea.html";
 });
@@ -878,6 +1155,36 @@ function loadFleetState() {
 
 let fleet = loadFleetState();
 
+/**
+ * The shipyard's own state (S74), read from the sea save: her hull, her garrison and the
+ * guns her victories have earned. The shipyard does not run the fight; it only reports it,
+ * so there is one source of truth and it is the sea's.
+ */
+function renderFort() {
+  if (!els.fortState) return;
+  let game = null;
+  try {
+    game = JSON.parse(localStorage.getItem(GAME_KEY) ?? "null");
+  } catch {
+    game = null;
+  }
+  const fort = game?.fort;
+  const victories = Math.max(0, Math.floor(Number(game?.victories) || 0));
+  const condition = fort?.condition ?? { hull: 100, crew: 100 };
+  const status = fort?.status ?? "fighting";
+  const taken = status === "surrendered" || status === "sunk";
+
+  els.fortState.textContent = taken ? t("shipyard.fort.taken") : t("shipyard.fort.ours");
+  els.fortState.className = `fort-state${taken ? " is-taken" : ""}`;
+  els.fortHull.style.width = `${Math.max(0, Math.min(100, Math.round(Number(condition.hull) || 0)))}%`;
+  els.fortCrew.style.width = `${Math.max(0, Math.min(100, Math.round(Number(condition.crew) || 0)))}%`;
+  els.fortDetail.textContent = t("shipyard.fort.detail", {
+    guns: FORT.gunsPerSide * 2 + 2 * Math.floor(victories / FORT.gunsPerVictories),
+    victories,
+    needed: FORT.gunsPerVictories - (victories % FORT.gunsPerVictories),
+  });
+}
+
 function saveFleet() {
   try {
     localStorage.setItem(FLEET_KEY, serializeFleet(fleet));
@@ -889,6 +1196,10 @@ function saveFleet() {
 /** Redraw the fleet strip: every owned hull, with the captain marked. */
 function renderFleet() {
   const captain = captainShip(fleet);
+  els.setSailBtn.disabled = isEmptyFleet(fleet);
+  renderFort();
+  // Buying the first ship locks the country (S26), so the selector follows the fleet.
+  renderCountry();
   els.fleetCount.textContent = isEmptyFleet(fleet)
     ? t("fleet.count.none")
     : t(fleet.ships.length === 1 ? "fleet.count.one" : "fleet.count.many", {
@@ -904,25 +1215,92 @@ function renderFleet() {
   els.fleetList.innerHTML = fleet.ships
     .map((ship) => {
       const isCaptain = ship.id === captain?.id;
+      // The captain always sails; every other hull sails if its check is on (S35).
+      const sails = isCaptain || ship.sails !== false;
       return `
-        <li class="fleet-item${isCaptain ? " is-captain" : ""}" data-ship-id="${ship.id}">
-          <button class="fleet-ship" type="button" data-captain="${ship.id}"
-            ${isCaptain ? "disabled" : ""}
-            title="${isCaptain ? t("fleet.isCaptain") : t("fleet.promote")}">
+        <li class="fleet-item${isCaptain ? " is-captain" : ""}${sails ? " is-sailing" : ""}${ship.id === refitId ? " is-refitting" : ""}" data-ship-id="${ship.id}">
+          <input class="fleet-check" type="checkbox" data-sail="${ship.id}"
+            ${sails ? "checked" : ""} ${isCaptain ? "disabled" : ""}
+            aria-label="${t("fleet.sails", { name: ship.name })}"
+            title="${isCaptain ? t("fleet.sailsCaptain") : t("fleet.sails", { name: ship.name })}" />
+          <button class="fleet-ship" type="button" data-refit="${ship.id}" title="${t("shipyard.refit.select")}">
             <span class="fleet-mark">${isCaptain ? "⚓" : "·"}</span>
             <span class="fleet-name">${ship.name}</span>
             <span class="fleet-hull">${ship.hullName}</span>
           </button>
-          ${isCaptain ? `<span class="fleet-tag">${t("fleet.captain")}</span>` : ""}
+          ${isCaptain ? `<span class="fleet-tag" title="${t("fleet.isCaptain")}">${t("fleet.captain")}</span>` : `<button class="fleet-captain-button" type="button" data-captain="${ship.id}" title="${t("fleet.promote")}">${t("shipyard.refit.captain")}</button>`}
+          <button class="fleet-sell" type="button" data-sell="${ship.id}"
+            ${canSellShip(fleet, ship.id) ? "" : "disabled"}
+            title="${canSellShip(fleet, ship.id) ? t("shipyard.sellTitle", { name: ship.name, gold: gold(salePrice(ship)) }) : t("shipyard.sellLast")}"
+          >${t("shipyard.sell", { gold: gold(salePrice(ship)) })}</button>
         </li>`;
     })
     .join("");
 }
 
 els.fleetList.addEventListener("click", (event) => {
-  const button = event.target.closest("[data-captain]");
-  if (!button) return;
-  fleet = setCaptain(fleet, button.dataset.captain);
+  const sell = event.target.closest("[data-sell]");
+  if (sell) {
+    // Selling pays a share of the hull's value and takes her out of the fleet (S62).
+    // The last hull is refused by the model, and her button is already disabled.
+    const result = sellShip(fleet, sell.dataset.sell, state.gold);
+    if (!result) return;
+    fleet = result.fleet;
+    state.gold = result.gold;
+    // A hull being refitted cannot be sold under the player's feet.
+    if (refitId && !fleet.ships.some((entry) => entry.id === refitId)) refitId = null;
+    saveFleet();
+    savePurse();
+    els.goldValue.textContent = gold(state.gold);
+    lastNoticeKey = null;
+    els.purchaseNotice.textContent = t("shipyard.sold", { name: result.ship.name, gold: gold(result.price) });
+    renderFleet();
+    render();
+    return;
+  }
+  const promote = event.target.closest("[data-captain]");
+  if (promote) {
+    fleet = setCaptain(fleet, promote.dataset.captain);
+    saveFleet();
+    renderFleet();
+    return;
+  }
+  const select = event.target.closest("[data-refit]");
+  const ship = fleet.ships.find((entry) => entry.id === select?.dataset.refit);
+  if (!ship) return;
+  const config = configFromShip(ship);
+  refitId = ship.id;
+  for (const key of ["hullId", "batteries", "crew", "days", "cargoKg", "ballastKg", "equipmentKg", "reserveKg"]) {
+    state[key] = config[key];
+  }
+  state.shipName = config.name ?? "";
+  els.shipName.value = state.shipName;
+  renderFleet();
+  render();
+});
+
+els.newShipBtn.addEventListener("click", () => {
+  refitId = null;
+  renderFleet();
+  render();
+});
+
+/**
+ * Mark a hull to sail with the captain (S35). The choice lives on the fleet entry, so
+ * it is saved with the fleet: a new ship is born marked, and a save written before the
+ * checks existed sails with everything, which is what it used to do.
+ */
+els.fleetList.addEventListener("change", (event) => {
+  const check = event.target.closest("[data-sail]");
+  if (!check) return;
+  const shipId = check.dataset.sail;
+  const captain = captainShip(fleet);
+  if (shipId === captain?.id) {
+    // The captain cannot stay ashore: she is the ship the player sails.
+    check.checked = true;
+    return;
+  }
+  fleet = withShipSailing(fleet, shipId, check.checked);
   saveFleet();
   renderFleet();
 });
@@ -948,8 +1326,13 @@ function damageSummary(damaged) {
   return damaged.map((segment) => t(DOCK_SEGMENT_KEY[segment])).join(", ");
 }
 
-/** The purse the shipyard shows and the sea save that carries it, kept in step. */
-function savePurse(patchedCaptain = null) {
+/**
+ * The purse the shipyard shows and the sea save that carries it, kept in step. A hull
+ * repaired here is patched in the sea save too (S23): the sea prefers that save to the
+ * fleet sheet on boot, so the captain's part and each escort's part both have to move,
+ * or the repair is undone the next time the player puts to sea.
+ */
+function savePurse(patchedShip = null, isCaptain = false, { refit = false } = {}) {
   let game = null;
   try {
     game = JSON.parse(localStorage.getItem(GAME_KEY) ?? "null");
@@ -958,18 +1341,19 @@ function savePurse(patchedCaptain = null) {
   }
   const record = game && typeof game === "object" ? game : {};
   const combat = record.combat;
-  const player = combat?.player;
-  const patchedCombat =
-    patchedCaptain && player
-      ? {
-          ...combat,
-          player: {
-            ...player,
-            condition: { ...patchedCaptain.condition },
-            crew: { ...patchedCaptain.crewAlive },
-          },
-        }
-      : combat;
+  const patch = patchedShip ? { condition: { ...patchedShip.condition }, crew: { ...patchedShip.crewAlive } } : null;
+  let patchedCombat = combat;
+  if (patch && isCaptain && combat?.player) {
+    const player = refit ? { ...combat.player, crew: patch.crew } : { ...combat.player, ...patch };
+    if (refit) delete player.pieces;
+    patchedCombat = { ...combat, player };
+  } else if (patch && !isCaptain && combat?.escorts?.[patchedShip.id]) {
+    const escort = combat.escorts[patchedShip.id];
+    patchedCombat = {
+      ...combat,
+      escorts: { ...combat.escorts, [patchedShip.id]: { ...escort, ...(refit ? { crew: patch.crew } : patch) } },
+    };
+  }
   try {
     localStorage.setItem(
       GAME_KEY,
@@ -990,16 +1374,10 @@ function renderDockList() {
   const signature = ships
     .map((ship) => {
       const report = repairReport(ship);
-      return [ship.id, ship.name, report.damaged.join(","), report.crewAlive, report.cost].join(":");
+      return [ship.id, ship.name, report.hull, report.rigging, report.crew, report.morale, report.crewAlive, report.cost].join(":");
     })
-    .join("|");
-  if (signature === dockSignature) {
-    for (const button of container.querySelectorAll("button[data-ship-id]")) {
-      const ship = ships.find((entry) => entry.id === button.dataset.shipId);
-      if (ship) button.classList.toggle("is-short", state.gold < repairCost(ship));
-    }
-    return;
-  }
+    .join("|") + `:${state.gold}`;
+  if (signature === dockSignature) return;
   dockSignature = signature;
   container.textContent = "";
 
@@ -1034,13 +1412,19 @@ function renderDockList() {
     const needs = document.createElement("p");
     needs.className = "dock-ship-needs";
     needs.textContent = t("shipyard.dock.needs", { segments: damageSummary(report.damaged) });
+    if (state.gold > 0 && state.gold < report.cost) {
+      needs.textContent += ` · ${t("shipyard.dock.partial", {
+        gold: gold(state.gold), percent: (100 * state.gold / report.cost).toFixed(1),
+      })}`;
+    }
 
     const button = document.createElement("button");
     button.type = "button";
     button.className = "dock-ship-button";
     button.dataset.shipId = ship.id;
-    button.textContent = t("shipyard.dock.button", { gold: gold(report.cost) });
-    button.classList.toggle("is-short", state.gold < report.cost);
+    button.textContent = t("shipyard.dock.button", { gold: gold(priceWithPurse(report.cost, state.gold)) });
+    button.disabled = state.gold <= 0 && report.cost > 0;
+    button.classList.toggle("is-short", button.disabled);
     button.addEventListener("click", () => repairFromDock(ship.id));
 
     row.append(head, detail, needs, button);
@@ -1101,7 +1485,7 @@ function repairFromDock(shipId) {
   state.gold = result.gold;
   saveFleet();
   const repaired = fleet.ships.find((ship) => ship.id === shipId) ?? null;
-  savePurse(shipId === captain?.id ? repaired : null);
+  savePurse(repaired, shipId === captain?.id);
 
   els.goldValue.textContent = gold(state.gold);
   renderFleet();
@@ -1118,7 +1502,7 @@ els.eraseBtn.addEventListener("click", () => els.eraseDialog.showModal());
 els.eraseCancel.addEventListener("click", () => els.eraseDialog.close());
 els.eraseConfirm.addEventListener("click", () => {
   try {
-    for (const key of [STORAGE_KEY, GAME_KEY, SHIP_KEY, FLEET_KEY]) {
+    for (const key of [STORAGE_KEY, GAME_KEY, SHIP_KEY, FLEET_KEY, COUNTRY_KEY]) {
       localStorage.removeItem(key);
     }
   } catch {
@@ -1126,17 +1510,6 @@ els.eraseConfirm.addEventListener("click", () => {
   }
   window.location.reload();
 });
-
-/** If a ship is already in the water (another session), offer sailing it directly. */
-function offerExistingShip() {
-  const captain = captainShip(fleet);
-  if (!captain || !captain.name) return;
-  const link = document.createElement("a");
-  link.className = "btn";
-  link.href = "./sea.html";
-  link.textContent = t("fleet.sail", { name: captain.name });
-  els.launchBtn.parentElement.appendChild(link);
-}
 
 window.addEventListener("resize", () => {
   if (lastShip) drawShip(lastShip);
@@ -1148,6 +1521,12 @@ window.addEventListener("resize", () => {
 /** Repaint everything after a language change, without reloading the page. */
 function repaintForLanguage() {
   applyStaticTranslations();
+  if (lastAddedName !== null) {
+    els.purchaseNotice.textContent = t(lastNoticeKey, { name: lastAddedName });
+  } else {
+    renderArrivalNotice();
+  }
+  renderCountry();
   renderHulls();
   renderPieceSelect();
   renderFleet();
@@ -1172,14 +1551,31 @@ if (els.langSelect) {
 
 /* ---------------------------------------------------------------- boot */
 
+// The tuning settings are applied before the shipyard prices anything (S33), and the
+// stored catalogue before the shipyard lists a single hull (S83).
+bootSettings();
+bootCatalogue();
+// A new game opens with the configured purse (S77). The state above was built before the
+// settings were applied, so it is set again here; `loadGold` then replaces it with the
+// saved purse, which is what a game in progress must keep.
+state.gold = normaliseGold(START.gold);
+// The hull pictures' credits are fetched once; the pictures themselves load lazily.
+await loadCredits();
 applyStaticTranslations();
 if (els.langSelect) els.langSelect.value = translator.language;
 loadConfig();
 loadGold();
 renderFleet();
+renderCountry();
 renderHulls();
 renderPieceSelect();
 if (state.shipName) els.shipName.value = state.shipName;
 render();
-offerExistingShip();
+try {
+  arrivalNotice = parseArrivalNotice(localStorage.getItem(ARRIVAL_NOTICE_KEY));
+  localStorage.removeItem(ARRIVAL_NOTICE_KEY);
+} catch {
+  /* storage disabled: the shipyard still opens */
+}
+renderArrivalNotice();
 openDockDialog();

@@ -126,12 +126,45 @@ h3 {
 
 .fleet-bar {
   display: grid;
-  gap: 4px;
-  min-width: 260px;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 4px 12px;
+  min-width: 350px;
   padding: 6px 12px;
   border: 1px solid var(--line);
   border-radius: 10px;
   background: #fffdf7;
+}
+
+.sail-controls {
+  grid-column: 2;
+  grid-row: 1 / span 2;
+  align-self: center;
+  display: flex;
+  flex-direction: column;
+  align-items: stretch;
+  gap: 5px;
+}
+
+#set-sail-btn {
+  white-space: nowrap;
+}
+
+/* Automatic fire (S47): the check sits under "Zarpar", where the player leaves port. */
+.autofire {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  font-size: 12px;
+  line-height: 1.2;
+  color: var(--ink, #2b2a26);
+  cursor: pointer;
+  white-space: nowrap;
+}
+
+.autofire input {
+  margin: 0;
+  cursor: pointer;
 }
 
 .fleet-head {
@@ -155,6 +188,8 @@ h3 {
 }
 
 .fleet-list {
+  grid-column: 1;
+  min-width: 0;
   list-style: none;
   margin: 0;
   padding: 0;
@@ -199,6 +234,42 @@ h3 {
 
 .fleet-ship:disabled {
   cursor: default;
+}
+
+.fleet-item.is-refitting .fleet-ship {
+  outline: 2px solid var(--gold);
+  background: rgba(184, 134, 11, 0.1);
+}
+
+.fleet-sell {
+  cursor: pointer;
+  padding: 3px 6px;
+  font-size: 11px;
+  border: 1px solid var(--gold);
+  border-radius: 3px;
+  background: transparent;
+  color: var(--navy);
+  white-space: nowrap;
+}
+
+.fleet-sell:hover:not(:disabled) {
+  background: rgba(184, 134, 11, 0.12);
+}
+
+.fleet-sell:disabled {
+  cursor: default;
+  opacity: 0.4;
+  border-color: var(--ink-soft);
+}
+
+.fleet-captain-button, #new-ship-btn {
+  cursor: pointer;
+  padding: 3px 6px;
+  font-size: 11px;
+  border: 1px solid var(--ink-soft);
+  border-radius: 3px;
+  background: transparent;
+  color: var(--navy);
 }
 
 .fleet-item.is-captain .fleet-name {
@@ -274,6 +345,43 @@ h3 {
   font-size: 12px;
 }
 
+/* ---------- country picker (S26) ---------- */
+
+.country-picker {
+  display: grid;
+  gap: 4px;
+  margin: 6px 0 10px;
+  padding: 8px 10px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: #fffdf7;
+}
+
+.country-label {
+  color: var(--ink-soft);
+  font-size: 11px;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+}
+
+.country-picker select {
+  width: 100%;
+}
+
+.country-picker select:disabled {
+  color: var(--ink-soft);
+  background: #f1ece1;
+  cursor: not-allowed;
+}
+
+.country-note {
+  margin: 0;
+}
+
+.country-note.is-locked {
+  color: var(--navy);
+}
+
 /* ---------- hull list ---------- */
 
 .hull-list {
@@ -325,6 +433,16 @@ h3 {
 }
 
 /* ---------- ship panel ---------- */
+
+.refit-banner {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  margin: 8px 0;
+  color: var(--navy);
+  font-weight: 600;
+}
 
 .ship-head {
   display: flex;
@@ -789,6 +907,16 @@ input[type="number"] {
   backdrop-filter: blur(6px);
 }
 
+.purchase-notice {
+  margin: 4px 0 0;
+  color: var(--green);
+  font-size: 13px;
+}
+
+.purchase-notice:empty {
+  display: none;
+}
+
 .verdict-issues {
   display: flex;
   flex-direction: column;
@@ -873,7 +1001,7 @@ input[type="number"] {
 
 /* ---------- dialog ---------- */
 
-.sail-dialog {
+.erase-dialog {
   width: min(560px, 92vw);
   padding: 22px;
   border: 1px solid var(--line);
@@ -883,52 +1011,26 @@ input[type="number"] {
   box-shadow: 0 24px 60px rgba(16, 22, 31, 0.28);
 }
 
-.sail-dialog::backdrop {
+.erase-dialog::backdrop {
   background: rgba(16, 22, 31, 0.45);
 }
 
-.sail-dialog h2 {
+.erase-dialog h2 {
   font-size: 18px;
   color: var(--navy);
   margin-bottom: 8px;
 }
 
-.sail-dialog p {
+.erase-dialog p {
   margin: 0 0 16px;
   font-size: 13.5px;
   line-height: 1.55;
 }
 
-.sail-actions {
+.erase-actions {
   display: flex;
   justify-content: flex-end;
   gap: 8px;
-}
-
-.sail-stats {
-  display: grid;
-  grid-template-columns: repeat(2, 1fr);
-  gap: 6px 16px;
-  margin: 0 0 16px;
-  font-size: 12.5px;
-}
-
-.sail-stats div {
-  display: flex;
-  justify-content: space-between;
-  gap: 8px;
-  border-bottom: 1px dotted var(--line);
-  padding-bottom: 3px;
-}
-
-.sail-stats dt {
-  color: var(--ink-soft);
-}
-
-.sail-stats dd {
-  margin: 0;
-  font-variant-numeric: tabular-nums;
-  color: var(--navy);
 }
 
 /* ---------- sea screen ---------- */
@@ -1075,6 +1177,92 @@ input[type="number"] {
   bottom: 14px;
   left: 14px;
   min-width: 210px;
+}
+
+/* The duel panel (S73): every engaged hull, ours and theirs, with her three bars. */
+.hud-duel {
+  bottom: 14px;
+  left: 14px;
+  min-width: 230px;
+  max-width: 280px;
+  max-height: 42vh;
+  overflow-y: auto;
+}
+
+.duel-roster {
+  display: grid;
+  gap: 7px;
+}
+
+.duel-row {
+  display: grid;
+  gap: 3px;
+  padding: 4px 5px;
+  border-radius: 5px;
+  background: rgba(244, 239, 228, 0.05);
+  border-left: 3px solid transparent;
+}
+
+/* Our hulls read as ours, theirs as theirs, without having to read the name. */
+.duel-row.is-ours {
+  border-left-color: #8fd0ff;
+}
+
+.duel-row.is-theirs {
+  border-left-color: #a13c2c;
+}
+
+.duel-head {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 6px;
+}
+
+.duel-name {
+  font-size: 11.5px;
+  font-weight: 600;
+  color: rgba(244, 239, 228, 0.92);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.duel-distance {
+  font-size: 10px;
+  color: rgba(244, 239, 228, 0.55);
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+
+.duel-bars {
+  display: grid;
+  gap: 2px;
+}
+
+.duel-bar {
+  height: 6px;
+  border-radius: 3px;
+  background: rgba(244, 239, 228, 0.14);
+  overflow: hidden;
+}
+
+.duel-fill {
+  height: 100%;
+  border-radius: 3px;
+  transition: width 0.25s ease;
+}
+
+.duel-fill-hull {
+  background: #a13c2c;
+}
+
+.duel-fill-rigging {
+  background: #3d6fa8;
+}
+
+.duel-fill-crew {
+  background: #2f6b47;
 }
 
 .target-distance {
@@ -1461,4 +1649,366 @@ input[type="number"] {
 .battery select:disabled {
   opacity: 0.85;
   cursor: default;
+}
+
+/* ---------- settings screen (S33) ---------- */
+
+.settings-layout {
+  flex: 1;
+  padding: 14px 20px;
+  display: grid;
+  gap: 12px;
+  align-content: start;
+}
+
+.settings-lead {
+  max-width: 70ch;
+}
+
+.settings-groups {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
+  gap: 14px;
+  align-items: start;
+}
+
+.settings-card {
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  background: #fffdf8;
+  box-shadow: var(--shadow);
+  padding: 14px;
+}
+
+.settings-card h2 {
+  font-size: 15px;
+  color: var(--navy);
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  margin-bottom: 10px;
+}
+
+.settings-card-body {
+  display: grid;
+  gap: 10px;
+}
+
+.settings-row {
+  display: grid;
+  gap: 3px;
+}
+
+.settings-label {
+  font-size: 13px;
+  color: var(--ink);
+}
+
+.settings-control {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.settings-control input {
+  width: 120px;
+  padding: 5px 7px;
+  border: 1px solid var(--line);
+  border-radius: 6px;
+  background: var(--paper);
+  font: inherit;
+  font-size: 13px;
+  color: var(--ink);
+  font-variant-numeric: tabular-nums;
+}
+
+.settings-unit {
+  color: var(--ink-soft);
+  font-size: 12px;
+}
+
+.settings-range {
+  margin: 0;
+  color: var(--ink-soft);
+  font-size: 11px;
+}
+
+.settings-status {
+  margin: 0;
+  color: var(--ink-soft);
+  font-size: 12px;
+}
+
+.settings-status.is-ok {
+  color: var(--green);
+}
+
+.settings-status.is-hint {
+  color: var(--ink-soft);
+}
+
+/* ---------- hull picture (S34) ---------- */
+
+.ship-figure {
+  position: relative;
+  margin: 0 0 8px;
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  overflow: hidden;
+  background: #efe7d7;
+  /*
+   * The height is reserved, not left to the image: while the picture is enlarged it
+   * leaves the flow (position: fixed), and without this the whole panel would jump up
+   * by the height of the thumbnail every time the pointer goes over it.
+   */
+  height: 240px;
+}
+
+.ship-figure.is-hidden {
+  display: none;
+}
+
+.ship-photo {
+  display: block;
+  width: 100%;
+  height: 100%;
+  max-height: 240px;
+  /* Cropped while small: the panel is narrow and the picture is a banner. */
+  object-fit: cover;
+  object-position: center;
+  cursor: zoom-in;
+}
+
+/*
+ * S41: clicking the picture shows it whole.
+ *
+ * The thumbnail is a cropped banner inside a narrow panel. Once the player clicks it
+ * (`.is-zoomed`, toggled by app.js), the image itself becomes a fixed, centred overlay
+ * over the page, with the crop replaced by `contain`, so the player sees the whole
+ * ship. Hovering does nothing: it stays open until a click, Escape or a click outside.
+ */
+.ship-figure.is-zoomed .ship-photo {
+  position: fixed;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  width: auto;
+  height: auto;
+  max-width: 92vw;
+  max-height: 88vh;
+  object-fit: contain;
+  z-index: 100;
+  cursor: zoom-out;
+  border-radius: 6px;
+  box-shadow: 0 24px 80px rgba(16, 22, 31, 0.55), 0 0 0 1px rgba(244, 239, 228, 0.35);
+  background: #1a1f27;
+}
+
+/* Dim the page behind the enlarged picture, so it reads as a viewer. */
+.ship-figure.is-zoomed::after {
+  content: "";
+  position: fixed;
+  inset: 0;
+  background: rgba(16, 22, 31, 0.72);
+  z-index: 99;
+  pointer-events: none;
+}
+
+/* The credit stays readable over the enlarged picture. */
+.ship-figure.is-zoomed .ship-photo-caption {
+  z-index: 101;
+  position: fixed;
+  left: 50%;
+  right: auto;
+  bottom: 4vh;
+  transform: translateX(-50%);
+  max-width: 92vw;
+  border-radius: 4px;
+  font-size: 12px;
+  padding: 5px 12px;
+  pointer-events: none;
+}
+
+.ship-photo-caption {
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  margin: 0;
+  padding: 3px 8px;
+  background: rgba(16, 22, 31, 0.62);
+  color: #f4efe4;
+  font-size: 10px;
+  line-height: 1.3;
+  letter-spacing: 0.02em;
+}
+
+.ship-photo-caption.is-hidden {
+  display: none;
+}
+
+/* The shipyard as a fortification (S74): her state in the shipyard screen. */
+.fort-panel {
+  margin-top: 10px;
+  padding: 8px 9px;
+  border: 1px solid rgba(23, 54, 93, 0.18);
+  border-radius: 6px;
+  background: rgba(23, 54, 93, 0.04);
+  display: grid;
+  gap: 5px;
+}
+
+.fort-head {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+.fort-label {
+  font-size: 11.5px;
+  font-weight: 600;
+  color: var(--navy);
+}
+
+.fort-state {
+  font-size: 10.5px;
+  color: var(--ink-soft);
+}
+
+.fort-state.is-taken {
+  color: #a13c2c;
+  font-weight: 600;
+}
+
+.fort-bars {
+  display: grid;
+  gap: 4px;
+}
+
+.fort-bar {
+  display: grid;
+  grid-template-columns: 66px 1fr;
+  align-items: center;
+  gap: 6px;
+}
+
+.fort-bar span {
+  font-size: 10px;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: var(--ink-soft);
+}
+
+.fort-track {
+  height: 7px;
+  border-radius: 4px;
+  background: rgba(23, 54, 93, 0.12);
+  overflow: hidden;
+}
+
+.fort-fill {
+  height: 100%;
+  border-radius: 4px;
+  transition: width 0.25s ease;
+}
+
+.fort-hull {
+  background: #a13c2c;
+}
+
+.fort-crew {
+  background: #2f6b47;
+}
+
+.fort-detail {
+  margin: 0;
+  font-size: 10.5px;
+  color: var(--ink-soft);
+}
+
+/* The catalogue editor (S80-S82): one card under the tuning blocks, holding a record
+   per hull and per piece. It is deliberately a plain column: the player reads a hull
+   top to bottom, the same way she reads a ship's papers. */
+.settings-catalogue {
+  margin-top: 14px;
+}
+
+.catalogue-card {
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  background: #fffdf8;
+  box-shadow: var(--shadow);
+  padding: 14px 14px 18px;
+}
+
+.catalogue-lead {
+  margin: 0 0 12px;
+  color: var(--ink-soft);
+  font-size: 12px;
+  max-width: 80ch;
+}
+
+.catalogue-card h3 {
+  font-size: 13px;
+  color: var(--navy);
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  margin: 16px 0 8px;
+}
+
+.catalogue-record {
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  padding: 10px;
+  margin-bottom: 10px;
+  background: var(--paper);
+}
+
+.catalogue-record-head {
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+  margin-bottom: 8px;
+}
+
+.catalogue-record-head strong {
+  color: var(--ink);
+  font-size: 13px;
+}
+
+.catalogue-badge {
+  font-size: 10px;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  padding: 1px 6px;
+  border-radius: 999px;
+  border: 1px solid var(--line);
+  color: var(--ink-soft);
+}
+
+.catalogue-badge.is-new {
+  border-color: var(--green);
+  color: var(--green);
+}
+
+.catalogue-badge.is-historical {
+  border-color: var(--navy);
+  color: var(--navy);
+}
+
+.catalogue-derived {
+  margin: 8px 0 0;
+  color: var(--ink-soft);
+  font-size: 11px;
+}
+
+.catalogue-create {
+  border: 1px dashed var(--line);
+  border-radius: 8px;
+  padding: 10px;
+  margin-bottom: 10px;
+}
+
+.catalogue-create h3 {
+  margin-top: 0;
 }

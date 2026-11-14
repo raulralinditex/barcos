@@ -5,9 +5,9 @@
  * keyboard and autosaves. Spanish labels (S10), English identifiers (S10).
  */
 
-import { hullById, pieceById } from "../data/naval-data.js";
+import { ammoById, hullById, pieceById } from "../data/naval-data.js";
 import { createAppTranslator } from "../i18n/index.js";
-import { localisedHull, localisedZone } from "../i18n/terms.js";
+import { localisedAmmo, localisedHull, localisedZone } from "../i18n/terms.js";
 import { compassPoint, windAt, windForecast } from "../model/wind.js";
 import {
   COMBAT,
@@ -16,10 +16,18 @@ import {
   bearingTo,
   createEnemyCombatant,
   createPlayerCombatant,
+  refreshStatus,
   damageDealt,
   fireBroadside,
+  AMMO_SWITCH,
+  ammoKeyAmmoId,
+  markEngaged,
+  openingBonus,
+  rangeCircleM,
+  describeAmmo,
   loadedShare,
   maneuverFactor,
+  setBroadsideAmmo,
   readyDamage,
   sideCapacity,
   sideForBearing,
@@ -30,21 +38,53 @@ import {
 import {
   captainShip,
   deserializeFleet,
+  fleetUpkeep,
   removeShip,
+  sailingShips,
   serializeFleet,
   withShipCondition,
 } from "../model/fleet.js";
 import {
+  REPAIR,
   damagedFleetShips,
-  damagedShips,
   needsRepair,
   repairCost,
   repairFleetShip,
-  repairReport,
   repairShip,
 } from "../model/repair.js";
+import { autoRepairFleet } from "../model/auto-repair.js";
+import { ARRIVAL_NOTICE_KEY, buildArrivalNotice, serializeArrivalNotice } from "../model/arrival-notice.js";
+import { normaliseGold } from "../model/economy.js";
+import { bootSettings } from "../model/settings-storage.js";
+import { bootCatalogue } from "../model/catalogue-storage.js";
+import { burnSupply, supplySeconds } from "../model/game-time.js";
+import {
+  closestTarget,
+  escortFire,
+  pruneAllies,
+  squadronStatus,
+} from "../model/squadron.js";
+import { createEscort } from "../model/formation.js";
+import { hasEnemyInGunshot, hullBarShare, timeScaleOnEngage } from "../model/sea-hud.js";
+import { flagColours, flagFor } from "../model/flag.js";
+import { conditionShare, duelRoster, duelVisible } from "../model/duel-panel.js";
+import {
+  canAssaultFort,
+  createFortCombatant,
+  damageFort,
+  fortFire,
+  portClosed,
+} from "../model/fort.js";
+import { hullTurnFactor } from "../model/turning.js";
+import { createTrail, stepTrail, trailWidthPx } from "../model/damage-trail.js";
+import { normaliseAutoFire, targetForSide } from "../model/autofire.js";
+import { priceWithPurse } from "../model/repair.js";
+import { captureableShip, withPrize } from "../model/sale.js";
 import {
   WORLD,
+  clampToSafeZone,
+  insideSafeZone,
+  safeZoneRadiusM,
   ZONE_BANDS,
   createWorld,
   deserializeWorld,
@@ -84,21 +124,14 @@ const els = {
   rigging: $("#hud-rigging"),
   crew: $("#hud-crew"),
   rounds: $("#hud-rounds"),
+  ammo: $("#hud-ammo"),
   banner: $("#banner"),
-  targetPanel: $("#target-panel"),
-  targetName: $("#target-name"),
-  targetDistance: $("#target-distance"),
-  targetHull: $("#target-hull"),
-  targetRigging: $("#target-rigging"),
-  targetCrew: $("#target-crew"),
+  duelPanel: $("#duel-panel"),
+  duelRoster: $("#duel-roster"),
   timeBadge: $("#time-badge"),
   portPanel: $("#port-panel"),
   portCost: $("#port-cost"),
   portFleet: $("#port-fleet"),
-  dockDialog: $("#dock-dialog"),
-  dockList: $("#dock-list"),
-  dockNote: $("#dock-note"),
-  dockLater: $("#dock-later"),
   gameoverOverlay: $("#gameover-overlay"),
   gameoverTitle: $("#gameover-title"),
   gameoverGold: $("#gameover-gold"),
@@ -145,7 +178,8 @@ function loadFleet() {
 function loadSavedGame() {
   try {
     const game = JSON.parse(localStorage.getItem(GAME_KEY));
-    if (game && Number.isFinite(game.gold)) return game;
+    // A corrupted or hand-edited save must not sail with a debt (S32).
+    if (game && game.gold !== undefined) return { ...game, gold: normaliseGold(game.gold) };
   } catch {
     /* fall through */
   }
@@ -159,8 +193,12 @@ const { legacyShip } = loaded;
 const runtimeShip = captainShip(fleet);
 
 const ui = {
-  /** Simulation steps per frame: 1 is real time, 2 is the time-warp key (S31). */
+  /** Simulation steps per frame: 1, 2, 4 or 8, cycled by the time-warp key (S31). */
   timeScale: 1,
+  /** Automatic fire (S47): the shipyard check, read once when the sea opens. */
+  autoFire: true,
+  /** Whether an enemy was engaged on the last step, so S43 acts only on the edge. */
+  wasEngaged: false,
   throttle: 0,
   rudder: 0,
   keys: new Set(),
@@ -173,18 +211,40 @@ let world = null;
 let gold = 0;
 let goldEarned = 0;
 let playerCombat = null;
+/**
+ * The crew's reserve, in seconds of game time (S67). It is the shipyard's `days` of
+ * provisions expressed in the clock the sea actually runs on, and it burns as the
+ * voyage goes: every whole day it gives up is a day of wages the crew is owed.
+ */
+let supplyLeftS = 0;
+/** Set once, so the "no provisions" warning fires on the moment it runs out. */
+let supplyWarned = false;
+/**
+ * The shipyard as a combatant (S74). She is built at boot and kept in the save, so her
+ * damage and her garrison survive a reload, like a hull's.
+ */
+let fortCombat = null;
+/** Victories the player has won, which is what grows the yard's battery (S74). */
+let victories = 0;
+/** The escorts at sea: `{ id, name, x, y, heading, currentSpeedKn, speedKn, combat }` (S36). */
+let escorts = [];
 let gameOver = false;
 let gameOverAt = 0;
 let gameOverShown = false;
 const fx = [];
-/**
- * The dock dialog asks once per arrival (S25): entering the port radius from
- * outside, or opening the sea already inside it, offers the repair. "Ahora no" and
- * a repair both spend the offer; sailing out and back arms it again.
- */
-const dock = { wasInPort: false, offered: false, open: false };
+// The initial position is seeded at boot, so only movement into port counts.
+let wasInPort = false;
 
 /* ---------------------------------------------------------------- persistence */
+
+/** Write the fleet back after it changed (a lost escort, a repair). */
+function saveFleetState() {
+  try {
+    localStorage.setItem(FLEET_KEY, serializeFleet(fleet));
+  } catch {
+    /* storage disabled: the change still lives in memory */
+  }
+}
 
 function saveGame() {
   if (!world) return;
@@ -192,13 +252,28 @@ function saveGame() {
     world = { ...world, gold: goldEarned };
     const payload = {
       gold,
+      supplyLeftS,
+      victories,
+      fort: fortCombat
+        ? { condition: { ...fortCombat.condition }, crew: { ...fortCombat.crew }, status: fortCombat.status }
+        : undefined,
       world: serializeWorld(world),
       combat: playerCombat
         ? {
+            escorts: Object.fromEntries(
+              escorts.map((escort) => [
+                escort.id,
+                { condition: escort.combat.condition, crew: escort.combat.crew },
+              ]),
+            ),
             player: {
               condition: playerCombat.condition,
               crew: playerCombat.crew,
               pieces: playerCombat.pieces.map((p) => ({
+                // The round chosen in the fight survives a reload (S65): it is the
+                // player's order, not a detail of the last volley.
+                pieceId: p.pieceId,
+                ammoId: p.ammoId,
                 shotsLeft: p.shotsLeft,
                 reloadTimer: p.reloadTimer,
               })),
@@ -232,6 +307,42 @@ function inHomePort() {
   return world ? Math.hypot(world.ship.x, world.ship.y) <= PORT_RADIUS_M : false;
 }
 
+/** Quote and repair the actual combatants, not their last saved fleet copies. */
+function liveRepairShip(ship) {
+  if (!ship) return ship;
+  const combat = ship.id === runtimeShip?.id
+    ? playerCombat
+    : escorts.find((escort) => escort.id === ship.id)?.combat;
+  return combat ? { ...ship, condition: combat.condition, crewAlive: combat.crew } : ship;
+}
+
+function liveRepairFleet() {
+  return { ...fleet, ships: (fleet?.ships ?? []).map(liveRepairShip) };
+}
+
+function repairFleetShipFromLive(shipId) {
+  const ship = (fleet?.ships ?? []).find((entry) => entry.id === shipId);
+  if (!ship) return repairFleetShip(fleet, shipId, gold);
+  const live = liveRepairShip(ship);
+  const source = withShipCondition(fleet, shipId, { condition: live.condition, crewAlive: live.crewAlive });
+  return repairFleetShip(source, shipId, gold);
+}
+
+/** Describe a partial offer as a share of the remaining damage, not condition. */
+function partialRepairOffer(cost) {
+  return gold > 0 && gold < cost
+    ? t("sea.port.partial", { gold: fmtInt.format(gold), percent: fmtOne.format(gold / cost * 100) })
+    : "";
+}
+
+function repairResultText(result, name, fullKey) {
+  return result.partial
+    ? t("sea.port.partialDone", {
+        name, gold: fmtInt.format(result.spent), percent: fmtOne.format(result.fraction * 100),
+      })
+    : t(fullKey, { name, gold: fmtInt.format(result.spent) });
+}
+
 /**
  * Repair the captain's hull at the home port (S22). The condition lives on the
  * fleet entry, so the fix has to be written back there and not only in memory.
@@ -242,8 +353,13 @@ function repairAtPort() {
     showBanner(t("sea.banner.repairAway"), "info", 2000);
     return;
   }
+  // A yard in enemy hands takes the repairs with her (S74).
+  if (portClosed(fortCombat)) {
+    showBanner(t("sea.banner.portClosed"), "danger", 3000);
+    return;
+  }
 
-  const result = repairShip(runtimeShip, gold);
+  const result = repairShip(liveRepairShip(runtimeShip), gold);
   if (!result.repaired) {
     showBanner(
       result.reason === "no-damage"
@@ -257,7 +373,7 @@ function repairAtPort() {
 
   gold = result.gold;
   // The repaired sheet is the new truth: keep the same hull in the fleet, with
-  // its condition and its full complement written into its own entry (S23).
+  // its condition and surviving crew written into its own entry (S23).
   Object.assign(runtimeShip, result.ship);
   playerCombat.condition = { ...result.ship.condition };
   playerCombat.crew = { ...result.ship.crewAlive };
@@ -269,10 +385,7 @@ function repairAtPort() {
 
   saveGame();
   showBanner(
-    t("sea.port.repairDone", {
-      name: runtimeShip.name,
-      gold: fmtInt.format(result.spent),
-    }),
+    repairResultText(result, runtimeShip.name, "sea.port.repairDone"),
     "gold",
     3200,
   );
@@ -280,16 +393,36 @@ function repairAtPort() {
 }
 
 /**
- * Repair one of the fleet's other hulls from the port list (S24). The flat fee and
- * the verdicts are the captain's; what changes is where the result is written: on
- * that ship's own fleet entry, never on the ship the player is sailing.
+ * A hull repaired through its fleet entry is also a live combatant at sea (S36). The
+ * sea save is written from the combatants and wins on reload (S23), so the fix has to
+ * reach the escort too or it would come back damaged on the next boot.
+ */
+function healEscortFromFleet(shipId) {
+  const escort = escorts.find((entry) => entry.id === shipId);
+  if (!escort?.combat) return;
+  const ship = (fleet?.ships ?? []).find((entry) => entry.id === shipId);
+  if (!ship) return;
+  escort.combat.condition = { ...ship.condition };
+  escort.combat.crew = { ...ship.crewAlive };
+  escort.combat.crewDamagePool = 0;
+  refreshStatus(escort.combat);
+}
+
+/**
+ * Repair one of the fleet's other hulls from the port list (S24). The price and the
+ * verdicts are the captain's; what changes is where the result is written: on that
+ * ship's own fleet entry, never on the ship the player is sailing.
  */
 function repairFleetShipAtPort(shipId) {
   if (!world || gameOver || !playerCombat || !inHomePort()) return;
+  if (portClosed(fortCombat)) {
+    showBanner(t("sea.banner.portClosed"), "danger", 3000);
+    return;
+  }
   const ship = (fleet?.ships ?? []).find((entry) => entry.id === shipId);
   if (!ship) return;
 
-  const result = repairFleetShip(fleet, shipId, gold);
+  const result = repairFleetShipFromLive(shipId);
   if (!result.repaired) {
     showBanner(
       result.reason === "no-damage"
@@ -303,9 +436,10 @@ function repairFleetShipAtPort(shipId) {
 
   fleet = result.fleet;
   gold = result.gold;
+  healEscortFromFleet(shipId);
   saveGame();
   showBanner(
-    t("sea.port.fleetDone", { name: ship.name, gold: fmtInt.format(result.spent) }),
+    repairResultText(result, ship.name, "sea.port.fleetDone"),
     "gold",
     3200,
   );
@@ -313,258 +447,107 @@ function repairFleetShipAtPort(shipId) {
   updateHud();
 }
 
-/* ---------------------------------------------------------------- dock dialog (S25) */
+/* ---------------------------------------------------------------- automatic port repair (S49) */
 
-/** The text of one damaged segment, in the catalogue's own words. */
-const SEGMENT_KEY = {
-  hull: "sea.dock.hull",
-  rigging: "sea.dock.rigging",
-  crew: "sea.dock.crew",
-  morale: "sea.dock.morale",
-};
+function updateAutoRepair() {
+  const inPort = inHomePort();
+  const arrived = inPort && !wasInPort;
+  wasInPort = inPort;
+  if (!arrived || gameOver || !playerCombat) return false;
 
-/** The segments below full, in the catalogue's words; a sound ship says so. */
-function damageSummary(damaged) {
-  if (damaged.length === 0) return t("sea.dock.sound");
-  return damaged.map((segment) => t(SEGMENT_KEY[segment])).join(", ");
-}
-
-/**
- * Rebuild the list of damaged hulls with one repair button each (S25). Rebuilt only
- * when what it shows changes, because a rebuild every frame would throw away the
- * button the player is about to click.
- */
-let dockSignature = null;
-
-function renderDockList() {
-  const container = els.dockList;
-  if (!container) return;
-  const ships = damagedShips(fleet);
-  const signature = ships
-    .map((ship) => {
-      const report = repairReport(ship);
-      return [ship.id, ship.name, report.damaged.join(","), report.crewAlive, report.cost].join(":");
-    })
-    .join("|");
-  if (signature === dockSignature) {
-    for (const button of container.querySelectorAll("button[data-ship-id]")) {
-      const ship = ships.find((entry) => entry.id === button.dataset.shipId);
-      if (ship) button.classList.toggle("is-short", gold < repairCost(ship));
+  const liveFleet = liveRepairFleet();
+  const result = autoRepairFleet(liveFleet, gold);
+  fleet = result.fleet;
+  gold = result.gold;
+  for (const repaired of result.repaired) {
+    if (repaired.id === runtimeShip.id) {
+      const captain = fleet.ships.find((ship) => ship.id === repaired.id);
+      Object.assign(runtimeShip, captain);
+      playerCombat.condition = { ...captain.condition };
+      playerCombat.crew = { ...captain.crewAlive };
+      playerCombat.crewDamagePool = 0;
+    } else {
+      healEscortFromFleet(repaired.id);
     }
-    return;
   }
-  dockSignature = signature;
-  container.textContent = "";
-
-  for (const ship of ships) {
-    const report = repairReport(ship);
-    const row = document.createElement("div");
-    row.className = "dock-ship";
-    row.dataset.shipId = ship.id;
-
-    const head = document.createElement("div");
-    head.className = "dock-ship-head";
-    const name = document.createElement("span");
-    name.className = "dock-ship-name";
-    name.textContent = ship.name ?? ship.hullId ?? ship.id;
-    const hull = document.createElement("span");
-    hull.className = "dock-ship-hull";
-    hull.textContent = t("sea.dock.hullPct", { hull: fmtInt.format(report.hull) });
-    head.append(name, hull);
-
-    const detail = document.createElement("div");
-    detail.className = "dock-ship-detail";
-    const rigging = document.createElement("span");
-    rigging.textContent = t("sea.dock.riggingPct", { rigging: fmtInt.format(report.rigging) });
-    const crew = document.createElement("span");
-    crew.textContent = t("sea.dock.crewMen", {
-      alive: fmtInt.format(report.crewAlive),
-      bought: fmtInt.format(report.crewBought),
-      crew: fmtInt.format(report.crew),
-    });
-    detail.append(rigging, crew);
-
-    const needs = document.createElement("p");
-    needs.className = "dock-ship-needs";
-    needs.textContent = t("sea.dock.needs", { segments: damageSummary(report.damaged) });
-
-    const button = document.createElement("button");
-    button.type = "button";
-    button.className = "dock-ship-button";
-    button.dataset.shipId = ship.id;
-    button.textContent = t("sea.port.fleetButton", { gold: fmtInt.format(report.cost) });
-    button.classList.toggle("is-short", gold < report.cost);
-    button.addEventListener("click", () => repairFromDock(ship.id));
-
-    row.append(head, detail, needs, button);
-    container.append(row);
+  const notice = buildArrivalNotice(result);
+  try {
+    if (notice) localStorage.setItem(ARRIVAL_NOTICE_KEY, serializeArrivalNotice(notice));
+    else localStorage.removeItem(ARRIVAL_NOTICE_KEY);
+  } catch {
+    /* storage disabled: continue to the shipyard */
   }
-}
-
-/** The missing gold for the cheapest damaged hull, or zero when the purse covers all. */
-function dockShortfall() {
-  const costs = damagedShips(fleet).map((ship) => repairCost(ship));
-  if (costs.length === 0) return 0;
-  return Math.max(0, Math.min(...costs) - gold);
-}
-
-/** Show or refresh the dialog. Nothing damaged, or a sinking, means no question. */
-function openDockDialog() {
-  if (!els.dockDialog || gameOver || !playerCombat) return;
-  if (damagedShips(fleet).length === 0) return;
-  dock.open = true;
-  dock.offered = true;
-  dockSignature = null;
-  renderDockList();
-  els.dockDialog.classList.remove("is-hidden");
-  // Opened non-modally on purpose: it asks, it does not trap. The port panel and
-  // the S24 buttons behind it must keep taking clicks (S25: they coexist).
-  if (typeof els.dockDialog.show === "function" && !els.dockDialog.open) {
-    els.dockDialog.show();
-  }
-  updateDockNote();
-}
-
-/** Say how much is missing when the purse cannot cover a hull; hide it otherwise. */
-function updateDockNote() {
-  if (!els.dockNote) return;
-  const missing = dockShortfall();
-  els.dockNote.textContent = missing > 0 ? t("sea.dock.missing", { gold: fmtInt.format(missing) }) : "";
-  els.dockNote.classList.toggle("is-hidden", missing === 0);
-}
-
-function closeDockDialog() {
-  if (!els.dockDialog) return;
-  dock.open = false;
-  // the offer is spent for this arrival, however it was spent
-  dock.offered = true;
-  if (els.dockDialog.open) els.dockDialog.close();
-  els.dockDialog.classList.add("is-hidden");
+  saveGame();
+  window.location.href = "./index.html";
+  return true;
 }
 
 /**
- * Repair one hull from the dialog (S25). The captain is the ship the player sails,
- * so she goes through the same path as the R key (combatant, fleet entry and save
- * all kept in step); every other hull goes through the fleet entry of S24.
+ * Time warp (S31): the key cycles the simulation through ×1, ×2, ×4 and ×8 so the
+ * long stretch between two objectives does not have to be waited out. The world is
+ * advanced in the same small steps as real time, once per multiplier, instead of one
+ * step that many times longer, so reloads, drift and pick-up radii behave exactly as
+ * they do at normal speed.
  */
-function repairFromDock(shipId) {
-  if (!world || gameOver || !playerCombat) return;
-  if (!inHomePort()) {
-    showBanner(t("sea.banner.repairAway"), "info", 2000);
-    return;
-  }
+const TIME_SCALES = [1, 2, 4, 8];
 
-  if (shipId === runtimeShip.id) {
-    const result = repairShip(runtimeShip, gold);
-    if (!result.repaired) {
-      showBanner(t("sea.port.repairShort", { gold: fmtInt.format(result.missing ?? 0) }), "danger", 2600);
-      updateDockNote();
-      return;
-    }
-    gold = result.gold;
-    Object.assign(runtimeShip, result.ship);
-    playerCombat.condition = { ...result.ship.condition };
-    playerCombat.crew = { ...result.ship.crewAlive };
-    playerCombat.crewDamagePool = 0;
-    fleet = withShipCondition(fleet, runtimeShip.id, {
-      condition: result.ship.condition,
-      crewAlive: result.ship.crewAlive,
-    });
-    saveGame();
-    showBanner(
-      t("sea.port.repairDone", { name: runtimeShip.name, gold: fmtInt.format(result.spent) }),
-      "gold",
-      3200,
-    );
-  } else {
-    const ship = (fleet?.ships ?? []).find((entry) => entry.id === shipId);
-    if (!ship) return;
-    const result = repairFleetShip(fleet, shipId, gold);
-    if (!result.repaired) {
-      showBanner(t("sea.port.repairShort", { gold: fmtInt.format(result.missing ?? 0) }), "danger", 2600);
-      updateDockNote();
-      return;
-    }
-    fleet = result.fleet;
-    gold = result.gold;
-    saveGame();
-    showBanner(
-      t("sea.port.fleetDone", { name: ship.name, gold: fmtInt.format(result.spent) }),
-      "gold",
-      3200,
-    );
-  }
+function nextTimeScale(current) {
+  const index = TIME_SCALES.indexOf(current);
+  return TIME_SCALES[(index + 1) % TIME_SCALES.length];
+}
 
-  updatePortPanel();
-  updateHud();
-  // nothing left to repair: the question is over
-  if (damagedShips(fleet).length === 0) {
-    closeDockDialog();
-    return;
-  }
-  dockSignature = null;
-  renderDockList();
-  updateDockNote();
+/** Redraw the ×N badge and its accessible label for the active multiplier. */
+function renderTimeBadge() {
+  if (!els.timeBadge) return;
+  const scale = ui.timeScale;
+  els.timeBadge.textContent = t("sea.time.badge", { scale });
+  els.timeBadge.setAttribute("aria-label", t("sea.time.now", { scale }));
+  els.timeBadge.classList.toggle("is-hidden", scale === 1);
 }
 
 /**
- * The arrival rule (S25): ask when the hull enters the port radius from outside, and
- * once at boot when the sea opens already inside it. The offer is spent on arrival,
- * so it never reopens while the ship stays in port.
+ * The fast-forward goes back to x1 when an enemy engages (S43), once per engagement:
+ * pressing T again in the middle of the fight is the player's call.
  */
-function updateDockDialog() {
-  if (!els.dockDialog) return;
-  const inPort = inHomePort() && !gameOver && Boolean(playerCombat);
-  if (!inPort) {
-    dock.wasInPort = false;
-    dock.offered = false;
-    if (dock.open) closeDockDialog();
-    return;
-  }
-  if (!dock.wasInPort) {
-    dock.wasInPort = true;
-    if (!dock.offered) openDockDialog();
-  }
-  if (dock.open) {
-    renderDockList();
-    updateDockNote();
-  }
+function dropTimeOnEngage() {
+  const engaged = world.encounters.some(
+    (encounter) => encounter.type === "enemy" && encounter.combat?.status === "fighting",
+  );
+  const next = timeScaleOnEngage(ui.timeScale, ui.wasEngaged, engaged);
+  ui.wasEngaged = engaged;
+  if (!next.dropped) return;
+  ui.timeScale = next.timeScale;
+  renderTimeBadge();
+  showBanner(t("sea.banner.timeEngage"), "danger", 3000);
 }
 
-if (els.dockLater) els.dockLater.addEventListener("click", closeDockDialog);
-// Escape closes a native dialog on its own: keep the flag and the class in step.
-if (els.dockDialog) {
-  els.dockDialog.addEventListener("close", () => {
-    dock.open = false;
-    dock.offered = true;
-    els.dockDialog.classList.add("is-hidden");
-  });
-}
-
-/**
- * Time warp (S31): the key doubles the simulation so the long stretch between two
- * objectives does not have to be waited out. The world is advanced in the same
- * small steps as real time, twice per frame, instead of one step twice as long, so
- * reloads, drift and pick-up radii behave exactly as they do at normal speed.
- */
 function toggleTimeWarp() {
-  ui.timeScale = ui.timeScale === 1 ? 2 : 1;
-  const fast = ui.timeScale === 2;
-  els.timeBadge?.classList.toggle("is-hidden", !fast);
-  showBanner(t(fast ? "sea.banner.timeFast" : "sea.banner.timeNormal"), "info", 1500);
+  ui.timeScale = nextTimeScale(ui.timeScale);
+  renderTimeBadge();
+  showBanner(t("sea.banner.timeWarp", { scale: ui.timeScale }), "info", 1500);
+}
+
+/**
+ * Load the guns with the round a key stands for (S65). The guns that cannot fire it keep
+ * the round they already had, and the banner says how many of each, so the player can see
+ * that a 32-pounder did not follow the order.
+ */
+function chooseAmmunition(key) {
+  const ammoId = ammoKeyAmmoId(key);
+  if (!ammoId || !playerCombat) return;
+  const result = setBroadsideAmmo(playerCombat, ammoId);
+  if (result.switched === 0 && result.kept === 0) return;
+  const name = localisedAmmo(ammoId, t).name;
+  showBanner(
+    result.kept > 0
+      ? t("sea.banner.ammoMixed", { ammo: name, switched: result.switched, kept: result.kept })
+      : t("sea.banner.ammo", { ammo: name, switched: result.switched }),
+    "info",
+    2200,
+  );
 }
 
 window.addEventListener("keydown", (event) => {
-  // The dock dialog owns the keyboard while it is open (S25): its buttons, Tab and
-  // Escape, but not the helm. The R key keeps working as before (S22).
-  if (els.dockDialog?.open) {
-    if (event.key === "Escape") {
-      event.preventDefault();
-      closeDockDialog();
-      return;
-    }
-    if (event.key !== "r" && event.key !== "R") return;
-  }
   const key = event.key.toLowerCase();
   if (["arrowup", "arrowdown", "arrowleft", "arrowright", "w", "a", "s", "d"].includes(key)) {
     event.preventDefault();
@@ -576,6 +559,10 @@ window.addEventListener("keydown", (event) => {
   } else if (key === "q" || key === "e") {
     event.preventDefault();
     firePlayerBroadside(key === "q" ? "babor" : "estribor");
+  } else if (key === "1" || key === "2" || key === "3") {
+    event.preventDefault();
+    // The middle of a fight is exactly when the round has to change (S65).
+    if (!event.repeat) chooseAmmunition(key);
   } else if (key === "t") {
     event.preventDefault();
     if (!event.repeat) toggleTimeWarp();
@@ -667,6 +654,28 @@ function drawSea(ctx) {
   ctx.lineWidth = 22;
   ctx.stroke();
 
+  // A taken yard flies a warning instead of the anchor (S74).
+  if (portClosed(fortCombat)) {
+    ctx.beginPath();
+    ctx.arc(0, 0, 150, 0, Math.PI * 2);
+    ctx.strokeStyle = "rgba(161,60,44,0.85)";
+    ctx.lineWidth = 22;
+    ctx.stroke();
+  }
+
+  // The safe zone around the shipyard (S66): the water no hostile may enter.
+  if (safeZoneRadiusM() > 0) {
+    ctx.beginPath();
+    ctx.arc(0, 0, safeZoneRadiusM(), 0, Math.PI * 2);
+    ctx.strokeStyle = "rgba(143,208,255,0.35)";
+    ctx.setLineDash([60, 45]);
+    ctx.lineWidth = 12;
+    ctx.stroke();
+    ctx.setLineDash([]);
+    ctx.fillStyle = "rgba(143,208,255,0.05)";
+    ctx.fill();
+  }
+
   // home port at the origin
   ctx.beginPath();
   ctx.arc(0, 0, 110, 0, Math.PI * 2);
@@ -681,6 +690,7 @@ function drawSea(ctx) {
   ctx.textAlign = "center";
   ctx.fillText("⚓", 0, 32);
 
+  drawRangeCircles(ctx);
   drawEncounters(ctx);
   drawWake(ctx);
   drawPlayerShip(ctx);
@@ -691,6 +701,14 @@ function drawSea(ctx) {
   // The floating bars are drawn in screen space, so a bar stays readable at any
   // camera scale instead of shrinking with the hull it belongs to (S21).
   drawShipBars(ctx);
+
+  // Keep allied hulls visible even when the captain's stern bars overlap their station.
+  ctx.save();
+  ctx.translate(width / 2, height / 2);
+  ctx.scale(PX_PER_M, PX_PER_M);
+  ctx.translate(-world.ship.x, -world.ship.y);
+  for (const escort of escorts) drawEscortShip(ctx, escort);
+  ctx.restore();
 }
 
 /* ---------------------------------------------------------------- floating bars (S21) */
@@ -715,6 +733,8 @@ const BAR = {
   crew: "#2f6b47",
   ready: "#e0a815",
   dealt: "rgba(224,168,21,0.28)",
+  /** The part of a condition bar that was just lost (S52). */
+  trail: "#f5e6c8",
   reload: "#9fc7e8",
   track: "rgba(10,18,28,0.62)",
   frame: "rgba(244,239,228,0.22)",
@@ -733,9 +753,20 @@ function inGunshot(encounter) {
   return Math.hypot(encounter.x - world.ship.x, encounter.y - world.ship.y) <= COMBAT.engageRadiusM;
 }
 
-function drawBar(ctx, x, y, share, color, { backdrop = null, width = BAR.width } = {}) {
+function drawBar(ctx, x, y, share, color, { backdrop = null, width = BAR.width, trail = null } = {}) {
   ctx.fillStyle = BAR.track;
   ctx.fillRect(x, y, width, BAR.height);
+  if (trail) {
+    // What the bar just lost stays in view behind the fill (S52), however short the bar
+    // and however small the hit. At the very end of a bar it is drawn over the fill's end
+    // instead of past the edge.
+    const trailPx = Math.min(width, trailWidthPx(trail, width));
+    if (trailPx > 0) {
+      const start = Math.min(x + width * Math.min(1, Math.max(0, share)), x + width - trailPx);
+      ctx.fillStyle = BAR.trail;
+      ctx.fillRect(start, y, trailPx, BAR.height);
+    }
+  }
   if (backdrop !== null && backdrop > 0) {
     // the part of the bar already earned, behind the part that is ready now
     ctx.fillStyle = BAR.dealt;
@@ -789,10 +820,27 @@ function drawBlock(ctx, rows, centreX, centreY, width) {
   for (const row of rows) {
     drawBar(ctx, left + BAR.padding, cursor, row.share, row.color, {
       backdrop: row.backdrop ?? null,
+      trail: row.trail ?? null,
       width,
     });
     cursor += BAR.height + BAR.gap;
   }
+}
+
+/** One lost-tramo state per condition bar, kept with its combatant (S52). */
+const trailStates = new WeakMap();
+/** World seconds that passed since the last frame was drawn: the tramo follows the world clock. */
+let frameWorldDt = 0;
+
+/** Step and return the lost-tramo state of one condition bar of `combatant`. */
+function trailFor(combatant, key, share) {
+  let states = trailStates.get(combatant);
+  if (!states) {
+    states = {};
+    trailStates.set(combatant, states);
+  }
+  states[key] = stepTrail(states[key] ?? createTrail(share), share, frameWorldDt);
+  return states[key];
 }
 
 /**
@@ -802,16 +850,18 @@ function drawBlock(ctx, rows, centreX, centreY, width) {
  * beam is a place on the ship, not a place on the screen. Condition sits on the
  * keel and the beams on the perpendicular, so the three never overlap.
  */
-function drawBarsFor(ctx, combatant, x, y, distanceM, heading, scale) {
+function drawBarsFor(ctx, combatant, x, y, distanceM, heading, scale, widthShare = 1) {
   if (!combatant) return;
+  // A tougher hull is drawn with longer condition bars than a light one (S59).
+  const conditionWidth = Math.round(BAR.width * widthShare);
 
   const conditionRows = [
-    { share: combatant.condition.hull / 100, color: BAR.hull },
-    { share: combatant.condition.rigging / 100, color: BAR.rigging },
-    { share: combatant.condition.crew / 100, color: BAR.crew },
-  ];
-  const stern = blockCentre(x, y, heading + Math.PI, blockSize(conditionRows.length, BAR.width));
-  drawBlock(ctx, conditionRows, stern.x, stern.y, BAR.width);
+    { share: combatant.condition.hull / 100, color: BAR.hull, key: "hull" },
+    { share: combatant.condition.rigging / 100, color: BAR.rigging, key: "rigging" },
+    { share: combatant.condition.crew / 100, color: BAR.crew, key: "crew" },
+  ].map((row) => ({ ...row, trail: trailFor(combatant, row.key, row.share) }));
+  const stern = blockCentre(x, y, heading + Math.PI, blockSize(conditionRows.length, conditionWidth));
+  drawBlock(ctx, conditionRows, stern.x, stern.y, conditionWidth);
 
   // One scale for every hull on screen (`scale`, in `sideCapacity` units): a bar is a
   // share of the strongest beam in view, not of its own ship, so a patache's
@@ -853,33 +903,63 @@ function drawShipBars(ctx) {
       at: toScreen(encounter.x, encounter.y),
       distance: Math.hypot(encounter.x - world.ship.x, encounter.y - world.ship.y),
       heading: encounter.heading ?? 0,
+      toughness: encounter.combat.hullToughness ?? 1,
     });
   }
 
   const nearest = targets.reduce((best, t) => Math.min(best, t.distance), Infinity);
-  const ships = [
-    ...(playerCombat
-      ? [
-          {
-            combatant: playerCombat,
-            at: toScreen(world.ship.x, world.ship.y),
-            distance: Number.isFinite(nearest) ? nearest : 0,
-            heading: world.ship.heading ?? 0,
-          },
-        ]
-      : []),
-    ...targets,
-  ];
+  const gunRange = Number.isFinite(nearest) ? nearest : 0;
+  const owned = [];
+  if (playerCombat) {
+    owned.push({
+      combatant: playerCombat,
+      at: toScreen(world.ship.x, world.ship.y),
+      distance: gunRange,
+      heading: world.ship.heading ?? 0,
+      toughness: playerCombat.hullToughness ?? 1,
+    });
+  }
+  // The escorts carry the same bars as the captain, but only while they are in the
+  // fight (S54): in a tight formation their blocks would pile up under the captain's.
+  // Only the enemies actually fighting count: combat is raised for the ones the captain
+  // has engaged, and an escort answers nothing else (S54).
+  const hostiles = world.encounters.filter(
+    (encounter) => encounter.type === "enemy" && encounter.combat?.status === "fighting",
+  );
+  for (const escort of escorts) {
+    if (!escort.combat) continue;
+    if (!hasEnemyInGunshot(escort, hostiles, COMBAT.engageRadiusM)) continue;
+    owned.push({
+      combatant: escort.combat,
+      at: toScreen(escort.x, escort.y),
+      distance: gunRange,
+      heading: escort.heading ?? 0,
+      toughness: escort.combat.hullToughness ?? 1,
+    });
+  }
+  // Escorts first, the captain on top of them: her bars are the ones to read.
+  const ships = [...owned.slice(1), ...owned.slice(0, 1), ...targets];
 
   let scale = 1;
+  let referenceToughness = 0;
   for (const ship of ships) {
+    referenceToughness = Math.max(referenceToughness, ship.toughness);
     for (const side of ["babor", "estribor"]) {
       scale = Math.max(scale, sideCapacity(ship.combatant, side, ship.distance));
     }
   }
 
   for (const ship of ships) {
-    drawBarsFor(ctx, ship.combatant, ship.at.x, ship.at.y, ship.distance, ship.heading, scale);
+    drawBarsFor(
+      ctx,
+      ship.combatant,
+      ship.at.x,
+      ship.at.y,
+      ship.distance,
+      ship.heading,
+      scale,
+      hullBarShare(ship.toughness, referenceToughness),
+    );
   }
 }
 
@@ -934,6 +1014,43 @@ function drawWreck(ctx, encounter) {
   ctx.fill();
 }
 
+/**
+ * The colours of one hull, flown from her masthead (S72). The canvas is already
+ * translated to the hull and rotated to her heading, so the flag is drawn at her
+ * stern-mast and streams aft: the wind is always ahead of a sail in this drawing, which
+ * keeps it readable at any heading.
+ */
+function drawFlag(ctx, countryId, { x = -10, y = 0, size = 26 } = {}) {
+  const colours = flagColours(countryId);
+  const height = size * 0.62;
+  // Three horizontal bands, top to bottom.
+  const bandHeight = height / 3;
+  for (let i = 0; i < 3; i += 1) {
+    ctx.fillStyle = colours.bands[i];
+    ctx.fillRect(x - size, y - height / 2 + i * bandHeight, size, bandHeight + 0.5);
+  }
+  // The cross, when the flag has one: a vertical bar plus a horizontal one.
+  if (colours.cross) {
+    ctx.fillStyle = colours.cross;
+    ctx.fillRect(x - size * 0.58, y - height / 2, size * 0.16, height);
+    ctx.fillRect(x - size, y - bandHeight * 0.55, size, bandHeight * 1.1);
+    if (colours.ragged) {
+      // A ragged cross of Burgundy: short diagonal strokes over the field.
+      ctx.strokeStyle = colours.cross;
+      ctx.lineWidth = 1.6;
+      for (const t of [0.15, 0.45, 0.75]) {
+        ctx.beginPath();
+        ctx.moveTo(x - size * (1 - t), y - height / 2);
+        ctx.lineTo(x - size * (0.82 - t), y + height / 2);
+        ctx.stroke();
+      }
+    }
+  }
+  ctx.strokeStyle = "rgba(10,18,28,0.55)";
+  ctx.lineWidth = 1;
+  ctx.strokeRect(x - size, y - height / 2, size, height);
+}
+
 function drawEnemySail(ctx, encounter) {
   ctx.save();
   ctx.translate(encounter.x, encounter.y);
@@ -958,6 +1075,9 @@ function drawEnemySail(ctx, encounter) {
   ctx.lineWidth = 5;
   ctx.stroke();
 
+  // An enemy flies her own nation's colours, never the captain's (S72).
+  drawFlag(ctx, flagFor({ hullId: encounter.hullId, isFleet: false }), { x: -6, size: 20 });
+
   ctx.restore();
 }
 
@@ -974,9 +1094,46 @@ function drawWake(ctx) {
   ctx.stroke();
 }
 
+/**
+ * The range of each beam, drawn as an arc on the water (S68). One circle per beam, at the
+ * reach of the round that beam is loaded with, so the drawing follows a change of
+ * ammunition in the middle of the fight instead of promising the bare gun's range.
+ *
+ * It is an arc, not a full circle: a broadside cannot fire through its own hull, so a
+ * full ring would advertise the stern as a firing bearing. The arc spans the same 120°
+ * the guns actually cover, centred on the beam.
+ */
+function drawRangeCircles(ctx) {
+  if (!playerCombat || !world) return;
+  const hull = { x: world.ship.x, y: world.ship.y };
+  const heading = world.ship.heading ?? 0;
+
+  for (const side of ["babor", "estribor"]) {
+    const radius = rangeCircleM(playerCombat, side);
+    if (!(radius > 0)) continue;
+    // Starboard bears at heading + 90°, port at heading - 90°, as everywhere else.
+    const centre = heading + (side === "estribor" ? 1 : -1) * (Math.PI / 2);
+    // A beam whose guns are all loaded and ready is drawn solid: that is the beam that
+    // can fire right now, so the arcs also say which side is live (S71).
+    const ready = loadedShare(playerCombat, side) >= 1;
+    const opening = openingBonus(playerCombat, side).damage > 1;
+    ctx.beginPath();
+    ctx.arc(hull.x, hull.y, radius, centre - COMBAT.arcHalf, centre + COMBAT.arcHalf);
+    const hue = side === "estribor" ? "143,208,255" : "224,168,21";
+    ctx.strokeStyle = ready ? `rgba(${hue},0.85)` : `rgba(${hue},0.26)`;
+    ctx.lineWidth = ready ? 9 : 6;
+    // The opening volley gets a brighter arc still: the player can see the bonus is live.
+    if (opening) ctx.strokeStyle = side === "estribor" ? "rgba(180,235,255,0.95)" : "rgba(255,215,120,0.95)";
+    ctx.setLineDash(ready ? [] : [40, 34]);
+    ctx.stroke();
+    ctx.setLineDash([]);
+  }
+}
+
 function drawPlayerShip(ctx) {
   const ship = world.ship;
   const hull = hullById(runtimeShip.hullId);
+  const flag = flagFor({ hullId: runtimeShip.hullId, isFleet: true, captainHullId: runtimeShip.hullId });
   const lengthRatio = hull ? Math.min(1.5, Math.max(0.7, hull.lengthM / 25)) : 1;
   const len = 70 * lengthRatio;
   const beam = 26 * lengthRatio;
@@ -1018,6 +1175,48 @@ function drawPlayerShip(ctx) {
     ctx.stroke();
   }
 
+  // The captain flies her own colours, and the fleet follows them (S72).
+  drawFlag(ctx, flag, { x: -len * 0.3, size: 26 });
+  ctx.restore();
+}
+
+/** Draw an allied hull at its actual position and heading, without a player rudder. */
+function drawEscortShip(ctx, escort) {
+  const ship = fleet.ships.find((entry) => entry.id === escort.id);
+  const hull = hullById(ship?.hullId);
+  const lengthRatio = hull ? Math.min(1.5, Math.max(0.7, hull.lengthM / 25)) : 1;
+  const len = 70 * lengthRatio;
+  const beam = 26 * lengthRatio;
+
+  ctx.save();
+  ctx.translate(escort.x, escort.y);
+  ctx.rotate(escort.heading);
+  ctx.beginPath();
+  ctx.moveTo(len * 0.5, 0);
+  ctx.lineTo(len * 0.1, -beam * 0.5);
+  ctx.lineTo(-len * 0.5, -beam * 0.42);
+  ctx.quadraticCurveTo(-len * 0.56, 0, -len * 0.5, beam * 0.42);
+  ctx.lineTo(len * 0.1, beam * 0.5);
+  ctx.closePath();
+  ctx.fillStyle = "#3c5a7a";
+  ctx.fill();
+  ctx.strokeStyle = "#101c2a";
+  ctx.lineWidth = 3;
+  ctx.stroke();
+  ctx.strokeStyle = "#d9d2c2";
+  ctx.lineWidth = 4;
+  for (const t of [-0.2, 0.05, 0.22]) {
+    ctx.beginPath();
+    ctx.moveTo(len * t, -beam * 0.34);
+    ctx.lineTo(len * t, beam * 0.34);
+    ctx.stroke();
+  }
+  // Every hull in the fleet flies the captain's colours (S72).
+  const captainHull = captainShip(fleet)?.hullId ?? runtimeShip.hullId;
+  drawFlag(ctx, flagFor({ hullId: ship?.hullId, isFleet: true, captainHullId: captainHull }), {
+    x: -len * 0.3,
+    size: 22,
+  });
   ctx.restore();
 }
 
@@ -1065,6 +1264,21 @@ function drawMinimap() {
     ctx.fill();
   }
 
+  // the escorts, smaller and in their own colour (S42)
+  for (const escort of escorts) {
+    ctx.save();
+    ctx.translate(escort.x, escort.y);
+    ctx.rotate(escort.heading ?? 0);
+    ctx.beginPath();
+    ctx.moveTo(150, 0);
+    ctx.lineTo(-95, -80);
+    ctx.lineTo(-95, 80);
+    ctx.closePath();
+    ctx.fillStyle = "#8fd0ff";
+    ctx.fill();
+    ctx.restore();
+  }
+
   // player arrow
   ctx.save();
   ctx.translate(world.ship.x, world.ship.y);
@@ -1097,6 +1311,9 @@ function ensureEnemyCombat(encounter) {
     encounter.currentSpeedKn = 0;
     // from now on the combat AI owns this hull's movement, not the drift step
     encounter.engaged = true;
+    // A new fight is a new opening: the captain's beams get their first-volley bonus
+    // back (S69). It is the enemy's arrival that reopens it, not the player's whim.
+    markEngaged(playerCombat);
   }
   return encounter.combat;
 }
@@ -1110,32 +1327,22 @@ function playerMaxRangeM() {
 }
 
 /** Fire one side's guns at the nearest enemy that side bears on. */
-function firePlayerBroadside(side) {
+function firePlayerBroadside(side, { auto = false } = {}) {
   if (!playerCombat || gameOver || playerCombat.status !== "fighting") return;
 
-  const maxRange = playerMaxRangeM();
-  let target = null;
-  let targetDistance = Infinity;
-  for (const encounter of world.encounters) {
-    if (encounter.type !== "enemy") continue;
-    if (encounter.combat && encounter.combat.status !== "fighting") continue;
-    const distance = Math.hypot(encounter.x - world.ship.x, encounter.y - world.ship.y);
-    if (distance > maxRange || distance >= targetDistance) continue;
-    if (sideForBearing(world.ship.heading, bearingTo(world.ship, encounter)) !== side) continue;
-    target = encounter;
-    targetDistance = distance;
-  }
-
-  if (!target) {
-    showBanner(t("sea.banner.noTarget", { side: t(`sea.sides.${side}`) }), "info", 1500);
+  const hit = targetForSide(world.ship, world.encounters, side, playerMaxRangeM());
+  if (!hit) {
+    // The automatic fire looks every tick: it stays silent when nothing bears.
+    if (!auto) showBanner(t("sea.banner.noTarget", { side: t(`sea.sides.${side}`) }), "info", 1500);
     return;
   }
+  const { target, distance: targetDistance } = hit;
 
   const targetCombat = ensureEnemyCombat(target);
   if (!targetCombat) return;
   const { volley } = fireBroadside(playerCombat, side, targetDistance, rnd);
   if (volley.length === 0) {
-    showBanner(t("sea.banner.reloading", { side: t(`sea.sides.${side}`) }), "info", 1200);
+    if (!auto) showBanner(t("sea.banner.reloading", { side: t(`sea.sides.${side}`) }), "info", 1200);
     return;
   }
 
@@ -1150,10 +1357,129 @@ function firePlayerBroadside(side) {
   }
 }
 
+/** With the shipyard check on, the captain's guns answer by themselves, like the escorts' (S47). */
+function playerAutoFire() {
+  if (!ui.autoFire) return;
+  for (const side of ["babor", "estribor"]) firePlayerBroadside(side, { auto: true });
+}
+
+/** Copy the positions the world computed back onto the escorts that carry combat. */
+function syncEscortsFromWorld() {
+  for (const escort of escorts) {
+    const moved = (world.escorts ?? []).find((entry) => entry.id === escort.id);
+    if (!moved) continue;
+    escort.x = moved.x;
+    escort.y = moved.y;
+    escort.heading = moved.heading;
+    escort.currentSpeedKn = moved.currentSpeedKn;
+  }
+}
+
+/** The whole line: the captain first, then every escort still at sea (S36). */
+function allies() {
+  const line = [{ id: runtimeShip.id, name: runtimeShip.name, ...world.ship, combat: playerCombat }];
+  for (const escort of escorts) {
+    line.push({ id: escort.id, name: escort.name, ...escort, combat: escort.combat });
+  }
+  return line;
+}
+
+/** Each escort fires on its own when a hostile bears, with its own reloads. */
+function escortsFire() {
+  if (gameOver) return;
+  for (const escort of escorts) {
+    const target = closestTarget(
+      world.encounters.filter((e) => e.type === "enemy" && e.combat?.status === "fighting"),
+      escort,
+    );
+    if (!target) continue;
+    const { volley, side } = escortFire(escort, target, rnd);
+    if (!volley.length) continue;
+    for (const shot of volley) {
+      pushFx("tracer", escort.x, escort.y, target.x, target.y, 0.3);
+      if (shot.hit) {
+        applyDamage(target.combat, shot.damage);
+        pushFx("hit", target.x, target.y, target.x, target.y, 0.5);
+      } else {
+        pushFx("splash", target.x + (rnd() - 0.5) * 70, target.y + (rnd() - 0.5) * 70, 0, 0, 0.6);
+      }
+    }
+    showBanner(t("sea.banner.escortFire", { name: escort.name, side: t(`sea.sides.${side}`) }), "info", 1400);
+  }
+}
+
+/**
+ * Forget the targets that gave up the chase (S58). `updateWorld` releases their combat
+ * when they fall past the disengage radius; the UI keeps its own view of the sea, so it
+ * drops the stale combatant here instead of reading a fight that is over.
+ */
+function dropDisengagedTargets() {
+  world.encounters = world.encounters.map((encounter) => {
+    // Only a hull the world actually released: an enemy that still has combat for any
+    // other reason (a saved voyage, a seeded sea) keeps it.
+    if (encounter.type !== "enemy" || !encounter.wasEngaged || encounter.engaged) return encounter;
+    if (!encounter.combat) return encounter;
+    const { combat, ...rest } = encounter;
+    return rest;
+  });
+}
+
+/**
+ * The shipyard's own fight (S74). She is a static hull: she never moves, she fires her
+ * battery at any hostile that came for her, and the abyss squadrons that reach her fire
+ * back. Her damage and her garrison live in the save, like a hull's.
+ */
+function updateFortCombat(dt) {
+  if (!fortCombat || portClosed(fortCombat)) return;
+  tickCombatant(fortCombat, dt);
+
+  for (const encounter of world.encounters) {
+    if (encounter.type !== "enemy") continue;
+    if (!canAssaultFort(encounter.zoneId ?? currentZone().id)) continue;
+    const distance = Math.hypot(encounter.x, encounter.y);
+    if (distance > COMBAT.engageRadiusM) continue;
+    const combat = encounter.combat;
+    if (!combat || combat.status !== "fighting") continue;
+
+    // The yard fires both beams, each at whatever bears; the range gate is her own guns'.
+    for (const side of ["babor", "estribor"]) {
+      const { volley } = fortFire(fortCombat, side, distance, rnd);
+      for (const shot of volley) {
+        if (!shot.hit) continue;
+        const piece = pieceById(shot.pieceId);
+        const ammo = ammoById(shot.ammoId);
+        if (!piece || !ammo) continue;
+        const falloff = 1 - 0.5 * (distance / piece.rangeM);
+        const total = piece.shotKg * ammo.massFactor * COMBAT.damageScale * falloff;
+        applyDamage(combat, {
+          hull: total * ammo.damageSplit.hull,
+          rigging: total * ammo.damageSplit.rigging,
+          crew: total * ammo.damageSplit.crew,
+        });
+        pushFx("hit", encounter.x, encounter.y, encounter.x, encounter.y, 0.5);
+      }
+    }
+
+  }
+}
+
 /** Enemies inside the engage radius think, move and shoot. */
 function processCombat(dt, now) {
   if (!playerCombat || gameOver) return;
   tickCombatant(playerCombat, dt);
+  for (const escort of escorts) tickCombatant(escort.combat, dt);
+
+  playerAutoFire();
+
+  // Escorts shoot first: they answer whatever hostile is nearest to them.
+  escortsFire();
+
+  // The fleet loses a hull for good when it sinks or strikes (S36).
+  pruneLostEscorts();
+
+  // The yard fights as a static hull (S74): she fires at whatever hostile is in range and
+  // takes the fire of the squadrons that came for her.
+  updateFortCombat(dt);
 
   for (const encounter of world.encounters) {
     if (encounter.type !== "enemy") continue;
@@ -1163,39 +1489,120 @@ function processCombat(dt, now) {
     if (!combat || combat.status !== "fighting") continue;
 
     tickCombatant(combat, dt);
-    const result = aiStep(encounter, world.ship, dt, rnd);
+    // An enemy aims at the nearest allied hull: an escort that has run ahead of the
+    // captain takes the fire, and pays for it (S36).
+    // An abyss squadron that came for the yard shoots the yard, not the captain (S74).
+    // That is the whole point of a fortification: it draws the fire.
+    const assaulting = canAssaultFort(encounter.zoneId ?? currentZone().id) &&
+      !portClosed(fortCombat) &&
+      Math.hypot(encounter.x, encounter.y) <= COMBAT.engageRadiusM;
+    const aimedAt = assaulting
+      ? { id: "fort", name: fortCombat.name, x: 0, y: 0, combat: fortCombat }
+      : closestTarget(allies(), encounter) ?? {
+          id: runtimeShip.id,
+          name: runtimeShip.name,
+          ...world.ship,
+          combat: playerCombat,
+        };
+    // The enemy hull feels the same wind the captain feels (S57).
+    const result = aiStep(encounter, aimedAt, dt, rnd, { wind: windAt(world.seed, world.timeS) });
+
+    // A fortification is not manoeuvred against (S74): a squadron bombarding the yard
+    // fires from where it lies, because the yard cannot be out-turned and her walls are
+    // not a beam to be presented. Without this the AI would spend the fight trying to
+    // bring a broadside onto a target it is already sitting on, and never fire.
+    if (assaulting) {
+      const at = Math.hypot(encounter.x, encounter.y);
+      for (const side of ["babor", "estribor"]) {
+        const { volley: fortVolley } = fireBroadside(combat, side, at, rnd);
+        for (const shot of fortVolley) {
+          if (!shot.hit) continue;
+          damageFort(fortCombat, shot.damage);
+          pushFx("hit", 0, 0, 0, 0, 0.5);
+        }
+      }
+      continue;
+    }
     encounter.x = result.enemy.x;
     encounter.y = result.enemy.y;
     encounter.heading = result.enemy.heading;
     encounter.currentSpeedKn = result.enemy.currentSpeedKn;
 
-    for (const shot of result.volley) {
-      pushFx("tracer", encounter.x, encounter.y, world.ship.x, world.ship.y, 0.3);
+    // The water around the shipyard is closed to hostiles (S66): an enemy that ends its
+    // step inside is pushed back out, and it does not fire from in there. Without this a
+    // chasing sail could park on the quay and shoot a repairing captain.
+    let volley = result.volley;
+    if (insideSafeZone(encounter)) {
+      const pushed = clampToSafeZone(encounter);
+      encounter.x = pushed.x;
+      encounter.y = pushed.y;
+      volley = [];
+    }
+
+    for (const shot of volley) {
+      pushFx("tracer", encounter.x, encounter.y, aimedAt.x, aimedAt.y, 0.3);
       if (shot.hit) {
-        applyDamage(playerCombat, shot.damage);
-        pushFx("hit", world.ship.x, world.ship.y, world.ship.x, world.ship.y, 0.5);
+        // The yard takes her damage through her own rule, so her garrison breaks and her
+        // hull goes exactly as a ship's does (S74).
+        if (aimedAt.combat === fortCombat) damageFort(fortCombat, shot.damage);
+        else applyDamage(aimedAt.combat, shot.damage);
+        pushFx("hit", aimedAt.x, aimedAt.y, aimedAt.x, aimedAt.y, 0.5);
       } else {
-        pushFx("splash", world.ship.x + (rnd() - 0.5) * 70, world.ship.y + (rnd() - 0.5) * 70, 0, 0, 0.6);
+        pushFx("splash", aimedAt.x + (rnd() - 0.5) * 70, aimedAt.y + (rnd() - 0.5) * 70, 0, 0, 0.6);
       }
     }
   }
 
   resolveDefeatedEnemies();
 
-  if (playerCombat.status !== "fighting" && !gameOver) {
+  // Only the captain ends the voyage (S36): losing an escort is a loss, not the end.
+  const status = squadronStatus(allies());
+  if (status.over && !gameOver) {
     gameOver = true;
     gameOverAt = now;
     ui.throttle = 0;
   }
 }
 
-/** A sunk or surrendered enemy becomes a wreck whose gold the world model pays out. */
+/**
+ * Drop the escorts that sank or struck and take them out of the fleet, with a
+ * warning on screen: losing a hull is meant to hurt (S36).
+ */
+function pruneLostEscorts() {
+  const { survivors, lost } = pruneAllies(escorts);
+  if (lost.length === 0) return;
+  for (const gone of lost) {
+    showBanner(t("sea.banner.escortLost", { name: gone.name }), "danger", 4000);
+    fleet = removeShip(fleet, gone.id);
+  }
+  escorts = survivors;
+  saveFleetState();
+}
+
+/**
+ * A sunk or surrendered enemy becomes a wreck whose gold the world model pays out.
+ *
+ * A hull that struck her colours can be taken instead (S63): she joins the fleet as the
+ * player's own and leaves no wreck behind, because the player has her. A hull that went
+ * to the bottom is only ever a wreck.
+ */
 function resolveDefeatedEnemies() {
   const zone = currentZone();
   world.encounters = world.encounters.map((encounter) => {
     if (encounter.type !== "enemy" || !encounter.combat) return encounter;
     const status = encounter.combat.status;
     if (status !== "sunk" && status !== "surrendered") return encounter;
+
+    // Beating a hostile is a victory, and victories grow the yard's battery (S74).
+    victories += 1;
+    const prize = status === "surrendered" ? captureableShip(encounter) : null;
+    if (prize) {
+      fleet = withPrize(fleet, prize);
+      saveFleetState();
+      showBanner(t("sea.banner.captured", { name: prize.name }), "gold", 4000);
+      return null;
+    }
+
     showBanner(
       status === "sunk" ? t("sea.banner.sunk") : t("sea.banner.surrendered"),
       "gold",
@@ -1210,7 +1617,29 @@ function resolveDefeatedEnemies() {
       gold: wreckPrize(encounter, zone),
       zoneId: zone.id,
     };
-  });
+  }).filter(Boolean);
+}
+
+/**
+ * Spend the crew's reserve as the voyage goes, and pay the wages of every whole day it
+ * gives up (S67). The supply is the shipyard's `days` of provisions turned into the
+ * clock the sea runs on; the wages are the fleet's own per-day upkeep, which existed and
+ * was never charged.
+ *
+ * Running out is reported once, and it does not sink the ship: it is a warning that the
+ * crew is on short rations, not a hidden game over.
+ */
+function burnVoyageSupply(dt) {
+  const result = burnSupply(supplyLeftS, dt);
+  supplyLeftS = result.secondsLeft;
+  if (result.daysSpent > 0) {
+    const owed = result.daysSpent * fleetUpkeep(fleet);
+    if (owed > 0) gold = Math.max(0, gold - owed);
+  }
+  if (result.exhausted && !supplyWarned) {
+    supplyWarned = true;
+    showBanner(t("sea.banner.noSupply"), "danger", 4000);
+  }
 }
 
 function showGameOver() {
@@ -1274,31 +1703,122 @@ function tickFx(dt) {
   }
 }
 
-function updateTargetPanel() {
-  let best = null;
-  let bestDistance = Infinity;
-  for (const encounter of world.encounters) {
-    if (encounter.type !== "enemy" || !encounter.combat) continue;
-    if (encounter.combat.status !== "fighting") continue;
-    const distance = Math.hypot(encounter.x - world.ship.x, encounter.y - world.ship.y);
-    if (distance > COMBAT.engageRadiusM || distance >= bestDistance) continue;
-    best = encounter;
-    bestDistance = distance;
-  }
+/**
+ * The duel panel (S73): every hull in the fight, ours and theirs, each with her three
+ * condition bars. It replaces the old target panel, which showed only the nearest enemy
+ * and so hid the player's own side of the fight.
+ *
+ * The roster is rebuilt only when its numbers change: rebuilding it every frame would
+ * restart the bars' transition on every tick and make them flicker.
+ */
+let duelSignature = null;
 
-  if (!best) {
-    els.targetPanel.classList.add("is-hidden");
-    return;
-  }
-  els.targetPanel.classList.remove("is-hidden");
-  els.targetName.textContent =
-    localisedHull(best.hullId, t)?.name ?? t("sea.target.hostileSail");
-  els.targetDistance.textContent = `${fmtInt.format(bestDistance)} m`;
-  els.targetHull.style.width = `${best.combat.condition.hull}%`;
-  els.targetRigging.style.width = `${best.combat.condition.rigging}%`;
-  els.targetCrew.style.width = `${best.combat.condition.crew}%`;
+/** True when an abyss squadron is close enough to be fighting the yard (S74). */
+function fortInFight() {
+  if (!world || !fortCombat) return false;
+  return world.encounters.some(
+    (encounter) =>
+      encounter.type === "enemy" &&
+      encounter.combat?.status === "fighting" &&
+      canAssaultFort(encounter.zoneId ?? currentZone().id) &&
+      Math.hypot(encounter.x, encounter.y) <= COMBAT.engageRadiusM,
+  );
 }
 
+function updateDuelPanel() {
+  if (!world || !els.duelRoster) return;
+
+  const own = [];
+  if (playerCombat) {
+    own.push({
+      id: runtimeShip?.id ?? "captain",
+      name: runtimeShip?.name ?? t("sea.target.captain"),
+      x: world.ship.x,
+      y: world.ship.y,
+      combat: playerCombat,
+    });
+  }
+  for (const escort of escorts) {
+    if (!escort.combat) continue;
+    own.push({ id: escort.id, name: escort.name, x: escort.x, y: escort.y, combat: escort.combat });
+  }
+
+  // The yard fights as one of ours (S74), so her hull and her garrison read in the same
+  // panel as the ships in the fight.
+  if (fortCombat && !portClosed(fortCombat) && fortInFight()) {
+    own.push({ id: "fort", name: t("sea.fort.name"), x: 0, y: 0, combat: fortCombat });
+  }
+
+  const hostile = world.encounters
+    .filter((encounter) => encounter.type === "enemy" && encounter.combat)
+    .map((encounter) => ({
+      id: encounter.id,
+      name: localisedHull(encounter.hullId, t)?.name ?? t("sea.target.hostileSail"),
+      hullId: encounter.hullId,
+      x: encounter.x,
+      y: encounter.y,
+      combat: encounter.combat,
+    }));
+
+  const roster = duelRoster({
+    ours: own,
+    theirs: hostile,
+    engageRadiusM: COMBAT.engageRadiusM,
+    ship: world.ship,
+  });
+
+  if (!duelVisible(roster)) {
+    els.duelPanel.classList.add("is-hidden");
+    duelSignature = null;
+    return;
+  }
+  els.duelPanel.classList.remove("is-hidden");
+
+  const signature = roster
+    .map((entry) => `${entry.id}:${Math.round(entry.hull)}:${Math.round(entry.rigging)}:${Math.round(entry.crew)}:${entry.side}`)
+    .join("|");
+  if (signature === duelSignature) return;
+  duelSignature = signature;
+
+  els.duelRoster.textContent = "";
+  for (const entry of roster) {
+    const row = document.createElement("div");
+    row.className = `duel-row is-${entry.side}`;
+    row.dataset.shipId = String(entry.id);
+
+    const head = document.createElement("div");
+    head.className = "duel-head";
+    const name = document.createElement("span");
+    name.className = "duel-name";
+    name.textContent = entry.name;
+    const distance = document.createElement("span");
+    distance.className = "duel-distance";
+    distance.textContent = Number.isFinite(entry.distanceM)
+      ? t("sea.duel.distance", { distance: fmtInt.format(Math.round(entry.distanceM)) })
+      : "";
+    head.append(name, distance);
+
+    const bars = document.createElement("div");
+    bars.className = "duel-bars";
+    for (const [key, label] of [
+      ["hull", "sea.hull"],
+      ["rigging", "sea.rigging"],
+      ["crew", "sea.crew"],
+    ]) {
+      const bar = document.createElement("div");
+      bar.className = `duel-bar duel-bar-${key}`;
+      const fill = document.createElement("div");
+      fill.className = `duel-fill duel-fill-${key}`;
+      fill.style.width = `${Math.round(conditionShare(entry[key]) * 100)}%`;
+      bar.title = `${t(label)}: ${Math.round(entry[key])} %`;
+      bar.append(fill);
+      bars.append(bar);
+    }
+
+    row.append(head, bars);
+    els.duelRoster.append(row);
+  }
+}
 
 /**
  * Signature of the fleet list: the hull ids, their names and their hull condition.
@@ -1311,15 +1831,8 @@ let portFleetSignature = null;
 function renderPortFleet(ships) {
   const container = els.portFleet;
   if (!container) return;
-  const signature = ships.map((ship) => `${ship.id}:${ship.name}:${ship.condition?.hull ?? 100}`).join("|");
-  if (signature === portFleetSignature) {
-    // Same list: only the "can I afford it" mark can change with the purse.
-    for (const button of container.querySelectorAll("button[data-ship-id]")) {
-      const ship = ships.find((entry) => entry.id === button.dataset.shipId);
-      if (ship) button.classList.toggle("is-short", gold < repairCost(ship));
-    }
-    return;
-  }
+  const signature = ships.map((ship) => `${ship.id}:${ship.name}:${ship.condition?.hull ?? 100}:${repairCost(ship)}`).join("|") + `:${gold}`;
+  if (signature === portFleetSignature) return;
   portFleetSignature = signature;
   container.textContent = "";
 
@@ -1342,8 +1855,12 @@ function renderPortFleet(ships) {
     button.type = "button";
     button.className = "port-ship-button";
     button.dataset.shipId = ship.id;
-    button.textContent = t("sea.port.fleetButton", { gold: fmtInt.format(repairCost(ship)) });
-    button.classList.toggle("is-short", gold < repairCost(ship));
+    const cost = repairCost(ship);
+    button.textContent = t("sea.port.fleetButton", { gold: fmtInt.format(priceWithPurse(cost, gold)) });
+    const offer = partialRepairOffer(cost);
+    if (offer) button.textContent += ` · ${offer}`;
+    button.disabled = gold <= 0 && cost > 0;
+    button.classList.toggle("is-short", button.disabled);
     button.addEventListener("click", () => repairFleetShipAtPort(ship.id));
 
     row.append(head, button);
@@ -1357,13 +1874,21 @@ function updatePortPanel() {
   const docked = inHomePort() && !gameOver && playerCombat;
   els.portPanel.classList.toggle("is-hidden", !docked);
   if (!docked) return;
-  const cost = repairCost(runtimeShip);
+  const cost = repairCost(liveRepairShip(runtimeShip));
   els.portCost.textContent =
     cost === 0
       ? t("sea.port.repairNoDamage", { name: runtimeShip.name })
-      : t("sea.port.repairCost", { gold: fmtInt.format(cost) });
-  els.portCost.classList.toggle("is-short", cost > 0 && gold < cost);
-  renderPortFleet(damagedFleetShips(fleet));
+      : t("sea.port.repairCost", { gold: fmtInt.format(priceWithPurse(cost, gold)) });
+  const offer = partialRepairOffer(cost);
+  if (offer) els.portCost.textContent += ` · ${offer}`;
+  // The price is a share of the hull's value, so the player can see what it follows (S40).
+  if (els.portCost && cost > 0) {
+    els.portCost.title = t("sea.port.repairShare", {
+      share: fmtInt.format(REPAIR.shareOfPrice * 100),
+    });
+  }
+  els.portCost.classList.toggle("is-short", cost > 0 && gold <= 0);
+  renderPortFleet(damagedFleetShips(liveRepairFleet()));
 }
 
 /* ---------------------------------------------------------------- wind rose (S18) */
@@ -1496,6 +2021,18 @@ function updateHud() {
   els.rounds.textContent =
     `${fmtInt.format(roundsLeft("babor"))}/${fmtInt.format(roundsLeft("estribor"))}` +
     (swivelRounds > 0 ? ` · ${t("sea.roundsSwivel", { count: fmtInt.format(swivelRounds) })}` : "");
+
+  // What each beam is loaded with right now (S65), mixed rounds included.
+  if (els.ammo) {
+    const ammo = describeAmmo(playerCombat);
+    const label = (side) =>
+      ammo[side].id
+        ? t(ammo[side].mixed ? "sea.ammo.mixed" : "sea.ammo.name", {
+            ammo: localisedAmmo(ammo[side].id, t).name,
+          })
+        : t("sea.ammo.none");
+    els.ammo.textContent = `${label("babor")} · ${label("estribor")}`;
+  }
 }
 
 /** Men actually aboard, across the combat roles. */
@@ -1527,7 +2064,17 @@ function frame(now) {
   const before = goldEarned;
   for (let step = 0; step < ui.timeScale; step += 1) {
     world = updateWorld(world, gameOver ? {} : readInput(), dt);
+    // The voyage eats the crew's reserve (S67). It runs on the world clock, so a
+    // fast-forward burns it faster, exactly like everything else the sea does.
+    if (!gameOver) burnVoyageSupply(dt);
+    // Copy the newly calculated positions before synchronizing survivors for the next step.
+    syncEscortsFromWorld();
+    // An enemy that gave up the chase is no longer a target (S58), so the panel, the bars
+    // and the auto-fire stop reading it before this tick's combat pass runs.
+    dropDisengagedTargets();
     processCombat(dt, now);
+    world = { ...world, escorts: escorts.map(({ combat, ...rest }) => rest) };
+    dropTimeOnEngage();
     tickFx(dt);
   }
   goldEarned = world.gold;
@@ -1562,20 +2109,36 @@ function frame(now) {
 
   if (gameOver && !gameOverShown && now - gameOverAt > 1400) showGameOver();
 
+  // The lost tramo of the bars runs on the world's clock, so it follows the fast-forward (S52).
+  frameWorldDt = dt * ui.timeScale;
+
   const ctx = els.canvas.getContext("2d");
   drawSea(ctx);
   drawMinimap();
   drawWindRose(now);
   updateHud();
-  updateTargetPanel();
+  updateDuelPanel();
   updatePortPanel();
-  updateDockDialog();
+  if (updateAutoRepair()) return;
   hideBannerIfDue(now);
 
   requestAnimationFrame(frame);
 }
 
 function boot() {
+  // The tuning settings are applied before anything reads a constant (S33): the
+  // world, the wind and the combat model all read them live from here on. The catalogue
+  // comes with them, so a saved fleet can resolve a hull the player created (S83).
+  bootSettings();
+  bootCatalogue();
+
+  // The shipyard's automatic-fire check (S47): on unless the player turned it off.
+  try {
+    ui.autoFire = normaliseAutoFire(localStorage.getItem("barcos:autofire:v1"));
+  } catch {
+    ui.autoFire = normaliseAutoFire(null);
+  }
+
   const savedGame = loadSavedGame();
   const savedWorld = savedGame?.world ? deserializeWorld(savedGame.world) : null;
 
@@ -1585,29 +2148,102 @@ function boot() {
       ? savedWorld
       : createWorld(worldSeed, { speedKn: runtimeShip.speedKn }, 0);
 
-  gold = savedGame?.gold ?? 0;
-  goldEarned = world.gold;
+  // The captain turns at her own hull's rate (S48), whatever the saved sea says: she may
+  // not be the hull that last sailed it.
+  world = { ...world, ship: { ...world.ship, turnFactor: hullTurnFactor(runtimeShip.hullId) } };
+
+  gold = normaliseGold(savedGame?.gold);
+  // The reserve starts as the captain's bought days of provisions (S67), and the sea
+  // save is fresher than the fleet sheet, as it is for damage and crew.
+  const savedSupply = Number(savedGame?.supplyLeftS);
+  supplyLeftS = Number.isFinite(savedSupply) && savedSupply >= 0
+    ? savedSupply
+    : supplySeconds(runtimeShip?.days ?? 0);
+  supplyWarned = supplyLeftS <= 0;
+
+  // The yard (S74). Her damage, garrison and the player's victories come from the save,
+  // so a captured or battered yard is still that after a reload.
+  victories = Math.max(0, Math.floor(Number(savedGame?.victories) || 0));
+  fortCombat = createFortCombatant({ victories });
+  const savedFort = savedGame?.fort;
+  if (savedFort && typeof savedFort === "object") {
+    fortCombat.condition = { ...fortCombat.condition, ...savedFort.condition };
+    fortCombat.crew = { ...fortCombat.crew, ...savedFort.crew };
+    if (savedFort.status) fortCombat.status = savedFort.status;
+    refreshStatus(fortCombat);
+  }
+  goldEarned = normaliseGold(world.gold);
+
+  // The hulls that put to sea with the captain (S35, S36): everything marked to sail.
+  escorts = sailingShips(fleet)
+    .filter((ship) => ship.id !== runtimeShip?.id)
+    .map((ship, index) => {
+    const combatant = createPlayerCombatant(ship);
+    const saved = savedGame?.combat?.escorts?.[ship.id];
+    if (saved) {
+      // The sea save is fresher than the fleet sheet (S23): the damage from the last
+      // voyage wins, or an escort would come back whole after being shot to pieces.
+      combatant.condition = { ...combatant.condition, ...saved.condition };
+      combatant.crew = { ...combatant.crew, ...saved.crew };
+      // A hull that went down on the last trip is not "fighting" just because it was
+      // rebuilt from a sheet: without this it sails on with zero hull (S36).
+      refreshStatus(combatant);
+    }
+    const place = (world.escorts ?? []).find((entry) => entry.id === ship.id);
+    const escort = createEscort(
+      { id: ship.id, speedKn: ship.speedKn, turnFactor: hullTurnFactor(ship.hullId) },
+      world.ship,
+      index,
+    );
+    return {
+      ...escort,
+      ...(place ? { x: place.x, y: place.y, heading: place.heading, currentSpeedKn: place.currentSpeedKn } : {}),
+      name: ship.name,
+      combat: combatant,
+    };
+  });
+  world = { ...world, escorts: escorts.map(({ combat, ...rest }) => rest) };
 
   // Restore the guns from the autosave, or rig the ship out of the shipyard sheet.
   playerCombat = createPlayerCombatant(runtimeShip);
   const savedCombat = savedGame?.combat?.player;
-  if (savedCombat && Array.isArray(savedCombat.pieces)) {
+  if (savedCombat && typeof savedCombat === "object") {
     // The sea save is the fresher of the two, because the fleet sheet is written
-    // every three seconds and the sea save right after combat (S23).
+    // every three seconds and the sea save right after combat (S23). Her damage and crew
+    // count even when the guns state is gone: a refit drops the saved pieces (the new
+    // guns are rebuilt from the fleet sheet) but keeps her damage (S50).
     playerCombat.condition = { ...playerCombat.condition, ...savedCombat.condition };
     playerCombat.crew = { ...playerCombat.crew, ...savedCombat.crew };
+  }
+  if (savedCombat && Array.isArray(savedCombat.pieces)) {
     playerCombat.pieces = playerCombat.pieces.map((piece, index) => {
       const saved = savedCombat.pieces[index];
-      return saved
-        ? { ...piece, shotsLeft: saved.shotsLeft ?? piece.shotsLeft, reloadTimer: saved.reloadTimer ?? 0 }
-        : piece;
+      if (!saved) return piece;
+      // The round the player chose in the fight comes back with the guns (S65), but only
+      // when the piece is the same one and she can actually fire it: a refit can put a
+      // different gun in that slot.
+      const samePiece = !saved.pieceId || saved.pieceId === piece.pieceId;
+      const carries = samePiece && pieceById(piece.pieceId).ammo.includes(saved.ammoId);
+      return {
+        ...piece,
+        ...(carries ? { ammoId: saved.ammoId } : {}),
+        shotsLeft: saved.shotsLeft ?? piece.shotsLeft,
+        reloadTimer: saved.reloadTimer ?? 0,
+      };
     });
   }
-  // Recompute the crew share from the men actually aboard, whatever source won.
-  playerCombat.condition.crew = Math.min(
+  // Preserve a fractional repair only when it still agrees with the men aboard.
+  const crewFromMen = Math.min(
     100,
     Math.round((100 * totalAboard(playerCombat.crew)) / playerCombat.initialCrew),
   );
+  const savedCrewCondition = savedCombat && typeof savedCombat === "object"
+    ? savedCombat.condition?.crew
+    : runtimeShip.condition?.crew;
+  playerCombat.condition.crew = Number.isFinite(savedCrewCondition) &&
+    savedCrewCondition >= 0 && savedCrewCondition <= 100 && Math.round(savedCrewCondition) === crewFromMen
+    ? savedCrewCondition
+    : crewFromMen;
   if (playerCombat.condition.hull <= 0 || playerCombat.condition.crew <= COMBAT.surrenderCrewPct) {
     // The saved voyage ended in a sinking: show the same verdict instead of sailing on.
     playerCombat.status = playerCombat.condition.hull <= 0 ? "sunk" : "surrendered";
@@ -1616,9 +2252,9 @@ function boot() {
   }
 
   applyStaticTranslations();
-  // Opening the sea already inside the port with something damaged asks at once (S25).
-  dock.wasInPort = inHomePort();
-  if (dock.wasInPort) openDockDialog();
+  renderTimeBadge();
+  // Opening inside is not an arrival; leaving and returning arms the next one.
+  wasInPort = inHomePort();
   setInterval(saveGame, 3000);
   window.addEventListener("beforeunload", saveGame);
   window.addEventListener("resize", resizeCanvas);

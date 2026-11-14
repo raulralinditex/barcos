@@ -24,6 +24,9 @@ function localise(entity, prefix, fields, t) {
 
 export const localisedHull = (hullOrId, t) => {
   const hull = typeof hullOrId === "string" ? hullById(hullOrId) : hullOrId;
+  // A hull created on the settings screen has no entry in either catalogue (S80), and
+  // the name it was given is the only name it has: `localise` already falls back to the
+  // dataset text when a key is missing, which is exactly right here.
   return localise(hull, "hull", ["name", "type", "country", "note"], t);
 };
 

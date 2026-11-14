@@ -23,6 +23,8 @@ import {
   loadStoredSettings,
   saveStoredSettings,
 } from "../model/settings-storage.js";
+import { applyCatalogue, loadStoredCatalogue, saveStoredCatalogue } from "../model/catalogue-storage.js";
+import { createCatalogueEditor } from "./catalogue-editor.js";
 
 const $ = (selector) => document.querySelector(selector);
 
@@ -34,6 +36,7 @@ const t = translator.t;
 
 const els = {
   groups: $("#settings-groups"),
+  catalogue: $("#settings-catalogue"),
   status: $("#settings-status"),
   apply: $("#settings-apply"),
   reset: $("#settings-reset"),
@@ -203,6 +206,20 @@ if (els.langSelect) {
     applyLanguage(translator, localStorage, event.target.value);
     applyStaticTranslations();
     render(currentSettings());
+    if (els.catalogue) {
+      els.catalogue.textContent = "";
+      const editor = createCatalogueEditor({
+        t,
+        catalogue: loadStoredCatalogue(),
+        formatNumber: (value) => fmtOne.format(value),
+        onChange: (next) => {
+          applyCatalogue(next);
+          saveStoredCatalogue(next);
+          showStatus(t("catalogue.saved"), "ok");
+        },
+      });
+      els.catalogue.append(editor.root);
+    }
     showStatus(t("settings.reloaded"), "ok");
   });
 }
@@ -216,4 +233,24 @@ const live = applySettings(stored);
 applyStaticTranslations();
 if (els.langSelect) els.langSelect.value = translator.language;
 render(live);
+
+// The catalogue editor (S80-S82) sits under the tuning blocks: it is the same screen
+// and the same idea, one level down. What it writes is stored apart, because a shipped
+// record that was never touched must not be frozen into an old save (S83).
+const catalogue = loadStoredCatalogue();
+applyCatalogue(catalogue);
+if (els.catalogue) {
+  const editor = createCatalogueEditor({
+    t,
+    catalogue,
+    formatNumber: (value) => fmtOne.format(value),
+    onChange: (next) => {
+      applyCatalogue(next);
+      saveStoredCatalogue(next);
+      showStatus(t("catalogue.saved"), "ok");
+    },
+  });
+  els.catalogue.append(editor.root);
+}
+
 showStatus(t("settings.hint", { count: SETTINGS_FIELDS.length }), "hint");

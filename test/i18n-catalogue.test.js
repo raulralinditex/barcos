@@ -130,6 +130,12 @@ test("S11: no catalogue key is orphaned (every key is used by the app or the dat
     "erase.",
     "sea.",
     "issue.",
+    // S33: the settings screen resolves its labels by field id, so the family is
+    // `settings.` plus one sub-family per block (settings.wind.bonus, ...).
+    "settings.",
+    // S80-S82: the catalogue editor on that same screen has its own family, because a
+    // hull or a piece is not a tuning field and must not read as one.
+    "catalogue.",
   ];
   for (const key of keysOf(es)) {
     const isData = dataKeys.has(key);
