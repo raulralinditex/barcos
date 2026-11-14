@@ -1,0 +1,60 @@
+odd/tasks/paises.md
+  s_fbb00885ed79f8::t_88b1f24a515159 3,59-60,77-86
+  s_0615c265d5ef3b::t_46b1907835b6c0 11-12,69-70
+  s_cbeb974d811fa5::t_b533b24c84cc84 57-58,71-76
+scripts/smoke-country.mjs
+  s_fbb00885ed79f8::t_93fa493867672c 1-264
+src/data/naval-data.js
+  s_f06c10fdae734f::t_1b5549732ace52 636-641
+  s_cbeb974d811fa5::t_955f885b576ec7 58,76,95,114,132,151,169,187,205,224,242,260,361,374,387,400,413,426,439,452,465,478,492
+  s_cbeb974d811fa5::t_6d3c93eefeb852 40-43,50-53,276-330,352-356
+  s_f06c10fdae734f::t_68a7d3355009ce 642
+test/country-switch.test.js
+  s_fbb00885ed79f8::t_61417a24972a14 1-69,71-132
+  s_fbb00885ed79f8::t_ef74e9d5cbb486 70
+test/country.test.js
+  s_cbeb974d811fa5::t_760e45d5993fa5 1-210
+src/model/country.js
+  s_fbb00885ed79f8::t_63b9ce49dcc31a 38-71
+  s_cbeb974d811fa5::t_1237019ed3f471 1-37
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.6",
+  "base_commit_sha": "91493fdfc89a9383985c2063b49529845f7b8d30",
+  "prompts": {},
+  "sessions": {
+    "s_0615c265d5ef3b": {
+      "agent_id": {
+        "tool": "pi",
+        "id": "01a1cbe7-b77b-77ed-ba1b-220f1e39ae58",
+        "model": "claude-sonnet-5.5"
+      },
+      "human_author": "Raul Ripoll <raulral@ext.inditex.com>"
+    },
+    "s_cbeb974d811fa5": {
+      "agent_id": {
+        "tool": "pi",
+        "id": "01a1ccea-d49b-7600-90e2-f75f9fba6025",
+        "model": "deepseek-v4.1-flash"
+      },
+      "human_author": "Raul Ripoll <raulral@ext.inditex.com>"
+    },
+    "s_f06c10fdae734f": {
+      "agent_id": {
+        "tool": "pi",
+        "id": "01a1d6ff-202c-776e-a594-1d85cdb28493",
+        "model": "claude-sonnet-5.5"
+      },
+      "human_author": "Raul Ripoll <raulral@ext.inditex.com>"
+    },
+    "s_fbb00885ed79f8": {
+      "agent_id": {
+        "tool": "pi",
+        "id": "01a1ccee-391a-73a4-b55a-66013b3f51e8",
+        "model": "claude-sonnet-5.5"
+      },
+      "human_author": "Raul Ripoll <raulral@ext.inditex.com>"
+    }
+  }
+}
