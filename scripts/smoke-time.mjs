@@ -4,10 +4,11 @@ import { buildShip, toRuntimeShip } from "../src/model/shipyard.js";
 /**
  * Browser smoke for the time-warp key (S31), driven through the UI only.
  *
- * T doubles the speed of the simulation so the player does not wait out the long
- * stretches between objectives. The proof is the world clock, which drives the wind
- * and every reload: it must run twice as fast after T and back to normal after a
- * second T. A badge says when the warp is on, in both languages.
+ * T cycles the speed of the simulation through x1, x2, x4 and x8 so the player does
+ * not wait out the long stretches between objectives. The proof is the world clock,
+ * which drives the wind and every reload: each press must multiply it, and the fifth
+ * press must come back to real time. A badge says which multiplier is on, in both
+ * languages.
  */
 
 const runtime = toRuntimeShip(
@@ -89,25 +90,41 @@ async function rate(page, ms) {
 const page = await open("es");
 const badge = page.locator("#time-badge");
 
-const normal = await rate(page, 2000);
+const normal = await rate(page, 1500);
 check(normal > 0.8 && normal < 1.2, `the world clock does not run in real time (${normal.toFixed(2)}x)`);
 check(await badge.isHidden(), "the time-warp badge shows before the key is pressed");
 
-await page.keyboard.press("t");
-await page.waitForTimeout(150);
-const fast = await rate(page, 2000);
-check(fast > 1.7 && fast < 2.3, `T does not double the world clock (${fast.toFixed(2)}x)`);
-check(await badge.isVisible(), "the time-warp badge is hidden while the warp is on");
-const badgeText = await badge.textContent();
-check(/2/.test(badgeText), `the badge does not say x2: "${badgeText}"`);
-const bannerOn = await page.locator("#banner").textContent();
-check(/tiempo/i.test(bannerOn), `the player is not told the time is doubled: "${bannerOn}"`);
+/** Press T once and prove both the world clock and the badge for one multiplier. */
+async function expectScale(scale, label) {
+  await page.keyboard.press("t");
+  await page.waitForTimeout(150);
+  const measured = await rate(page, 1200);
+  check(
+    measured > scale * 0.8 && measured < scale * 1.25,
+    `${label}: the world clock should run at ${scale}x, measured ${measured.toFixed(2)}x`,
+  );
+  check(await badge.isVisible(), `${label}: the badge is hidden at ${scale}x`);
+  const text = (await badge.textContent())?.trim();
+  check(text === `×${scale}`, `${label}: the badge says "${text}", expected "×${scale}"`);
+  const banner = await page.locator("#banner").textContent();
+  check(
+    banner.includes(`×${scale}`),
+    `${label}: the banner does not announce ×${scale}: "${banner}"`,
+  );
+  return measured;
+}
+
+const fast = await expectScale(2, "first press");
+const four = await expectScale(4, "second press");
+const eight = await expectScale(8, "third press");
 
 await page.keyboard.press("t");
 await page.waitForTimeout(150);
-const back = await rate(page, 2000);
-check(back > 0.8 && back < 1.2, `a second T does not restore real time (${back.toFixed(2)}x)`);
-check(await badge.isHidden(), "the badge stays after the warp is turned off");
+const back = await rate(page, 1500);
+check(back > 0.8 && back < 1.2, `the fourth T does not come back to real time (${back.toFixed(2)}x)`);
+check(await badge.isHidden(), "the badge stays after the cycle returns to x1");
+const bannerBack = await page.locator("#banner").textContent();
+check(/×1/.test(bannerBack), `the banner does not announce the return to ×1: "${bannerBack}"`);
 await page.close();
 
 /* ---------------------------------------------------------------- en */
@@ -117,6 +134,10 @@ await pageEn.keyboard.press("t");
 await pageEn.waitForTimeout(200);
 const bannerEn = await pageEn.locator("#banner").textContent();
 check(/time/i.test(bannerEn) && !/tiempo/i.test(bannerEn), `the English banner is not translated: "${bannerEn}"`);
+await pageEn.keyboard.press("t");
+await pageEn.waitForTimeout(200);
+const badgeEn = (await pageEn.locator("#time-badge").textContent())?.trim();
+check(badgeEn === "×4", `the English badge does not follow the cycle: "${badgeEn}"`);
 const helpEn = await pageEn.locator(".hud-help").textContent();
 check(/\bT\b/.test(helpEn), `the help line does not mention the T key: "${helpEn}"`);
 await pageEn.close();
@@ -124,10 +145,10 @@ await pageEn.close();
 await browser.close();
 
 if (errors.length) failures.push(`console errors: ${errors.join(" | ")}`);
-console.log(JSON.stringify({ normal, fast, back, failures }, null, 2));
+console.log(JSON.stringify({ normal, fast, four, eight, back, failures }, null, 2));
 if (failures.length) {
   console.error("SMOKE FAILED:");
   for (const failure of failures) console.error(`- ${failure}`);
   process.exit(1);
 }
-console.log("SMOKE OK: T doubles the world clock, a second T restores it, in both languages");
+console.log("SMOKE OK: T cycles the world clock through x1, x2, x4 and x8, in both languages");
