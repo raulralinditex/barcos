@@ -52,8 +52,7 @@ import {
   repairFleetShip,
   repairShip,
 } from "../model/repair.js";
-import { autoRepairFleet } from "../model/auto-repair.js";
-import { ARRIVAL_NOTICE_KEY, buildArrivalNotice, serializeArrivalNotice } from "../model/arrival-notice.js";
+import { ARRIVAL_NOTICE_KEY } from "../model/arrival-notice.js";
 import { normaliseGold } from "../model/economy.js";
 import { bootSettings } from "../model/settings-storage.js";
 import { bootCatalogue } from "../model/catalogue-storage.js";
@@ -449,31 +448,21 @@ function repairFleetShipAtPort(shipId) {
 
 /* ---------------------------------------------------------------- automatic port repair (S49) */
 
-function updateAutoRepair() {
+/**
+ * Arriving at the home port opens the shipyard, but it no longer repairs anything
+ * (S86): repairing is the player's decision, one hull at a time, with the button each
+ * hull carries in the fleet panel. What is left here is the arrival itself — save the
+ * voyage and go to the shipyard, where the repair buttons are.
+ */
+function updatePortArrival() {
   const inPort = inHomePort();
   const arrived = inPort && !wasInPort;
   wasInPort = inPort;
   if (!arrived || gameOver || !playerCombat) return false;
 
-  const liveFleet = liveRepairFleet();
-  const result = autoRepairFleet(liveFleet, gold);
-  fleet = result.fleet;
-  gold = result.gold;
-  for (const repaired of result.repaired) {
-    if (repaired.id === runtimeShip.id) {
-      const captain = fleet.ships.find((ship) => ship.id === repaired.id);
-      Object.assign(runtimeShip, captain);
-      playerCombat.condition = { ...captain.condition };
-      playerCombat.crew = { ...captain.crewAlive };
-      playerCombat.crewDamagePool = 0;
-    } else {
-      healEscortFromFleet(repaired.id);
-    }
-  }
-  const notice = buildArrivalNotice(result);
+  // Nothing is spent and no hull is touched: the shop asks, the player answers.
   try {
-    if (notice) localStorage.setItem(ARRIVAL_NOTICE_KEY, serializeArrivalNotice(notice));
-    else localStorage.removeItem(ARRIVAL_NOTICE_KEY);
+    localStorage.removeItem(ARRIVAL_NOTICE_KEY);
   } catch {
     /* storage disabled: continue to the shipyard */
   }
@@ -2137,7 +2126,7 @@ function frame(now) {
   updateHud();
   updateDuelPanel();
   updatePortPanel();
-  if (updateAutoRepair()) return;
+  if (updatePortArrival()) return;
   hideBannerIfDue(now);
 
   requestAnimationFrame(frame);

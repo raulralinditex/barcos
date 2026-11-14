@@ -2012,3 +2012,26 @@ input[type="number"] {
 .catalogue-create h3 {
   margin-top: 0;
 }
+
+/* The repair button on a fleet entry (S86): same weight as the sell button, because the
+   player now repairs hull by hull instead of on arrival. */
+.fleet-repair {
+  border: 1px solid var(--line);
+  border-radius: 6px;
+  background: var(--paper);
+  color: var(--ink);
+  font: inherit;
+  font-size: 11px;
+  padding: 2px 8px;
+  cursor: pointer;
+}
+
+.fleet-repair:hover:not(:disabled) {
+  border-color: var(--green);
+  color: var(--green);
+}
+
+.fleet-repair:disabled {
+  opacity: 0.45;
+  cursor: default;
+}

@@ -1229,6 +1229,10 @@ function renderFleet() {
             <span class="fleet-hull">${ship.hullName}</span>
           </button>
           ${isCaptain ? `<span class="fleet-tag" title="${t("fleet.isCaptain")}">${t("fleet.captain")}</span>` : `<button class="fleet-captain-button" type="button" data-captain="${ship.id}" title="${t("fleet.promote")}">${t("shipyard.refit.captain")}</button>`}
+          <button class="fleet-repair" type="button" data-repair="${ship.id}"
+            ${repairCost(ship) > 0 ? "" : "disabled"}
+            title="${repairCost(ship) > 0 ? t("fleet.repairTitle", { name: ship.name, gold: gold(priceWithPurse(repairCost(ship), state.gold)) }) : t("fleet.repairSound", { name: ship.name })}"
+          >${repairCost(ship) > 0 ? t("fleet.repair", { gold: gold(priceWithPurse(repairCost(ship), state.gold)) }) : t("fleet.repairNone")}</button>
           <button class="fleet-sell" type="button" data-sell="${ship.id}"
             ${canSellShip(fleet, ship.id) ? "" : "disabled"}
             title="${canSellShip(fleet, ship.id) ? t("shipyard.sellTitle", { name: ship.name, gold: gold(salePrice(ship)) }) : t("shipyard.sellLast")}"
@@ -1238,7 +1242,43 @@ function renderFleet() {
     .join("");
 }
 
+/** Select an owned ship and copy her bought configuration into the refit editor. */
+function selectRefitShip(ship) {
+  const config = configFromShip(ship);
+  refitId = ship.id;
+  for (const key of ["hullId", "batteries", "crew", "days", "cargoKg", "ballastKg", "equipmentKg", "reserveKg"]) {
+    state[key] = config[key];
+  }
+  state.shipName = config.name ?? "";
+  els.shipName.value = state.shipName;
+}
+
 els.fleetList.addEventListener("click", (event) => {
+  const repair = event.target.closest("[data-repair]");
+  if (repair) {
+    // Repairing is the player's decision, one hull at a time (S86): the sea no longer
+    // repairs on arrival, so this button is where a damaged hull is put right.
+    const captain = captainShip(fleet);
+    const result = repairFleetShip(fleet, repair.dataset.repair, state.gold, { allowCaptain: true });
+    if (!result.repaired) return;
+    fleet = result.fleet;
+    state.gold = result.gold;
+    saveFleet();
+    const repaired = fleet.ships.find((ship) => ship.id === repair.dataset.repair) ?? null;
+    savePurse(repaired, repair.dataset.repair === captain?.id);
+    els.goldValue.textContent = gold(state.gold);
+    lastNoticeKey = "fleet.repaired";
+    lastAddedName = repaired?.name ?? null;
+    els.purchaseNotice.textContent = t("fleet.repaired", {
+      name: repaired?.name ?? "",
+      gold: gold(result.spent ?? 0),
+    });
+    dockSignature = null;
+    renderFleet();
+    render();
+    return;
+  }
+
   const sell = event.target.closest("[data-sell]");
   if (sell) {
     // Selling pays a share of the hull's value and takes her out of the fleet (S62).
@@ -1268,13 +1308,7 @@ els.fleetList.addEventListener("click", (event) => {
   const select = event.target.closest("[data-refit]");
   const ship = fleet.ships.find((entry) => entry.id === select?.dataset.refit);
   if (!ship) return;
-  const config = configFromShip(ship);
-  refitId = ship.id;
-  for (const key of ["hullId", "batteries", "crew", "days", "cargoKg", "ballastKg", "equipmentKg", "reserveKg"]) {
-    state[key] = config[key];
-  }
-  state.shipName = config.name ?? "";
-  els.shipName.value = state.shipName;
+  selectRefitShip(ship);
   renderFleet();
   render();
 });
@@ -1565,6 +1599,8 @@ applyStaticTranslations();
 if (els.langSelect) els.langSelect.value = translator.language;
 loadConfig();
 loadGold();
+const captain = captainShip(fleet);
+if (captain) selectRefitShip(captain);
 renderFleet();
 renderCountry();
 renderHulls();
@@ -1578,4 +1614,6 @@ try {
   /* storage disabled: the shipyard still opens */
 }
 renderArrivalNotice();
-openDockDialog();
+// Repairing is the player's decision (S86): the shipyard no longer opens the repair
+// dialog on its own. The button on each fleet entry is the way in, and the dialog stays
+// reachable from there for the fleet-wide view.

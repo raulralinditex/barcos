@@ -26,7 +26,27 @@
           <span class="fleet-count" id="fleet-count"></span>
         </div>
         <ul class="fleet-list" id="fleet-list"></ul>
+        <div class="sail-controls">
+          <button id="set-sail-btn" class="btn btn-launch" type="button" disabled data-i18n="fleet.setSail">Zarpar</button>
+          <label class="autofire" for="autofire-check">
+            <input id="autofire-check" type="checkbox" checked />
+            <span data-i18n="shipyard.autofire">Disparo automático</span>
+          </label>
+        </div>
       </div>
+      <!-- The shipyard as a fortification (S74): her hull, her garrison and her guns. -->
+      <div id="fort-panel" class="fort-panel">
+        <div class="fort-head">
+          <span class="fort-label" data-i18n="shipyard.fort.title">Astillero</span>
+          <span id="fort-state" class="fort-state">—</span>
+        </div>
+        <div class="fort-bars">
+          <div class="fort-bar"><span data-i18n="sea.hull">Casco</span><div class="fort-track"><div class="fort-fill fort-hull" id="fort-hull"></div></div></div>
+          <div class="fort-bar"><span data-i18n="sea.crew">Tripulación</span><div class="fort-track"><div class="fort-fill fort-crew" id="fort-crew"></div></div></div>
+        </div>
+        <p class="fort-detail" id="fort-detail">—</p>
+      </div>
+      <a class="btn btn-settings" href="./config.html" data-i18n="settings.open">⚙ Configuración</a>
       <label class="lang-picker">
         <span class="lang-label" data-i18n="app.language">Idioma</span>
         <select id="lang-select">
@@ -39,6 +59,11 @@
     <main class="layout">
       <section class="panel panel-hulls" aria-labelledby="hulls-title">
         <h2 id="hulls-title" data-i18n="shipyard.hulls">Casco</h2>
+        <div class="country-picker">
+          <label class="country-label" for="country-select" data-i18n="shipyard.country.label">País</label>
+          <select id="country-select" aria-describedby="country-note"></select>
+          <p class="hint country-note" id="country-note"></p>
+        </div>
         <p class="hint" data-i18n="shipyard.hullsHint">Arqueo histórico del modelo; el desplazamiento se deriva de él.</p>
         <div id="hull-list" class="hull-list" role="listbox" aria-label="Cascos disponibles"></div>
       </section>
@@ -51,6 +76,16 @@
             <input id="ship-name" type="text" maxlength="28" data-i18n-placeholder="shipyard.namePlaceholder" placeholder="Sin nombre" />
           </label>
         </div>
+
+        <div class="refit-banner is-hidden" id="refit-banner">
+          <span id="refit-mode"></span>
+          <button type="button" id="new-ship-btn" data-i18n="shipyard.refit.new">Nuevo barco</button>
+        </div>
+
+        <figure class="ship-figure" id="ship-figure">
+          <img id="ship-photo" class="ship-photo" alt="" />
+          <figcaption class="ship-photo-caption" id="ship-photo-caption"></figcaption>
+        </figure>
 
         <canvas id="ship-canvas" width="900" height="300" aria-label="Silueta del buque con sus puertos de cañón"></canvas>
 
@@ -124,27 +159,19 @@
     <footer class="footer">
       <div class="verdict" id="verdict">
         <div class="verdict-issues" id="verdict-issues"></div>
+        <p class="purchase-notice" id="purchase-notice" role="status" aria-live="polite"></p>
       </div>
       <div class="launch">
         <div class="price">
-          <span data-i18n="shipyard.total">Coste total</span>
+          <span id="price-label" data-i18n="shipyard.total">Coste total</span>
           <strong id="price-total">0</strong>
         </div>
-        <button id="launch-btn" class="btn btn-launch" type="button" disabled data-i18n="shipyard.launch">Botar el barco</button>
+        <button id="launch-btn" class="btn btn-launch" type="button" disabled data-i18n="shipyard.launch">Añadir a la flota</button>
         <button id="erase-btn" class="btn btn-erase" type="button" data-i18n="shipyard.erase">Borrar partida</button>
       </div>
     </footer>
 
-    <dialog id="sail-dialog" class="sail-dialog">
-      <h2 id="sail-title" data-i18n="sail.title">Botadura</h2>
-      <p id="sail-body"></p>
-      <div class="sail-actions">
-        <button id="sail-back" class="btn" type="button" data-i18n="sail.back">Volver al astillero</button>
-        <button id="sail-go" class="btn btn-launch" type="button" data-i18n="sail.go">Zarpar</button>
-      </div>
-    </dialog>
-
-    <dialog id="dock-dialog" class="dock-dialog">
+    <dialog id="dock-dialog" class="dock-dialog is-hidden">
       <h2 data-i18n="shipyard.dock.title">¿Reparamos la flota?</h2>
       <p class="dock-lead" data-i18n="shipyard.dock.lead">En el astillero no navega nadie: acá también se remienda la capitana.</p>
       <div class="dock-list" id="dock-list"></div>
@@ -154,13 +181,13 @@
       </div>
     </dialog>
 
-    <dialog id="erase-dialog" class="sail-dialog">
+    <dialog id="erase-dialog" class="erase-dialog">
       <h2 data-i18n="erase.title">Borrar partida</h2>
       <p data-i18n="erase.body">
         Se borra la flota entera, la bolsa, el barco que estás capitaneando y el mar
         que exploraste. No se puede deshacer.
       </p>
-      <div class="sail-actions">
+      <div class="erase-actions">
         <button id="erase-cancel" class="btn" type="button" data-i18n="erase.cancel">Cancelar</button>
         <button id="erase-confirm" class="btn btn-erase" type="button" data-i18n="erase.confirm">Borrar todo</button>
       </div>
