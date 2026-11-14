@@ -1,0 +1,140 @@
+{
+  "patache": {
+    "file": "assets/ships/patache.jpg",
+    "title": "Patache portugaise au début du XIXème siècle.jpg",
+    "author": "Jean-Jérôme Baugean (1764 - 1819)",
+    "license": "Public domain",
+    "source": "https://commons.wikimedia.org/wiki/File:Patache_portugaise_au_d%C3%A9but_du_XIX%C3%A8me_si%C3%A8cle.jpg"
+  },
+  "carabela-latina": {
+    "file": "assets/ships/carabela-latina.jpg",
+    "title": "Caravela latina from the Santa Auta altarpiece.jpg",
+    "author": "Unknown Flemish painter (Santa Auta altarpiece)",
+    "license": "Public domain",
+    "source": "https://commons.wikimedia.org/wiki/File:Caravela_latina_from_the_Santa_Auta_altarpiece.jpg"
+  },
+  "jacht": {
+    "file": "assets/ships/jacht.jpg",
+    "title": "Een jacht voor de kust liggend, RP-T-00-1607.jpg",
+    "author": "Rijksmuseum",
+    "license": "CC0",
+    "source": "https://commons.wikimedia.org/wiki/File:Een_jacht_voor_de_kust_liggend,_RP-T-00-1607.jpg"
+  },
+  "zabra": {
+    "file": "assets/ships/zabra.jpg",
+    "title": "Zabra Santiago.jpg",
+    "author": "Andrés López",
+    "license": "CC BY-SA 4.0",
+    "source": "https://commons.wikimedia.org/wiki/File:Zabra_Santiago.jpg"
+  },
+  "galeon-pequeno": {
+    "file": "assets/ships/galeon-pequeno.jpg",
+    "title": "Golden Hind RMG B2588.tiff",
+    "author": "George Robinson",
+    "license": "Public domain",
+    "source": "https://commons.wikimedia.org/wiki/File:Golden_Hind_RMG_B2588.tiff"
+  },
+  "fluyt": {
+    "file": "assets/ships/fluyt.jpg",
+    "title": "Wenceslas Hollar - A Flute (State 2).jpg",
+    "author": "Wenceslaus Hollar",
+    "license": "Public domain",
+    "source": "https://commons.wikimedia.org/wiki/File:Wenceslas_Hollar_-_A_Flute_(State_2).jpg"
+  },
+  "nao-armada": {
+    "pictures": [
+      {
+        "file": "assets/ships/nao-armada.jpg",
+        "title": "Carrack 1565.jpg",
+        "author": "Sebastião Lópes",
+        "license": "Public domain",
+        "source": "https://commons.wikimedia.org/wiki/File:Carrack_1565.jpg"
+      },
+      {
+        "file": "assets/ships/nao-armada-2.jpg",
+        "title": "Karacke.jpg (small carrack under sail, engraving by the Master W.A. of Bruges, 2nd third of the 15th century; resized)",
+        "author": "Master W.A. of Bruges",
+        "license": "Public domain",
+        "source": "https://commons.wikimedia.org/wiki/File:Karacke.jpg"
+      }
+    ]
+  },
+  "galeon-guerra": {
+    "file": "assets/ships/galeon-guerra.jpg",
+    "title": "English ship Revenge at Battle of Gravelines (1588) - Invincible Armada (cropped).jpg",
+    "author": "Unknown (English, 16th century)",
+    "license": "Public domain",
+    "source": "https://commons.wikimedia.org/wiki/File:English_ship_Revenge_at_Battle_of_Gravelines_(1588)_-_Invincible_Armada_(cropped).jpg"
+  },
+  "gran-mercante": {
+    "file": "assets/ships/gran-mercante.jpg",
+    "title": "A Castro, Lorenzo - A Dutch East-Indiaman off Hoorn - Google Art Project.jpg",
+    "author": "Lorenzo a Castro (active c. 1664 – c. 1700)",
+    "license": "Public domain",
+    "source": "https://commons.wikimedia.org/wiki/File:A_Castro,_Lorenzo_-_A_Dutch_East-Indiaman_off_Hoorn_-_Google_Art_Project.jpg"
+  },
+  "galeaza": {
+    "pictures": [
+      {
+        "file": "assets/ships/galeaza.jpg",
+        "title": "Armada galleass.png",
+        "author": "Unknown (English, 16th century)",
+        "license": "Public domain",
+        "source": "https://commons.wikimedia.org/wiki/File:Armada_galleass.png"
+      },
+      {
+        "file": "assets/ships/galeaza-2.jpg",
+        "title": "GaleazaVenecianaPrincipiosDelSigloXVI.jpg (Venetian galleass, Museo Naval de Madrid; resized)",
+        "author": "Rowanwindwhistler (photograph of the Museo Naval de Madrid illustration)",
+        "license": "CC BY-SA 3.0",
+        "source": "https://commons.wikimedia.org/wiki/File:GaleazaVenecianaPrincipiosDelSigloXVI.jpg"
+      }
+    ]
+  },
+  "gran-galeon": {
+    "file": "assets/ships/gran-galeon.jpg",
+    "title": "Galleons S. Matheus & S. Martim.jpg",
+    "author": "Unknown (Portuguese, 16th century)",
+    "license": "Public domain",
+    "source": "https://commons.wikimedia.org/wiki/File:Galleons_S._Matheus_%26_S._Martim.jpg"
+  },
+  "gran-buque-real": {
+    "file": "assets/ships/gran-buque-real.jpg",
+    "title": "Ark-Royal-1587.jpg",
+    "author": "Claes Janszoon Visscher (after)",
+    "license": "Public domain",
+    "source": "https://commons.wikimedia.org/wiki/File:Ark-Royal-1587.jpg"
+  },
+  "barca-costera": {
+    "pictures": [
+      {
+        "file": "assets/ships/barca-costera.jpg",
+        "title": "Willem van de Velde (II) - Small English Ship Dismasted in a Gale - WGA24535.jpg",
+        "author": "Willem van de Velde the Younger",
+        "license": "Public domain",
+        "source": "https://commons.wikimedia.org/wiki/File:Willem_van_de_Velde_(II)_-_Small_English_Ship_Dismasted_in_a_Gale_-_WGA24535.jpg"
+      },
+      {
+        "file": "assets/ships/barca-costera-2.jpg",
+        "title": "Chasse marée naviguant au plus près.jpg (coastal lugger, engraving published 1826; resized). Later than the hull's 1586: shown as a type, not as a period view.",
+        "author": "Jean-Jérôme Baugean (1764 - 1819)",
+        "license": "Public domain",
+        "source": "https://commons.wikimedia.org/wiki/File:Chasse_mar%C3%A9e_naviguant_au_plus_pr%C3%A8s.jpg"
+      }
+    ]
+  },
+  "pinaza": {
+    "file": "assets/ships/pinaza.jpg",
+    "title": "Black Pinnace.jpg",
+    "author": "Thomas Lant, 1587",
+    "license": "Public domain",
+    "source": "https://commons.wikimedia.org/wiki/File:Black_Pinnace.jpg"
+  },
+  "bark-armado": {
+    "file": "assets/ships/bark-armado.jpg",
+    "title": "Richard Chancellor in Edward Bonaventure.JPG",
+    "author": "Unknown (English, 16th century)",
+    "license": "Public domain",
+    "source": "https://commons.wikimedia.org/wiki/File:Richard_Chancellor_in_Edward_Bonaventure.JPG"
+  }
+}
