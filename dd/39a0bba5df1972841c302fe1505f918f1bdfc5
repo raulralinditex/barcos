@@ -1,0 +1,44 @@
+src/ui/sea.js
+  s_c6ded83af037ef::t_c9ef63d1ffc86f 1549-1551
+  s_18534e10edc115::t_6bd5a3c34c0383 45,64,194,1557-1584,2209-2210,2271-2275,2284
+scripts/smoke-command-handover.mjs
+  s_18534e10edc115::t_337a3407424994 90-116,119
+  s_18534e10edc115::t_83e73f154bbbcd 1-63,65-88,117-118,120-125
+  s_18534e10edc115::t_9505259281a9b5 64,89
+src/i18n/es.js
+  s_18534e10edc115::t_de75e9fb7538ca 192
+test/squadron.test.js
+  s_18534e10edc115::t_69df60fb5fa94a 16,191-221
+  s_18534e10edc115::t_76ed61114b04b1 222
+src/i18n/en.js
+  s_18534e10edc115::t_c09073018f619d 195
+odd/tasks/catalogo-editable.md
+  s_18534e10edc115::t_35f4d1de3020cf 57,93
+  s_18534e10edc115::t_9c1543cf531cd8 94
+src/model/squadron.js
+  s_18534e10edc115::t_c41569c61c0f2e 69-77
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.6",
+  "base_commit_sha": "dd39a0bba5df1972841c302fe1505f918f1bdfc5",
+  "prompts": {},
+  "sessions": {
+    "s_18534e10edc115": {
+      "agent_id": {
+        "tool": "pi",
+        "id": "01a1db80-f7ea-72b6-b8fe-400a08e60cc1",
+        "model": "gpt-6.1-terra"
+      },
+      "human_author": "Raul Ripoll <raulral@ext.inditex.com>"
+    },
+    "s_c6ded83af037ef": {
+      "agent_id": {
+        "tool": "pi",
+        "id": "01a1daee-b1ed-7761-bcc5-aec60ce861d8",
+        "model": "deepseek-v4.1-flash_high"
+      },
+      "human_author": "Raul Ripoll <raulral@ext.inditex.com>"
+    }
+  }
+}
