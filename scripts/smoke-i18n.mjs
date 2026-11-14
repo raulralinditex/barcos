@@ -77,7 +77,7 @@ const en = {
   url: esPage.url(),
 };
 check(en.brand === "Shipyard", `English brand should be Shipyard, got ${en.brand}`);
-check(en.launch === "Launch the ship", `English launch button, got ${en.launch}`);
+check(en.launch === "Add to fleet", `English launch button, got ${en.launch}`);
 // Compare the whole list: some hulls keep the same name in both languages
 // (Patache, Jacht, Zabra), but the class names must move.
 check(
