@@ -1,0 +1,71 @@
+test/duel-panel.test.js
+  s_c6ded83af037ef::t_86bb7d2cf8530a 128-142
+  s_f06c10fdae734f::t_f04b4aa4c657bb 1-127,143-167
+src/model/sea-hud.js
+  s_c6ded83af037ef::t_034a725cbbda48 82
+  s_f06c10fdae734f::t_a8283b6915972f 2,8-13,17-26,28-31,34
+  s_f06c10fdae734f::t_7f1d05c1d1eab8 33
+  s_da4f60aa90c620::t_1519b6bbad522d 49-68
+  s_c6ded83af037ef::t_d4cdf9a474b870 69-81,83
+  s_273470a569a5b8::t_538f29ed36aa08 1,3-7,14-16,27,32,35-48
+src/ui/sea.js
+  s_c6ded83af037ef::t_8764fe4cb602cb 68,968-974
+  s_c6ded83af037ef::t_d776ad2bd837bc 895-896,2026-2031
+  s_c6ded83af037ef::t_fbeb43df1699ca 975-976,2032
+src/model/duel-panel.js
+  s_f06c10fdae734f::t_b774d4f0935bb7 23-26,38-42,50-52,64-66
+  s_c6ded83af037ef::t_3f656beadbfa1b 77-87,89-90
+  s_f06c10fdae734f::t_5aa1b27a339f00 1-22,27-37,43-49,53-63,67-76,88,91-101
+sea.html
+  s_fbb00885ed79f8::t_d0219da3d4c9be 69
+  s_c6ded83af037ef::t_18b9d9c9002eaf 20-24
+  s_f06c10fdae734f::t_e7bacbc890ed6c 28-32
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.6",
+  "base_commit_sha": "8742e89ed0eac1c59ce791eb9581a86d37fcc514",
+  "prompts": {},
+  "sessions": {
+    "s_273470a569a5b8": {
+      "agent_id": {
+        "tool": "pi",
+        "id": "01a1d098-627b-7272-80a7-a39aba728357",
+        "model": "claude-sonnet-5.5"
+      },
+      "human_author": "Raul Ripoll <raulral@ext.inditex.com>"
+    },
+    "s_c6ded83af037ef": {
+      "agent_id": {
+        "tool": "pi",
+        "id": "01a1daee-b1ed-7761-bcc5-aec60ce861d8",
+        "model": "deepseek-v4.1-flash_high"
+      },
+      "human_author": "Raul Ripoll <raulral@ext.inditex.com>"
+    },
+    "s_da4f60aa90c620": {
+      "agent_id": {
+        "tool": "pi",
+        "id": "01a1d4b0-cdfc-7736-b408-a2614d2e15dc",
+        "model": "deepseek-v4.1-flash"
+      },
+      "human_author": "Raul Ripoll <raulral@ext.inditex.com>"
+    },
+    "s_f06c10fdae734f": {
+      "agent_id": {
+        "tool": "pi",
+        "id": "01a1d6ff-202c-776e-a594-1d85cdb28493",
+        "model": "claude-sonnet-5.5"
+      },
+      "human_author": "Raul Ripoll <raulral@ext.inditex.com>"
+    },
+    "s_fbb00885ed79f8": {
+      "agent_id": {
+        "tool": "pi",
+        "id": "01a1ccee-391a-73a4-b55a-66013b3f51e8",
+        "model": "claude-sonnet-5.5"
+      },
+      "human_author": "Raul Ripoll <raulral@ext.inditex.com>"
+    }
+  }
+}
