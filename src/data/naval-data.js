@@ -37,16 +37,25 @@ export const CONVENTIONS = {
   waterDensity: 997,
 };
 
+/** Stable ASCII country ids. The game default is England (S26). */
+export const COUNTRIES = ["inglaterra", "espana", "portugal", "paises-bajos"];
+export const DEFAULT_COUNTRY = "inglaterra";
+
 /**
  * Hulls. `arqueo` is the historical range from 01_Buques; `displacementKg` and
  * `lightMassKg` are derived from it with CONVENTIONS. `draftRefM` is either
  * transcribed from 04_Calados (draftSource "verified") or interpolated
  * (draftSource "derived") because the workbook explicitly refuses to infer drafts
  * for those types.
+ *
+ * `countries` (S27) is the list of country ids that may buy the hull. The free-text
+ * `country` stays untouched for display; the two composite values resolve as
+ * Nápoles -> Spain and "Portugal / Felipe II" -> Spain and Portugal.
  */
 export const HULLS = [
   {
     id: "patache",
+    countries: ["espana"],
     name: "Patache",
     type: "Patache de enlace",
     country: "España",
@@ -64,6 +73,7 @@ export const HULLS = [
   },
   {
     id: "carabela-latina",
+    countries: ["portugal"],
     name: "Carabela latina",
     type: "Carabela de dos y tres mástiles",
     country: "Portugal",
@@ -82,6 +92,7 @@ export const HULLS = [
   },
   {
     id: "jacht",
+    countries: ["paises-bajos"],
     name: "Jacht",
     type: "Pequeña nave exploradora",
     country: "Países Bajos",
@@ -100,6 +111,7 @@ export const HULLS = [
   },
   {
     id: "zabra",
+    countries: ["espana"],
     name: "Zabra",
     type: "Zabra o galeoncete",
     country: "España",
@@ -117,6 +129,7 @@ export const HULLS = [
   },
   {
     id: "galeon-pequeno",
+    countries: ["inglaterra"],
     name: "Galeón pequeño",
     type: "Galeón corsario",
     country: "Inglaterra",
@@ -135,6 +148,7 @@ export const HULLS = [
   },
   {
     id: "fluyt",
+    countries: ["paises-bajos"],
     name: "Fluyt",
     type: "Mercante holandés",
     country: "Países Bajos",
@@ -152,6 +166,7 @@ export const HULLS = [
   },
   {
     id: "nao-armada",
+    countries: ["espana"],
     name: "Nao mercante armada",
     type: "Transporte armado",
     country: "España",
@@ -169,6 +184,7 @@ export const HULLS = [
   },
   {
     id: "galeon-guerra",
+    countries: ["inglaterra"],
     name: "Galeón de guerra",
     type: "Galeón de escuadra",
     country: "Inglaterra",
@@ -186,6 +202,7 @@ export const HULLS = [
   },
   {
     id: "gran-mercante",
+    countries: ["paises-bajos"],
     name: "Gran mercante",
     type: "Mercante oceánico",
     country: "Países Bajos",
@@ -204,6 +221,7 @@ export const HULLS = [
   },
   {
     id: "galeaza",
+    countries: ["espana"],
     name: "Galeaza",
     type: "Galera artillada",
     country: "Nápoles / Felipe II",
@@ -221,6 +239,7 @@ export const HULLS = [
   },
   {
     id: "gran-galeon",
+    countries: ["espana", "portugal"],
     name: "Gran galeón",
     type: "Galeón de mando",
     country: "Portugal / Felipe II",
@@ -238,6 +257,7 @@ export const HULLS = [
   },
   {
     id: "gran-buque-real",
+    countries: ["inglaterra"],
     name: "Gran buque real",
     type: "Buque insignia",
     country: "Inglaterra",
@@ -252,6 +272,61 @@ export const HULLS = [
     maxPiecesPerSide: 26,
     crewMin: 150,
     priceGold: 14000,
+  },
+  /* ------------------------------------------------- S28: English small hulls */
+  {
+    id: "barca-costera",
+    name: "Barca costera",
+    type: "Barca pequeña de cabotaje",
+    country: "Inglaterra",
+    countries: ["inglaterra"],
+    date: "1586",
+    arqueo: [14, 40],
+    provenance: "BWAS-1603 / convención",
+    note: "El Swallow, barca pequeña de 14 t con dos falconetes y dos giratorias, apresada en 1586; eslora, calado y precio son convención del juego.",
+    lengthM: 12,
+    beamM: 4,
+    draftRefM: 1.6,
+    draftSource: "derived",
+    maxPiecesPerSide: 4,
+    crewMin: 6,
+    priceGold: 320,
+  },
+  {
+    id: "pinaza",
+    name: "Pinaza",
+    type: "Pinaza pequeña",
+    country: "Inglaterra",
+    countries: ["inglaterra"],
+    date: "Hacia 1603",
+    arqueo: [50, 50],
+    provenance: "BWAS-1603 / convención",
+    note: "Quilla de 50 pies (15,24 m), manga de 13-14 pies y puntal de 6 pies en el Sun y el Spy; tripulación de 35 a 40 y 5-9 piezas. Precio y calado, convención del juego.",
+    lengthM: 17,
+    beamM: 4.2,
+    draftRefM: 1.83,
+    draftSource: "derived",
+    maxPiecesPerSide: 5,
+    crewMin: 14,
+    priceGold: 620,
+  },
+  {
+    id: "bark-armado",
+    name: "Bark mercante armado",
+    type: "Bark mercante artillado",
+    country: "Inglaterra",
+    countries: ["inglaterra"],
+    date: "1585",
+    arqueo: [100, 200],
+    provenance: "Friel / convención",
+    note: "El Bark Hawkyns (1585) era de 150 t y 100 t era el mínimo oficial para que un mercante pudiera combatir; eslora, calado y precio son convención del juego.",
+    lengthM: 22,
+    beamM: 6.5,
+    draftRefM: 2.5,
+    draftSource: "derived",
+    maxPiecesPerSide: 9,
+    crewMin: 12,
+    priceGold: 1150,
   },
 ].map((hull) => {
   const arqueoMid = (hull.arqueo[0] + hull.arqueo[1]) / 2;
@@ -274,10 +349,16 @@ export const HULLS = [
  * the transcribed archaeological pieces (culebrina 2750 kg, 1340 kg, 900 kg) and
  * scales by shot mass. Reload times are game conventions anchored on the workbook's
  * "verso de cámaras = 30 s" and the terrestrial 240-360 s figure.
+ *
+ * `countries` (S29) lists the navies that used the piece. Naval ordnance of the
+ * period was largely international, so the map separates little between England,
+ * Spain and Portugal; what it does separate is the minion (English and Dutch only)
+ * and the doubtful Dutch rows for the sacre and the 60-pounder.
  */
 export const PIECES = [
   {
     id: "canon-60",
+    countries: ["inglaterra", "espana", "portugal"],
     name: "Cañón de 60 libras",
     family: "cañón",
     shotKg: 27.2,
@@ -290,6 +371,7 @@ export const PIECES = [
   },
   {
     id: "canon-40",
+    countries: ["inglaterra", "espana", "portugal", "paises-bajos"],
     name: "Cañón de 40 libras",
     family: "cañón",
     shotKg: 18.1,
@@ -302,6 +384,7 @@ export const PIECES = [
   },
   {
     id: "medio-canon-32",
+    countries: ["inglaterra", "espana", "portugal", "paises-bajos"],
     name: "Medio cañón de 32 libras",
     family: "medio cañón",
     shotKg: 14.5,
@@ -314,6 +397,7 @@ export const PIECES = [
   },
   {
     id: "culebrina-18",
+    countries: ["inglaterra", "espana", "portugal", "paises-bajos"],
     name: "Culebrina de 18 libras",
     family: "culebrina",
     shotKg: 8.2,
@@ -326,6 +410,7 @@ export const PIECES = [
   },
   {
     id: "media-culebrina-9",
+    countries: ["inglaterra", "espana", "portugal", "paises-bajos"],
     name: "Media culebrina de 9 libras",
     family: "media culebrina",
     shotKg: 4.1,
@@ -338,6 +423,7 @@ export const PIECES = [
   },
   {
     id: "sacre",
+    countries: ["inglaterra", "espana", "portugal"],
     name: "Sacre",
     family: "sacre",
     shotKg: 2.7,
@@ -350,6 +436,7 @@ export const PIECES = [
   },
   {
     id: "minion",
+    countries: ["inglaterra", "paises-bajos"],
     name: "Minion de 4 libras",
     family: "minion",
     shotKg: 1.8,
@@ -362,6 +449,7 @@ export const PIECES = [
   },
   {
     id: "falcon",
+    countries: ["inglaterra", "espana", "portugal", "paises-bajos"],
     name: "Falcón",
     family: "falcón",
     shotKg: 1.25,
@@ -374,6 +462,7 @@ export const PIECES = [
   },
   {
     id: "falconete",
+    countries: ["inglaterra", "espana", "portugal", "paises-bajos"],
     name: "Falconete",
     family: "falconete",
     shotKg: 0.62,
@@ -386,6 +475,7 @@ export const PIECES = [
   },
   {
     id: "pedrero",
+    countries: ["inglaterra", "espana", "portugal", "paises-bajos"],
     name: "Pedrero",
     family: "pedrero",
     shotKg: 5.5,
@@ -399,6 +489,7 @@ export const PIECES = [
   },
   {
     id: "verso",
+    countries: ["inglaterra", "espana", "portugal", "paises-bajos"],
     name: "Verso de hierro (giratoria)",
     family: "verso",
     shotKg: 0.5,
@@ -541,6 +632,13 @@ export const ZONES = [
 ];
 
 export const STARTING_GOLD = 12000;
+
+/**
+ * The starting purse the shipyard actually reads (S77). `STARTING_GOLD` stays the shipped
+ * constant, because the balance tests and the "flagship is out of reach" rule are written
+ * against it; this is the live copy the settings screen is allowed to change.
+ */
+export const START = { gold: STARTING_GOLD };
 
 export const byId = (list, id) => list.find((item) => item.id === id) ?? null;
 

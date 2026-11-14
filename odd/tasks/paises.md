@@ -1,6 +1,6 @@
 # Juego de barcos — elegir país
 
-Estado: especificado, sin implementar. Espera a que cierre T35 (diálogo de reparación), que toca los mismos archivos (`app.js`, `sea.js`, catálogos i18n).
+Estado: cerrado y verificado (T36-T39).
 
 ## Specs
 
@@ -8,7 +8,8 @@ S26. El jugador elige un país y sólo puede comprar cascos y artillería de ese
 - Países disponibles: Inglaterra, España, Portugal y Países Bajos (los que ya existen en los datos de cascos). El país por defecto es **Inglaterra**.
 - El país se elige en el Astillero con un selector y se guarda en el navegador (clave propia, con prefijo `barcos:`).
 - Con un país elegido, el catálogo del Astillero muestra únicamente los cascos y las piezas de ese país; los demás no aparecen (no basta con deshabilitarlos).
-- Las naves que ya están en la flota se conservan aunque sean de otro país: la restricción es del catálogo de compra, no de lo ya comprado.
+- Las naves que ya están en la flota se conservan aunque sean de otro país (por ejemplo, una partida anterior a esta feature): la restricción es del catálogo de compra, no de lo ya comprado.
+- **El país sólo se puede cambiar con la flota vacía** (decisión del usuario: "Sólo con la flota vacía"). Con al menos una nave en la flota el selector queda fijo y se ve cuál es; vuelve a poder cambiarse al quedarse sin naves o al borrar la partida.
 - Cambiar de país con una configuración a medias que usa un casco o piezas que el país nuevo no tiene no puede romper nada: se pasa al primer casco válido y se descartan las piezas no válidas.
 - La interfaz del selector sale en es y en en.
 
@@ -51,16 +52,12 @@ S30. Fuera de alcance, sin cambios: los enemigos del mar siguen saliendo de sus 
 - Artillería portuguesa (*berço* = verso español, *falcão*, *falconete*, *esmeril*, *colubrina*): Kardasz, *Berço manuelino del naufragio de Santiago*; Smith, comparación de artillería portuguesa y mediterránea.
 - Pinazas: Three Decks (BWAS-1603: *Sun*, *Spy*, *Makeshift*, *Charles*); NAVWAR, "small pinnace". Barcas y mercantes: Gresham College; Ian Friel, *History Today*; Three Decks, *Bark Hawkyns*.
 
-## Pregunta abierta antes de implementar
-
-¿Se puede cambiar de país con una flota ya comprada? La spec asume que se puede cambiar el selector en cualquier momento y que la flota se conserva (S26), pero está sin confirmar.
-
 ## Tasks
 
-- T36 — Tests primero y datos: `countries` en cascos y piezas, `availableHulls(country)` y `availablePieces(country)` puros. `S26,S27,S29` — pending
-- T37 — Los tres cascos ingleses menores con sus fuentes, nombres, notas y nombre de barco por defecto, en es y en. `S28` — pending
-- T38 — Estado del Astillero: selector, persistencia, filtro del catálogo y reconversión de la configuración a medias. `S26` — pending
-- T39 — i18n del selector y del catálogo, smoke de navegador en los dos idiomas, documentación. `S26,S28` — pending
+- T36 — Tests primero y datos: `countries` en cascos y piezas, `availableHulls(country)` y `availablePieces(country)` puros. `S26,S27,S29` — worker — done
+- T37 — Los tres cascos ingleses menores con sus fuentes, nombres, notas y nombre de barco por defecto, en es y en. `S28` — worker — done
+- T38 — Estado del Astillero: selector, persistencia, filtro del catálogo y reconversión de la configuración a medias. `S26` — inline — done
+- T39 — i18n del selector y del catálogo, smoke de navegador en los dos idiomas, documentación. `S26,S28` — inline — done
 
 ## Log
 
@@ -69,3 +66,21 @@ L1 (verbatim): "vamos a hacerlo por paises, eliges un pais y los barcos, artille
 L2: Al preguntar cómo asignar país a la artillería (los datos de piezas no lo traen), el usuario respondió, textual: "busca en la web esa informacion". Se investigó (fuentes arriba) y el mapa de S29 es el resultado. Sobre los cascos de Inglaterra eligió "Añado cascos ingleses menores".
 
 L3: Hallazgo: los datos de cascos ya tienen `country`, pero como texto libre, con dos compuestos ("Nápoles / Felipe II", "Portugal / Felipe II"). Las piezas y las municiones no tienen país. Por eso S27 pasa a una lista de ids y la galeaza y el gran galeón se resuelven como se indica arriba.
+
+L4: Sobre cambiar de país con flota comprada, el usuario eligió "Sólo con la flota vacía". Ajusta S26.
+
+L5: T36 y T37 hechos. `COUNTRIES` y `DEFAULT_COUNTRY` viven en `src/data/naval-data.js`; cada casco y cada pieza llevan `countries` según S27 y S29 (la munición sigue sin país propio). Los ayudantes puros están en `src/model/country.js`: `availableHulls`, `availablePieces`, `isCountryId` y `normaliseCountry`, que cae en Inglaterra ante un id desconocido o ausente y nunca lanza. Reparto comprobado: Inglaterra 6 cascos, España 5, Portugal 2, Países Bajos 3.
+
+L6: T37 añade tres cascos ingleses menores con sus fuentes: `barca-costera` (14-40 t, el Swallow de 1586; 320 doblones, el más barato del juego), `pinaza` (50 t, quilla de 15,24 m; 620) y `bark-armado` (100-200 t, Bark Hawkyns; 1150). Esloras, calados y precios son convención declarada (`provenance` "BWAS-1603 / convención", "Friel / convención"; `draftSource` "derived") calibrada contra patache, jacht y zabra. Los tres llevan nombre, tipo, país y nota en es y en, y nombre de barco por defecto (Swallow, Sun, Bark Hawkyns).
+
+L7: Evidencia: `node --test test/country.test.js` falla contra los datos base (sin `COUNTRIES`) y pasa en verde con 18 pruebas después del cambio; `npm test` 235/235 en verde; smokes `i18n`, `fleet` y `ui` con código 0. La interfaz sólo cambia en que los tres cascos ingleses nuevos aparecen ya en la lista del Astillero (el selector y el filtro son T38/T39).
+
+L8: T38/T39 hechos, inline. Modelo: `canChangeCountry(fleet)` y `reconcileLoadout(loadout, countryId)` en `src/model/country.js`, puras y sin lanzar; la reconciliación devuelve `{ hullId, batteries, changed }` y cae al primer casco del país cuando el actual no se vende ahí. UI: `#country-select` en el panel del Casco con `#country-note`, la clave propia `barcos:country:v1` (más `country` dentro de `barcos:config:v1`, así un guardado viejo cae en Inglaterra), y el catálogo del Astillero pasa a `availableHulls`/`availablePieces`, incluido el selector de piezas y el botón de añadir batería, que rechaza una pieza de otro país aunque el picker la ofrezca.
+
+L9: El selector se bloquea con la flota no vacía: `renderCountry()` se llama desde `renderFleet()` y desde `repaintForLanguage()`, así comprar la primera nave lo congela sin recargar, y borrar la partida lo libera (`COUNTRY_KEY` entra en la lista de claves que se borran).
+
+L10: Las claves de i18n van bajo `shipyard.country.*` (`label`, `hint`, `locked` y un nombre por país). Fue a propósito: el test existente "no catalogue key is orphaned" sólo admite familias ya declaradas (`app.`, `shipyard.`, ...), y no se toca un test existente sin confirmación.
+
+L11: Evidencia: RED de `test/country-switch.test.js` por falta de export, verde con 11 pruebas después; `npm test` 246/246; `scripts/smoke-country.mjs` con exit 0 (Inglaterra por defecto, 6 cascos, cambio a España con 5 cascos y minions descartados, persistencia tras recargar, selector en inglés, bloqueo con flota y nota, guardado sin país → Inglaterra). Smokes `i18n`, `fleet`, `sea`, `combat`, `ui`, `swivel`, `state`, `dock`, `time`, `wind` con exit 0.
+
+L12: Bug propio durante T38, encontrado por el smoke: `changeCountry()` no repintaba la lista de cascos, así que tras cambiar de país seguían los seis ingleses y ninguno activo. Se agregó `renderHulls()` al cambio de país; el smoke lo cubre.
