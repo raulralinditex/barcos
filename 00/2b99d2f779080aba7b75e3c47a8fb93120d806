@@ -1,0 +1,109 @@
+scripts/smoke-auto-repair.mjs
+  s_1a64bf95dff461::t_733fe38e77f7f1 1-17,20-25,27-29,31,115-117
+  s_9d629f83eb0853::t_fb0ce5680c0544 32-45,69-78,80-83,104-112,114
+  s_1a64bf95dff461::t_90e2de4c6e5fe0 46-52,55-63,65-67,79,84-87,90-95,97-99,101-103,113
+  s_2c8dc4aa4f8da8::t_5c4aa596444fe2 18-19,26,30,53-54,64,68,88-89,96,100
+scripts/smoke-escort-dock.mjs
+  s_273470a569a5b8::t_e72cd6ac38aba0 1-3,5-64,85-107
+  s_9d629f83eb0853::t_324c37a88d3144 4,65-84
+scripts/smoke-shipyard-buttons.mjs
+  s_0f5026df9808a9::t_7ccc286231fee3 1-36,40-44,46-65,70,72-83,125-135
+  s_9d629f83eb0853::t_3c41cd8fc3a220 37-39,101
+  s_0f5026df9808a9::t_c8ff80409be4c8 45,71
+  s_0f5026df9808a9::t_20cc7d9357081c 66-69,84-100,102-124
+odd/tasks/pendientes.md
+  s_da4f60aa90c620::t_5c9f7db656a54a 62
+  s_273470a569a5b8::t_c4b123bd71e12e 11-12,28,30
+  s_da4f60aa90c620::t_2894d99a3075ae 19
+  s_273470a569a5b8::t_38ee69bdd018b3 3-10,24,51-53,57
+  s_da4f60aa90c620::t_78a6f563a96bf8 37,40-41
+  s_273470a569a5b8::t_829895fdac2f7a 13-14,32,34
+  s_da4f60aa90c620::t_0e74f2d89d1cf5 38-39,42
+  s_f06c10fdae734f::t_aa3f50908c9aad 20
+  s_da4f60aa90c620::t_4508e4225ac550 49
+  s_273470a569a5b8::t_e83978a5d0bedd 17,47-48,50
+  s_273470a569a5b8::t_12344e5917ad66 15-16,18,26,36,43-46
+  s_f06c10fdae734f::t_3d8080740cff43 35
+scripts/smoke-ui.mjs
+  s_0f5026df9808a9::t_bd146ab8243ec0 55,68
+scripts/smoke-auto-repair-reentry.mjs
+  s_273470a569a5b8::t_f3d5991bc0f39d 1-6,10-54,56-58,60-72,81-102,104-110,112,117-119,131,133-136
+  s_2c8dc4aa4f8da8::t_7034a5e0ba95bf 55,73-80,115-116,122
+  s_9d629f83eb0853::t_249939dfd7ff7c 7-9,59,103,111,113-114,120-121,123-130,132,137
+odd/tasks/catalogo-editable.md
+  s_c6ded83af037ef::t_3b7565419da9d3 48-61
+  s_c6ded83af037ef::t_a4a71390abd9c3 100-114
+  s_c6ded83af037ef::t_80167e06905eea 62
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.6",
+  "base_commit_sha": "002b99d2f779080aba7b75e3c47a8fb93120d806",
+  "prompts": {},
+  "sessions": {
+    "s_0f5026df9808a9": {
+      "agent_id": {
+        "tool": "pi",
+        "id": "01a1d0ec-bbab-72bd-a221-e93abbdb895d",
+        "model": "gpt-6.1-terra"
+      },
+      "human_author": "Raul Ripoll <raulral@ext.inditex.com>"
+    },
+    "s_1a64bf95dff461": {
+      "agent_id": {
+        "tool": "pi",
+        "id": "01a1d18e-76ac-7141-bcf5-3f087966ee70",
+        "model": "gpt-6.1-terra"
+      },
+      "human_author": "Raul Ripoll <raulral@ext.inditex.com>"
+    },
+    "s_273470a569a5b8": {
+      "agent_id": {
+        "tool": "pi",
+        "id": "01a1d098-627b-7272-80a7-a39aba728357",
+        "model": "claude-sonnet-5.5"
+      },
+      "human_author": "Raul Ripoll <raulral@ext.inditex.com>"
+    },
+    "s_2c8dc4aa4f8da8": {
+      "agent_id": {
+        "tool": "pi",
+        "id": "01a1d1ec-b773-727c-bfc1-218cab6bd280",
+        "model": "gpt-6.1-terra"
+      },
+      "human_author": "Raul Ripoll <raulral@ext.inditex.com>"
+    },
+    "s_9d629f83eb0853": {
+      "agent_id": {
+        "tool": "pi",
+        "id": "01a1dba9-8af8-758f-b745-53f943346327",
+        "model": "gpt-6.1-terra"
+      },
+      "human_author": "Raul Ripoll <raulral@ext.inditex.com>"
+    },
+    "s_c6ded83af037ef": {
+      "agent_id": {
+        "tool": "pi",
+        "id": "01a1daee-b1ed-7761-bcc5-aec60ce861d8",
+        "model": "deepseek-v4.1-flash_high"
+      },
+      "human_author": "Raul Ripoll <raulral@ext.inditex.com>"
+    },
+    "s_da4f60aa90c620": {
+      "agent_id": {
+        "tool": "pi",
+        "id": "01a1d4b0-cdfc-7736-b408-a2614d2e15dc",
+        "model": "deepseek-v4.1-flash"
+      },
+      "human_author": "Raul Ripoll <raulral@ext.inditex.com>"
+    },
+    "s_f06c10fdae734f": {
+      "agent_id": {
+        "tool": "pi",
+        "id": "01a1d6ff-202c-776e-a594-1d85cdb28493",
+        "model": "claude-sonnet-5.5"
+      },
+      "human_author": "Raul Ripoll <raulral@ext.inditex.com>"
+    }
+  }
+}
