@@ -21,9 +21,9 @@ Estado: las peticiones anteriores están cerradas. Lo que sigue abierto es lo de
 
 ## Pendientes abiertos
 
-### El árbol de trabajo está sin commitear
+### El astillero no se ve en el minimapa con su estado
 
-Desde el commit `3da5b9d` (tecla T ×2) hay **85 entradas** sin commitear en la rama `feat/t7-combate-costados` según `git status`: país, configuración, bolsa no negativa, viento ±60 %, reparación proporcional, parcial y automática, flota en formación, imágenes por casco, ciclo ×1-×8, barritas y minimapa de las escoltas, los botones del Astillero, el precio topado, el disparo automático, el radio de giro por tonelaje, la reforma de naves, el ancla que abre el Astillero y el tramo de daño. Hay que partirlo en commits por unidad de trabajo (tests y docs con cada uno, unas 400 líneas por slice). El merge y el PR los hace el usuario.
+Único punto abierto de S74 (`escala-y-configuracion.md`, L33 punto a). El astillero pelea de verdad —`updateFortCombat`, `fortFire`, `damageFort`, guardado y restauración de su condición, el puerto cerrado bloqueando reparar y zarpar, y `smoke-fort-combat.mjs` midiendo el asedio—, pero en el minimapa sólo se ve el aro del puerto. Si se quiere que aparezca como objetivo con su barra de guarnición, es trabajo de `drawMinimap` en `src/ui/sea.js`.
 
 ### La ficha de estadísticas de la nave desapareció
 
@@ -59,4 +59,5 @@ La sincronización de las escoltas con el mundo vive en `src/ui/sea.js` y sólo 
 - Los smokes necesitan ese servidor y `npx playwright install chromium` la primera vez.
 - `git` pasa por un wrapper que falla con 401: usar `/usr/bin/git`.
 - Regla global vigente: no editar tests existentes sin confirmación explícita del usuario.
-- Verificación completa: `npm test` (401 tests) y los 30 smokes `scripts/smoke-*.mjs`, uno por vez (tardan de 2 s a 36 s cada uno). En macOS no existe el comando `timeout`: no usarlo como prefijo.
+- Verificación completa: `npm test` (**614 tests**) y los **45** smokes `scripts/smoke-*.mjs`, uno por vez (tardan de 2 s a 36 s cada uno). En macOS no existe el comando `timeout`: no usarlo como prefijo.
+- El árbol de trabajo está limpio: todo lo cerrado hasta S90 está commiteado. Los smokes de reparación y astillero corren verdes en serie.

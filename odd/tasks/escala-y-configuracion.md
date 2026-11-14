@@ -130,11 +130,11 @@ S74. El astillero es un combatiente estático. Pedido (verbatim, en L30).
 
 ## Tasks (S74)
 
-- T87 — Modelo puro `src/model/fort.js`: creación del combatiente estático, daño, rendición, captura y crecimiento por victorias + tests (RED primero). `S74` — inline — pendiente
-- T88 — Configuración: casco y defensa por defecto del astillero, grupo propio, i18n. `S74` — inline — pendiente
-- T89 — Mar: los enemigos del abismo atacan el astillero, y el puerto cerrado bloquea reparar y zarpar. `S74` — inline — pendiente
-- T90 — Pantalla del Astillero: sección con estado y crecimiento. `S74` — inline — pendiente
-- T91 — Smoke de navegador y regresión completa. `S74` — inline — pendiente
+- T87 — Modelo puro `src/model/fort.js`: creación del combatiente estático, daño, rendición, captura y crecimiento por victorias + tests (RED primero). `S74` — inline — hecho (002b99d)
+- T88 — Configuración: casco y defensa por defecto del astillero, grupo propio, i18n. `S74` — inline — hecho (002b99d)
+- T89 — Mar: los enemigos del abismo atacan el astillero, y el puerto cerrado bloquea reparar y zarpar. `S74` — inline — hecho (002b99d)
+- T90 — Pantalla del Astillero: sección con estado y crecimiento. `S74` — inline — hecho (002b99d)
+- T91 — Smoke de navegador y regresión completa. `S74` — inline — hecho (002b99d, `smoke-fort.mjs` y `smoke-fort-combat.mjs`)
 
 L32: Estado real de S74 al cerrar esta tanda. Hecho y verificado: `src/model/fort.js` con 24 tests; los cinco campos de configuración del astillero con i18n; el astillero cableado en el mar (`updateFortCombat`, `fortFire`, `damageFort`, victorias que hacen crecer la batería, guardado y restauración de su condición y su estado); el bloqueo de reparar en puerto con el astillero tomado; y el bloqueo de "Zarpar" en la pantalla del Astillero, con su smoke (`scripts/smoke-fort.mjs`, RED observado al quitar el bloqueo). `npm test` 569/569.
 

@@ -59,7 +59,7 @@ S84. **La pantalla sigue diciendo la verdad.** Los smokes y la documentación se
 - T103 — `scripts/smoke-dock.mjs` reescrito a la regla de S86. `S86` — inline — hecho (829efec)
 - T104 — Disparo automático como campo de Configuración y "Zarpar" al pie; `smoke-shipyard-layout` y `smoke-autofire` con RED. `S88` — inline — hecho (6905b12)
 - T105 — Aplicar el aparejo al cálculo de velocidad en `stepHull`; test `S89` y `smoke-rigging-speed` con RED. `S89` — inline — hecho (a8c298b)
-- T106 — Reescribir los 6 smokes que fijaban S49/S51 y la disposición vieja del panel de flota. `S86,S88` — worker — en curso
+- T106 — Reescribir los 6 smokes que fijaban S49/S51 y la disposición vieja del panel de flota. `S86,S88` — worker — hecho (002b99d, 829efec, 95d1af6)
 
 ## Log
 
