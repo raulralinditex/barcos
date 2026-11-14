@@ -1,0 +1,22 @@
+odd/tasks/viento.md
+  s_fbb00885ed79f8::t_930546d62ef373 3,10,37-40
+src/model/wind.js
+  s_fbb00885ed79f8::t_9203860fd0c7ea 90,115-127,131-133
+  s_fbb00885ed79f8::t_f90657607e47d8 27,29
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.6",
+  "base_commit_sha": "3dbd8a7e663a5d302b0a7c3bb1991db7f1cdc437",
+  "prompts": {},
+  "sessions": {
+    "s_fbb00885ed79f8": {
+      "agent_id": {
+        "tool": "pi",
+        "id": "01a1ccee-391a-73a4-b55a-66013b3f51e8",
+        "model": "claude-sonnet-5.5"
+      },
+      "human_author": "Raul Ripoll <raulral@ext.inditex.com>"
+    }
+  }
+}
