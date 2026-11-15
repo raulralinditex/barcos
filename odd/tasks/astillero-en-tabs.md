@@ -53,7 +53,7 @@ S104. **Verificación.**
 - T116 — `src/ui/settings-tab.js` + `config.html` redirigido con hash `#configuracion`: ajustes y catálogo dentro del tab, repintado por cambio de idioma compartiendo el traductor de la página (leído a la hora de la llamada). `S101` — inline — hecho, commit `b92e40c`
 - T117 — i18n `es.js`/`en.js`: todos los rótulos de los cuatro tabs y avisos nuevos. `S103` — inline — hecho, commit `6318bf8`
 - T118 — smokes: actualizar los que pintan la pantalla vieja (autorización en S104), smoke nuevo de recorrido de tabs, `npm test` y la serie de smokes en verde. `S104` — inline — hecho, commit `dfe7236`
-- T119 — cierre: `pendientes.md` al día, espejo Engram del documento, log de la ficha con evidencia. `S104` — inline — hecho, commit `8f2c91a` (ver log)
+- T119 — cierre: `pendientes.md` al día, espejo Engram del documento, log de la ficha con evidencia. `S104` — inline — hecho, commit `2bad095`
 
 ## Log
 
