@@ -164,6 +164,175 @@ export function damageFort(fort, damage) {
   return applyDamage(fort, damage);
 }
 
+/**
+ * What the enemy leaves behind when she takes the yard (S93): a garrison of her own men.
+ *
+ * The occupation is a separate pool from the yard's own crew on purpose. The yard struck
+ * *because* her garrison broke, so measuring the counter-attack on that same pool would
+ * start the fight already lost. It is also the number the player has to break: retaking a
+ * fortress is beating the men inside it, not knocking down the walls of your own harbour.
+ */
+export const OCCUPATION = {
+  /**
+   * Men the occupiers leave in her. A garrison of 212 is a fortress's *defence*, not a
+   * force that holds a yard already taken: measured, breaking 212 men with a mid-sized
+   * battery took 475 broadsides, which is not a fight, it is a chore. Sixty men is a
+   * detachment the player can actually beat — measured, about 20 broadsides with a
+   * 20-gun battery — while still being a real fight she can lose.
+   */
+  garrisonPct: 28,
+  /** How much punishment one point of occupying crew takes, at the ship rate. */
+  toughness: 1,
+  /** Rounds each of her guns carries while she is held. An occupation is not resupplied. */
+  shotsPerGun: 8,
+  /**
+   * The garrison the retaking party leaves behind, as a percentage. Retaking her is not a
+   * rebuild (S94): she comes back with her hull as it was, and the men who took her back
+   * stay to hold her. Without a floor she would strike again on the very next status
+   * refresh, because she struck for having a broken garrison in the first place.
+   */
+  recoveredGarrisonPct: 45,
+};
+
+/**
+ * The occupiers' fighting state for one taken yard (S93). Built on demand from the yard
+ * itself, so there is exactly one record of "how strong is the enemy inside her" and it
+ * lives where the rest of her state lives.
+ */
+function occupierState(fort) {
+  if (!fort) return null;
+  if (!fort.occupation) {
+    fort.occupation = {
+      // A full-strength occupation reads 100, whatever size the detachment is.
+      condition: { hull: 100, rigging: 100, crew: 100, morale: 100 },
+      crew: {
+        marino: 0,
+        artillero: FORT.gunners,
+        soldado: Math.max(1, Math.round(FORT.soldiers * (OCCUPATION.garrisonPct / 100))),
+      },
+      initialCrew: Math.max(1, FORT.gunners + Math.round(FORT.soldiers * (OCCUPATION.garrisonPct / 100))),
+      crewDamagePool: 0,
+    };
+  }
+  return fort.occupation;
+}
+
+/**
+ * Hand the yard to the enemy (S93). Called by the sea the moment she strikes, so the
+ * occupiers exist before the player can shoot at them. Idempotent: occupying a yard that
+ * is already held must not heal the men the player has already killed.
+ */
+export function occupyFort(fort) {
+  if (!fort) return fort;
+  if (!fortCaptured(fort) && !fortDestroyed(fort)) return fort;
+  occupierState(fort);
+  return fort;
+}
+
+/** True while the yard is held by the enemy and the player has to take her back (S93). */
+export function fortHeldByEnemy(fort) {
+  if (!fort) return false;
+  return (fortCaptured(fort) || fortDestroyed(fort)) && Boolean(fort.occupation);
+}
+
+/** How much fight the occupiers have left, 0..100. A yard in our hands reads 100. */
+export function fortOccupierCondition(fort) {
+  if (!fortHeldByEnemy(fort)) return 100;
+  const crew = Number(fort.occupation?.condition?.crew);
+  return Number.isFinite(crew) ? crew : 100;
+}
+
+/** True once the occupiers have been broken and the yard is ours again (S93). */
+export function fortRecovered(fort) {
+  if (!fort) return false;
+  return fort.status === "fighting";
+}
+
+/**
+ * Hit the men holding the yard (S93). Their hull is not touched: the player is retaking
+ * her own harbour, not bombarding it, and a fortress shelled into rubble is not recovered.
+ * Once their garrison breaks, the yard changes hands in the same call.
+ */
+export function damageOccupiedFort(fort, damage) {
+  if (!fortHeldByEnemy(fort)) return { fort, casualties: 0 };
+  const state = fort.occupation;
+  const crew = Number(damage?.crew);
+  if (Number.isFinite(crew) && crew > 0) state.crewDamagePool += crew / OCCUPATION.toughness;
+
+  let casualties = 0;
+  while (state.crewDamagePool >= COMBAT.casualtyPoints) {
+    state.crewDamagePool -= COMBAT.casualtyPoints;
+    casualties += 1;
+  }
+  if (casualties > 0) {
+    const alive = state.crew.soldado + state.crew.artillero + state.crew.marino;
+    if (alive <= 0) {
+      state.condition.crew = 0;
+    } else {
+      const take = Math.min(casualties, alive);
+      // The soldiers are the ones who hold a wall: they take the losses first.
+      const fromSoldiers = Math.min(take, state.crew.soldado);
+      state.crew.soldado -= fromSoldiers;
+      state.crew.artillero = Math.max(0, state.crew.artillero - (take - fromSoldiers));
+      state.condition.crew = Math.max(
+        0,
+        Math.round((100 * (state.crew.soldado + state.crew.artillero + state.crew.marino)) / state.initialCrew),
+      );
+    }
+  }
+
+  if (state.condition.crew <= COMBAT.surrenderCrewPct) {
+    // The men who took her are broken and the yard is ours again (S93).
+    fort.status = "fighting";
+    fort.condition.hull = Math.max(1, fort.condition.hull);
+    fort.condition.crew = Math.max(OCCUPATION.recoveredGarrisonPct, fort.condition.crew);
+    fort.crew = { marino: 0, artillero: FORT.gunners, soldado: Math.round(FORT.soldiers * (OCCUPATION.recoveredGarrisonPct / 100)) };
+    fort.initialCrew = Math.max(1, FORT.gunners + FORT.soldiers);
+    fort.crewDamagePool = 0;
+    // Her guns come back with her, reloaded, with the rounds a yard keeps in her magazine.
+    for (const piece of fort.pieces ?? []) {
+      piece.reloadTimer = 0;
+      piece.shotsLeft = FORT.shotsPerGun;
+    }
+    delete fort.occupation;
+  }
+
+  return { fort, casualties };
+}
+
+/**
+ * The occupiers' next broadside (S93). They shoot with the yard's own guns, so the player
+ * who comes to take her back is under the same fire she would face from any fortification.
+ */
+export function occupierReadyGuns(fort, side) {
+  if (!fortHeldByEnemy(fort)) return [];
+  const state = fort.occupation;
+  const available = new Set(crewedPieces(fort.pieces, state.crew.artillero ?? 0));
+  return (fort.pieces ?? []).filter(
+    (p) => available.has(p) && (p.side === side || p.side === "swivel") && p.reloadTimer <= 0 && p.shotsLeft > 0,
+  );
+}
+
+/** One volley from the men holding the yard, at a ship `distanceM` away (S93). */
+export function occupierFire(fort, side, distanceM, rnd) {
+  const guns = occupierReadyGuns(fort, side).filter((p) => {
+    const piece = pieceById(p.pieceId);
+    return piece && piece.rangeM >= distanceM;
+  });
+  const volley = [];
+  if (guns.length === 0) return { fort, volley };
+
+  for (const p of guns) {
+    const piece = pieceById(p.pieceId);
+    p.reloadTimer = piece.reloadS / COMBAT.timeScale;
+    p.shotsLeft -= 1;
+    const x = distanceM / piece.rangeM;
+    const chance = COMBAT.baseAccuracy * (1 - Math.pow(x, 1.6));
+    volley.push({ pieceId: p.pieceId, side, ammoId: p.ammoId, hit: rnd() < chance, distanceM });
+  }
+  return { fort, volley };
+}
+
 /** What a yard is worth to a boarding party: her guns and her stores (S74). */
 export function fortPrize(fort) {
   if (!fort) return 0;

@@ -98,3 +98,46 @@ test("S47: broken inputs give no target instead of throwing", () => {
   assert.equal(targetForSide(undefined, [enemy(1, 0, 200)], "estribor", 600), null);
   assert.equal(targetForSide(ship, [enemy(1, 0, 200)], "estribor", NaN), null);
 });
+
+/* S93 — a shipyard in enemy hands is a target like any other. */
+
+const occupiedFort = (x = 0, y = 300, status = "fighting") => ({
+  id: "fort",
+  type: "fort",
+  x,
+  y,
+  combat: { status },
+});
+
+test("S93: the guns bear on a shipyard the enemy holds", () => {
+  // The yard is not an encounter: she never drifts, the safe zone does not shove her and
+  // she must never become a wreck. She arrives as an extra target instead.
+  const hit = targetForSide(ship, [], "estribor", 600, [occupiedFort()]);
+  assert.equal(hit?.target.id, "fort");
+});
+
+test("S93: a shipyard out of range is not a target", () => {
+  assert.equal(targetForSide(ship, [], "estribor", 600, [occupiedFort(0, 900)]), null);
+});
+
+test("S93: a shipyard on the other beam is not a target", () => {
+  assert.equal(targetForSide(ship, [], "babor", 600, [occupiedFort()]), null);
+});
+
+test("S93: a yard already retaken is not a target", () => {
+  assert.equal(targetForSide(ship, [], "estribor", 600, [occupiedFort(0, 300, "fighting")])?.target.id, "fort");
+  assert.equal(targetForSide(ship, [], "estribor", 600, [occupiedFort(0, 300, "surrendered")]), null);
+});
+
+test("S93: the nearest of the two wins, fort or sail", () => {
+  const near = enemy(9, 0, 120);
+  const hit = targetForSide(ship, [near], "estribor", 600, [occupiedFort(0, 400)]);
+  assert.equal(hit?.target.id, 9, "a sail closer in is still the closer threat");
+  const other = targetForSide(ship, [], "estribor", 600, [occupiedFort(0, 90)]);
+  assert.equal(other?.target.id, "fort");
+});
+
+test("S93: no extra targets is the same as before", () => {
+  const south = enemy(1, 0, 300);
+  assert.equal(targetForSide(ship, [south], "estribor", 600)?.target.id, 1);
+});

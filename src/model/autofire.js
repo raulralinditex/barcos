@@ -33,21 +33,34 @@ export function serialiseAutoFire(value) {
  * and is within `maxRangeM`. A beaten enemy (sunk or surrendered) and anything that is
  * not an enemy are never targets; an enemy that has not been engaged yet is, since the
  * first shot is what engages it. Returns `{ target, distance }` or null.
+ *
+ * `extraTargets` are hostiles that are not encounters (S93): a shipyard in enemy hands is
+ * a fixed target, not a sail. She never drifts, the safe zone must not shove her and she
+ * must never turn into a wreck, so she cannot live in `world.encounters`. She is judged by
+ * the same rules as any other target, closest first.
  */
-export function targetForSide(ship, encounters, side, maxRangeM) {
+export function targetForSide(ship, encounters, side, maxRangeM, extraTargets = []) {
   if (!ship || !Array.isArray(encounters)) return null;
   const range = Number(maxRangeM);
   if (!Number.isFinite(range)) return null;
 
   let best = null;
+  const consider = (candidate) => {
+    if (!candidate) return;
+    if (candidate.combat && candidate.combat.status !== "fighting") return;
+    const distance = Math.hypot(candidate.x - ship.x, candidate.y - ship.y);
+    if (!Number.isFinite(distance) || distance > range) return;
+    if (best && distance >= best.distance) return;
+    if (sideForBearing(ship.heading, bearingTo(ship, candidate)) !== side) return;
+    best = { target: candidate, distance };
+  };
+
   for (const encounter of encounters) {
     if (encounter?.type !== "enemy") continue;
-    if (encounter.combat && encounter.combat.status !== "fighting") continue;
-    const distance = Math.hypot(encounter.x - ship.x, encounter.y - ship.y);
-    if (!Number.isFinite(distance) || distance > range) continue;
-    if (best && distance >= best.distance) continue;
-    if (sideForBearing(ship.heading, bearingTo(ship, encounter)) !== side) continue;
-    best = { target: encounter, distance };
+    consider(encounter);
+  }
+  if (Array.isArray(extraTargets)) {
+    for (const extra of extraTargets) consider(extra);
   }
   return best;
 }
