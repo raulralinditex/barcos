@@ -632,6 +632,50 @@ export const ZONES = [
 ];
 
 /**
+ * The goods of the trade (S113). `baseGold` is what one unit is worth in the water that
+ * produces it; every yard scales it by her zone, so the price the player sees is always
+ * the price of that market and never a constant written here.
+ *
+ * The spread between the coastal and the abyssal market is what makes a voyage pay, and
+ * the voyage is the only thing that does: nothing here produces gold on its own.
+ */
+export const COMMODITIES = [
+  {
+    id: "sal",
+    nameKey: "commodity.sal",
+    /** Kg one unit (a barrel) adds to the hold, and so to the draught. */
+    kgPerUnit: 320,
+    baseGold: 18,
+  },
+  {
+    id: "vino",
+    nameKey: "commodity.vino",
+    kgPerUnit: 280,
+    baseGold: 26,
+  },
+  {
+    id: "tabaco",
+    nameKey: "commodity.tabaco",
+    kgPerUnit: 160,
+    baseGold: 48,
+  },
+  {
+    id: "especias",
+    nameKey: "commodity.especias",
+    kgPerUnit: 90,
+    baseGold: 95,
+  },
+  {
+    id: "plata",
+    nameKey: "commodity.plata",
+    kgPerUnit: 60,
+    baseGold: 180,
+  },
+];
+
+export const commodityById = (id) => byId(COMMODITIES, id);
+
+/**
  * The mooring radius of the home port (S112). A hull inside it is at the yard, which is
  * what opens the shipyard screen (S51); the other yards declare their own.
  */
