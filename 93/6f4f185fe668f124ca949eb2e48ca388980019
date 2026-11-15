@@ -1,0 +1,21 @@
+src/model/commerce.js
+  s_1da4ad31d94a78::t_ff0fdc54bce17a 13,179-276
+src/model/fleet.js
+  s_1da4ad31d94a78::t_27d1111d4de518 2,13-14,148-157
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.6",
+  "base_commit_sha": "936f4f185fe668f124ca949eb2e48ca388980019",
+  "prompts": {},
+  "sessions": {
+    "s_1da4ad31d94a78": {
+      "agent_id": {
+        "tool": "pi",
+        "id": "01a1e010-7dfe-75d2-9eb3-7665a6e6c130",
+        "model": "deepseek-v4.1-flash_high"
+      },
+      "human_author": "Raul Ripoll <raulral@ext.inditex.com>"
+    }
+  }
+}
