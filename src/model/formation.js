@@ -132,21 +132,16 @@ export function stepEscort(escort, station, input = {}, dt = 0) {
   const dy = target.y - ship.y;
   const distance = Math.hypot(dx, dy);
 
-  // On station: hold the heading and coast down, instead of hunting around the point.
-  if (distance <= ESCORT.stationToleranceM) {
-    const coasting = Math.max(0, ship.currentSpeedKn - ship.speedKn * WORLD.accelerationRate * time);
-    const travelled = coasting * KN_TO_MS * WORLD.arcadeScale * time;
-    return {
-      ...escort,
-      x: ship.x + Math.cos(ship.heading) * travelled,
-      y: ship.y + Math.sin(ship.heading) * travelled,
-      heading: ship.heading,
-      currentSpeedKn: coasting,
-    };
-  }
+  // On station (S96): the escort stops *hunting* the point but keeps steering and keeps
+  // matching the captain's speed. It used to coast to a stop and freeze its heading, which
+  // is what made a hull pointed the wrong way sail out of the line and come back — the
+  // weaving the player sees. The dead band lives in the speed target below, not here.
+  const onStation = distance <= ESCORT.stationToleranceM;
 
   const bearing = Math.atan2(dy, dx);
-  const turn = clamp(angleDiff(bearing, ship.heading) / Math.max(time, 1e-6), -1, 1);
+  // Inside the tolerance the escort still points at its station, just gently: a hard
+  // rudder there would make it pivot around a point it already holds.
+  const turn = clamp(angleDiff(bearing, ship.heading) / Math.max(time, 1e-6), -1, 1) * (onStation ? 0.5 : 1);
   // Each escort turns at its own hull's rate (S48): a heavy one swings wide.
   const turnFactor = Number.isFinite(escort?.turnFactor) && escort.turnFactor > 0 ? escort.turnFactor : 1;
   const heading = normaliseAngle(ship.heading + turn * WORLD.maxTurnRate * turnFactor * time);
@@ -157,7 +152,13 @@ export function stepEscort(escort, station, input = {}, dt = 0) {
   const wind = input.wind ? windEffect(input.wind, heading).speedFactor : 1;
   const ceiling = ship.speedKn * wind * ESCORT.catchUpSpeed;
   const captainSpeed = Number.isFinite(input.captainSpeedKn) ? input.captainSpeedKn : 0;
-  const closing = clamp(distance / ESCORT.stationM, 0, 1) * ship.speedKn * ESCORT.closingShare;
+  // Dead band (S96). The target used to be `captain + closing`, and `closing` fell to
+  // zero inside the tolerance — so the target dropped *below* the captain's speed and the
+  // escort braked, fell astern, lunged, and braked again. Measured: a 1.05 kn saw on a
+  // captain holding a steady 6.00 kn. Now the closing term is measured from the edge of
+  // the tolerance and the escort never targets less than the captain's own speed.
+  const gap = Math.max(0, distance - ESCORT.stationToleranceM);
+  const closing = clamp(gap / ESCORT.stationM, 0, 1) * ship.speedKn * ESCORT.closingShare;
   const targetSpeed = Math.min(captainSpeed + closing, ceiling);
   const step = ship.speedKn * WORLD.accelerationRate * time;
   const currentSpeedKn =

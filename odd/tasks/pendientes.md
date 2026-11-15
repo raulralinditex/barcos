@@ -61,3 +61,17 @@ La sincronización de las escoltas con el mundo vive en `src/ui/sea.js` y sólo 
 - Regla global vigente: no editar tests existentes sin confirmación explícita del usuario.
 - Verificación completa: `npm test` (**614 tests**) y los **45** smokes `scripts/smoke-*.mjs`, uno por vez (tardan de 2 s a 36 s cada uno). En macOS no existe el comando `timeout`: no usarlo como prefijo.
 - El árbol de trabajo está limpio: todo lo cerrado hasta S90 está commiteado. Los smokes de reparación y astillero corren verdes en serie.
+
+## Cerrado: las escoltas hacían bolutas (S96)
+
+Reporte (verbatim): "los barcos que siguen a la capitana parece que no siguen las normas de la velocidad, hacen muchas bolutas".
+
+Medido antes del arreglo, con la capitana sosteniendo 6,00 kn: la velocidad de la escolta serruchaba entre **5,64 y 6,44 kn** en un ciclo de ~2 s (banda 0,80), y al entrar en estación frenaba hasta **3,15 kn**. En el navegador real la banda era de 3,83 kn.
+
+Dos causas, las dos en `stepEscort` (`src/model/formation.js`):
+1. El blanco de velocidad era `capitana + cierre`, y el término de cierre caía a cero dentro de la tolerancia. Así el blanco quedaba **por debajo** de la velocidad de la capitana y la escolta frenaba, caía atrás, volvía a acelerar y volvía a frenar.
+2. Dentro de la tolerancia la escolta dejaba de gobernar por completo: sólo navegaba recta con el rumbo que tuviera. Un casco apuntado al través se iba de lado hasta salir de la tolerancia y tenía que volver — el lazo que se veía como bolutas.
+
+Arreglo (decisión del usuario: "Velocidad estable, rumbo siempre corregido"): zona muerta en el blanco de velocidad, medida desde el borde de la tolerancia, y el rumbo se corrige siempre (a media caña dentro de la tolerancia).
+
+Evidencia: `test/escort-steady.test.js` (4 tests) con RED observado — el serrucho fallaba con banda 1,05 kn. Después: banda **0,00 kn** en el modelo y **0,09 kn** en el navegador, con la escolta a 0 m de su estación. `npm test` 637/637. Smokes `smoke-fleet`, `smoke-escort-dock`, `smoke-escort-hud` y `smoke-formation` verdes.
