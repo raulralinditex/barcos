@@ -1,0 +1,18 @@
+odd/tasks/pendientes.md
+  h_8b9b8fe190c867 64-77
+src/model/formation.js
+  h_8b9b8fe190c867 135-139,142-144,155-161
+test/escort-steady.test.js
+  h_8b9b8fe190c867 1-99
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.6",
+  "base_commit_sha": "674e941deb016658ca0774b1805f4f05063e5c78",
+  "prompts": {},
+  "humans": {
+    "h_8b9b8fe190c867": {
+      "author": "Raul Ripoll <raulral@ext.inditex.com>"
+    }
+  }
+}
