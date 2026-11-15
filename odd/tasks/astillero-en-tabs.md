@@ -87,9 +87,9 @@ S104. **Verificación.**
 - T121 — smokes: entrar al room que posee cada control (flota/comprar/astillero) antes de operarlo; aserciones de smoke-tabs al comportamiento nuevo. `S105` — inline — hecho, commit `d895d04`
 - T122 — `src/ui/styles.css`: S106, plantilla propia de los rooms de flota/astillero, slots transparentes, panel de flota a alto completo. `S106` — inline — hecho, commit `70162f1`
 - T123 — `src/ui/sea.js` + `scripts/smoke-escort-range.mjs`: S107, arcos de tiro para toda la línea; smoke con RED observado (arcos desde un solo casco) y GREEN. `S107` — inline — hecho, commit `70162f1`
-- T124 — `index.html` + `src/ui/app.js` + `styles.css` + i18n: S108, panel común del casco seleccionado con sus barras y sus dos acciones; filas de flota sin botones. `S108` — inline — hecho, commit `pending`
-- T125 — `src/ui/app.js` + `src/ui/sea.js`: S109, el boot no elige room y el mar desembarca en `#comprar`. `S109` — inline — hecho, commit `pending`
-- T126 — smokes: reparar y vender ahora pasan por el panel del casco elegido; los que desembarcan entran al tab Flota y aceptan la URL con hash. `S108,S109` — inline — hecho, commit `pending`
+- T124 — `index.html` + `src/ui/app.js` + `styles.css` + i18n: S108, panel común del casco seleccionado con sus barras y sus dos acciones; filas de flota sin botones. `S108` — inline — hecho, commit `62be33e`
+- T125 — `src/ui/app.js` + `src/ui/sea.js`: S109, el boot no elige room y el mar desembarca en `#comprar`. `S109` — inline — hecho, commit `62be33e`
+- T126 — smokes: reparar y vender ahora pasan por el panel del casco elegido; los que desembarcan entran al tab Flota y aceptan la URL con hash. `S108,S109` — inline — hecho, commit `62be33e`
 - T119 — cierre: `pendientes.md` al día, espejo Engram del documento, log de la ficha con evidencia. `S104` — inline — hecho, commit `2bad095`
 
 ## Log
