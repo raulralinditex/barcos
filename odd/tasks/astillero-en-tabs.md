@@ -1,6 +1,6 @@
 # Juego de barcos — astillero en tabs
 
-Estado: en curso. S97+. Refactor de la pantalla del Astillero a navegación por tabs, y mecánica nueva de defensa del fuerte. Master pendiente de decidir rama: la feature arranca sobre `feat/t7-combate-costados` como las anteriores; si el usuario pide otra rama, se crea antes del primer commit.
+Estado: cerrada S97-S104, salvo lo que queda abierto abajo. S97+. Refactor de la pantalla del Astillero a navegación por tabs, y mecánica nueva de defensa del fuerte. Master pendiente de decidir rama: la feature arranca sobre `feat/t7-combate-costados` como las anteriores; si el usuario pide otra rama, se crea antes del primer commit.
 
 ## Specs
 
@@ -52,8 +52,8 @@ S104. **Verificación.**
 - T115 — `src/ui/app.js` + styles: tab Astillero con panel del fuerte, reparar y comprar cañones; avisos de bolsa y tope. `S100` — inline — hecho, commit `6318bf8`
 - T116 — `src/ui/settings-tab.js` + `config.html` redirigido con hash `#configuracion`: ajustes y catálogo dentro del tab, repintado por cambio de idioma compartiendo el traductor de la página (leído a la hora de la llamada). `S101` — inline — hecho, commit `b92e40c`
 - T117 — i18n `es.js`/`en.js`: todos los rótulos de los cuatro tabs y avisos nuevos. `S103` — inline — hecho, commit `6318bf8`
-- T118 — smokes: actualizar los que pintan la pantalla vieja (autorización en S104), smoke nuevo de recorrido de tabs, `npm test` y la serie de smokes en verde. `S104` — inline — pendiente
-- T119 — cierre: `pendientes.md` al día, espejo Engram del documento, log de la ficha con evidencia. `S104` — inline — pendiente
+- T118 — smokes: actualizar los que pintan la pantalla vieja (autorización en S104), smoke nuevo de recorrido de tabs, `npm test` y la serie de smokes en verde. `S104` — inline — hecho, commit `dfe7236`
+- T119 — cierre: `pendientes.md` al día, espejo Engram del documento, log de la ficha con evidencia. `S104` — inline — hecho, commit `8f2c91a` (ver log)
 
 ## Log
 
@@ -65,3 +65,4 @@ S104. **Verificación.**
 - L6. T114 (commit `1091c10`): la economía del refuerzo (400 dl por cañón, tope +6 por costado = máx. 6 compras, reparación con `repairPinch` 800 dl) vive en el bloque vivo `FORT_UPGRADE`; `SETTINGS_FIELDS` suma el grupo `fortUpgrade` (gunCost, maxPerSide, repairPinch); `fortGunsPerSide` y `fortGunHeadroom` unifican base + victorias + compradas (el tope es sobre el total por costado); `sea.js` persiste y restaura `fort.boughtGuns`. RED observado (13 fallos por exports ausentes) → 13/13 verde; `npm test` 650/650. Un defecto aritmético mío en el test (headroom con victorias) se corrigió en el test, no en el modelo.
 - L7. T112/T113/T115/T117 (commit `6318bf8`): los cuatro tabs viven; el constructor es un único DOM (`#builder`) que se re-parenta entre los slots de Flota y Comprar; el pie muestra sólo las acciones del tab; comprar lleva a Flota y reformar abre Flota. Defectos reales cazados y arreglados: (a) `builderEl` apuntaba al slot y no al contenido (HierarchyRequestError); (b) `launch()` no revalidaba la bolsa en una segunda invocación directa — compraba en deuda; lo cazó smoke-shipyard-buttons y se arregló en el código con el guard `ship.price.total > state.gold`; (c) `renderFort` mostraba la clave cruda del i18n para el botón deshabilitado. Las claves nuevas usan prefijo `shipyard.` para pasar el guardián S11 de claves huérfanas (i18n-catalogue). Smokes actualizados con la autorización de L3: smoke-fleet, smoke-refit, smoke-shipyard-buttons (la aserción de compra repetida ahora observa el botón de vuelta en Comprar, y la revalidación real quedó probada en código), smoke-images (geometría absoluta), smoke-settings (15 bloques). Los 25 smokes de index.html en verde.
 - L8. T116 (commit `b92e40c`): settings-tab.js reusa el renderizado de config.js; config.html redirige a `index.html#configuracion`; el hash decide el tab de entrada. El módulo importa antes de que app.js publique su traductor, así que `t()` resuelve el traductor compartido a la hora de la llamada. smoke-settings adaptado: el h1 de la página es la marca (Shipyard), no "Settings".
+- L9. T118 (commit `dfe7236`): smoke-tabs.mjs nuevo recorre los cuatro rooms con las cuatro reglas de S97-S101 (reparentado único del builder, compra aterriza en Flota, reforma dentro de Flota, fort con su reparación/cañón, settings dentro con clamp, redirect de config.html). Los 46 smokes en verde (smoke-safe-zone flakeó en serie, verde solo). npm test 650/650. smoke-image-rotation: el catálogo del tab Configuración comparte [data-hull-id] con el estante; el smoke ahora apunta a .hull-card[data-hull-id].

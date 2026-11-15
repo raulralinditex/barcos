@@ -19,7 +19,7 @@ Estado: las peticiones anteriores están cerradas. Lo que sigue abierto es lo de
 - Barritas de escolta amontonadas (se muestran sólo con la escolta a tiro) y precio mínimo de reparación de un doblón: `escoltas-a-tiro-y-precio-minimo.md` (S54, S55).
 - Largo de las barras por aguante real del casco, daño de cada zona configurable, botín del pecio configurable en %, venta de naves propias y captura de enemigos rendidos: `escala-y-configuracion.md` (S59-S64).
 
-## Pendientes abiertos
+
 
 ### El astillero no se ve en el minimapa con su estado
 
@@ -55,6 +55,11 @@ La sincronización de las escoltas con el mundo vive en `src/ui/sea.js` y sólo 
 ## Estado del repositorio
 
 - Rama `feat/t7-combate-costados`, sobre `master`. Merge y PR los hace el usuario.
+- S97-S104 (`astillero-en-tabs.md`): astillero en cuatro tabs (Flota / Comprar buque /
+  Astillero / Configuración), reparación del fuerte y cañones comprables (400 dl, tope
+  +6 por costado, configurable). `config.html` redirige a `index.html#configuracion`.
+- Verificación: `npm test` son **650 tests**; los smokes son **46**, entre ellos el
+  nuevo `smoke-tabs.mjs` (recorrido de las cuatro rooms).
 - Para jugar: `python3 -m http.server 8765` en la raíz y abrir `http://localhost:8765/index.html`.
 - Los smokes necesitan ese servidor y `npx playwright install chromium` la primera vez.
 - `git` pasa por un wrapper que falla con 401: usar `/usr/bin/git`.
