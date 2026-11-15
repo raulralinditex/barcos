@@ -1,0 +1,20 @@
+odd/tasks/comercio-y-astilleros.md
+  h_8b9b8fe190c867 1-60
+src/data/naval-data.js
+  h_8b9b8fe190c867 634-675,691-706
+src/model/world.js
+  h_8b9b8fe190c867 12,166-193
+test/shipyard-zones.test.js
+  h_8b9b8fe190c867 1-68
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.6",
+  "base_commit_sha": "a4b7b1ec7c76a88e7d1a3f6f38f3a03fdc839839",
+  "prompts": {},
+  "humans": {
+    "h_8b9b8fe190c867": {
+      "author": "Raul Ripoll <raulral@ext.inditex.com>"
+    }
+  }
+}
