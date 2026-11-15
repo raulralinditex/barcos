@@ -1,6 +1,5 @@
 /**
- * Fleet model: the ships the player owns and which one they captain (S7).
- *
+ * Fleet model: the ships the player owns and which one they captain (S7). *
  * Pure and storage-free: it takes a fleet value and returns a new one, so the
  * progression rules are testable without a browser. The UI owns persistence.
  *
@@ -10,6 +9,8 @@
  * The captain is the hull that sails when the player puts to sea. Every other
  * ship stays in port, keeping the hull, crew and loadout it was bought with.
  */
+
+import { holdOf } from "./commerce.js";
 
 /**
  * Add a freshly launched ship to the fleet and make it the captain: buying a new
@@ -144,7 +145,16 @@ function normaliseShip(ship) {
   // A hull is marked to sail unless the save says otherwise (S35): a fleet written
   // before the checks existed sails with everything, which is what it always did.
   const sails = ship.sails !== false;
-  return { ...ship, condition, crewAlive, sails };
+  // The hold is a manifest of whole units, and her kg is derived from it (S114): a save
+  // that predates the trade has no manifest and keeps her hand-typed cargo untouched.
+  const hold = holdOf(ship.manifest ?? []);
+  const stored = { ...ship, condition, crewAlive, sails };
+  if (hold.cargoKg > 0) {
+    stored.manifest = hold.manifest;
+  } else {
+    delete stored.manifest;
+  }
+  return stored;
 }
 
 /**

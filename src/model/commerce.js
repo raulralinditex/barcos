@@ -10,7 +10,7 @@
  * (S110, S111): the manifest is what the hold is made of, and `cargoKg` is its total.
  */
 
-import { COMMODITIES, commodityById } from "../data/naval-data.js";
+import { COMMODITIES, commodityById, hullById } from "../data/naval-data.js";
 
 /**
  * The market of each zone (S113): how a commodity's base price is scaled when the yard
@@ -175,4 +175,102 @@ export function affordableUnits({ capacityKg, cargoKg, gold }, commodityId, zone
   const bySpace = Math.floor(freeKg / commodity.kgPerUnit);
   const byPurse = unitPrice > 0 ? Math.floor((Number(gold) || 0) / unitPrice) : bySpace;
   return Math.max(0, Math.min(bySpace, byPurse));
+}
+
+/* ------------------------------------------------- what a defeated hull carried (S115) */
+
+/** Deterministic RNG, the same one the sea uses: same sail, same hold. */
+function mulberry32(state) {
+  let t = (state + 0x6d2b79f5) | 0;
+  t = Math.imul(t ^ (t >>> 15), t | 1);
+  t ^= t + Math.imul(t ^ (t >>> 7), t | 61);
+  return { value: ((t ^ (t >>> 14)) >>> 0) / 4294967296, state: t };
+}
+
+/**
+ * How much a hold of a zone is worth as a multiplier on the declared enemy hold (S115).
+ * Deeper water carries richer cargo, which is what makes a dangerous crossing pay.
+ */
+const HOLD_ZONE = { costera: 0.5, abierto: 1, abismo: 1.8 };
+
+/**
+ * The hold an enemy sails with (S115). Deterministic in the encounter id and the hull,
+ * exactly like her guns (combat.js), so the same sail always carries the same cargo: a
+ * reload cannot reroll a rich prize.
+ *
+ * The kg is scaled by her zone, and the goods are spread across the catalogue so a
+ * captured hold is worth selling rather than a single line of barrels.
+ */
+export function enemyHoldFor(encounter) {
+  const id = Number(encounter?.id);
+  const hull = hullById(encounter?.hullId);
+  if (!Number.isFinite(id) || !hull) return null;
+  const zoneId = encounter.zoneId ?? "costera";
+  const zoneFactor = HOLD_ZONE[zoneId] ?? HOLD_ZONE.costera;
+  const baseKg = Number.isFinite(COMMERCE.enemyHoldKg) ? COMMERCE.enemyHoldKg : 12000;
+  const targetKg = Math.round(baseKg * zoneFactor * (0.6 + 0.8 * ((id * 2654435761) % 1000) / 1000));
+
+  let state = (id * 40503) ^ 0x9e3779b9;
+  const rnd = () => {
+    const r = mulberry32(state);
+    state = r.state;
+    return r.value;
+  };
+  const manifest = [];
+  let leftKg = targetKg;
+  // A merchantman fills her hold with a few lines of goods, never one endless one.
+  const lines = 2 + Math.floor(rnd() * 3);
+  for (let i = 0; i < lines && leftKg > 0; i += 1) {
+    const commodity = COMMODITIES[Math.floor(rnd() * COMMODITIES.length)];
+    const share = i === lines - 1 ? 1 : 0.2 + rnd() * 0.5;
+    const units = Math.floor((leftKg * share) / commodity.kgPerUnit);
+    if (units <= 0) continue;
+    manifest.push({ commodityId: commodity.id, units });
+    leftKg -= units * commodity.kgPerUnit;
+  }
+  return holdOf(manifest);
+}
+
+/**
+ * What a defeated hull leaves to be picked up (S115): her whole hold if she struck her
+ * colours, a declared share of it if she went down. A fight that is not over yet leaves
+ * nothing, because nothing has been won.
+ */
+export function defeatedHold(hold, status, { share = COMMERCE.sunkCargoShare } = {}) {
+  const source = holdOf(hold?.manifest ?? []);
+  if (source.cargoKg === 0) return { manifest: [], cargoKg: 0 };
+  if (status === "surrendered") return source;
+  if (status !== "sunk") return { manifest: [], cargoKg: 0 };
+  return salvageHold(source.manifest, share);
+}
+
+/**
+ * Load a prize into a hull's hold (S115). Only what fits goes aboard; the rest stays in
+ * the water, so a small hull cannot swallow a galleon's cargo. Returns the ship with her
+ * new hold and what was left behind, never null: a prize that does not fit is a smaller
+ * prize, not a failed one.
+ */
+export function awardHold(ship, prize) {
+  const incoming = holdOf(prize?.manifest ?? []);
+  const current = shipHold(ship);
+  const capacity = Number(ship?.capacityKg);
+  const freeKg = Number.isFinite(capacity) ? Math.max(0, capacity - (Number(ship?.cargoKg) || 0)) : Infinity;
+
+  const manifest = [...current.manifest.map((entry) => ({ ...entry }))];
+  let leftKg = 0;
+  const left = [];
+  for (const entry of incoming.manifest) {
+    const fits = Math.min(entry.units, Math.floor(freeKg / commodityById(entry.commodityId).kgPerUnit));
+    const remainder = entry.units - Math.max(0, fits);
+    if (fits > 0) {
+      const existing = manifest.find((line) => line.commodityId === entry.commodityId);
+      if (existing) existing.units += fits;
+      else manifest.push({ commodityId: entry.commodityId, units: fits });
+    }
+    if (remainder > 0) {
+      left.push({ commodityId: entry.commodityId, units: remainder });
+      leftKg += remainder * commodityById(entry.commodityId).kgPerUnit;
+    }
+  }
+  return { ship: withHold(ship, holdOf(manifest)), left: holdOf(left), leftKg };
 }
