@@ -1,0 +1,27 @@
+src/i18n/en.js
+  s_8ca75549fb5486::t_4a2c7fc29590bc 200,240-241
+src/i18n/es.js
+  s_8ca75549fb5486::t_8c06e6d8c47e88 197,237-238
+src/ui/app.js
+  s_8ca75549fb5486::t_b7ee340a78fca6 1102-1105,1114-1117,1119-1121
+src/ui/sea.js
+  s_8ca75549fb5486::t_b040022dca5b9d 78,80-83,266-280,705-719,937-954,1374-1418,1423,1431-1434,1445-1446,1484,1486-1487,1489-1491,1497-1498,1530-1542,1575-1615,1627-1629,1929-1930,1946-1953,2369-2377
+src/ui/styles.css
+  s_8ca75549fb5486::t_903b56fec873e5 916-930
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.6",
+  "base_commit_sha": "2d3365d77364f8608676a01752c3c08df8652191",
+  "prompts": {},
+  "sessions": {
+    "s_8ca75549fb5486": {
+      "agent_id": {
+        "tool": "pi",
+        "id": "01a1dc00-69e3-7628-b102-1d36f2ff622f",
+        "model": "deepseek-v4.1-flash_high"
+      },
+      "human_author": "Raul Ripoll <raulral@ext.inditex.com>"
+    }
+  }
+}
