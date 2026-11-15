@@ -1,6 +1,6 @@
 # Juego de barcos — comercio y astilleros por zona
 
-Estado: cerrada S112-S119, sin pendientes. Rama: `feat/comercio-y-astilleros` (se crea desde `feat/t7-combate-costados` antes del primer commit). Cierra el pendiente grande de `pendientes.md`: la carga deja de ser castigo puro y pasa a producir dinero.
+Estado: cerrada S112-S120, sin pendientes. Rama: `feat/comercio-y-astilleros` (se crea desde `feat/t7-combate-costados` antes del primer commit). Cierra el pendiente grande de `pendientes.md`: la carga deja de ser castigo puro y pasa a producir dinero.
 
 ## Specs
 
@@ -54,6 +54,11 @@ S119. **A market with memory.** Pedido (verbatim): "venga vamos con el mercado c
 - **El efecto medido**: dos viajes idénticos de 20 unidades de sal. Viaje 1: compra 11→13 (237 pagados), venta 58→47 (1160 cobrados). Viaje 2: compra 13→15 (279 pagados), venta 47→36 (940 cobrados). El segundo cuesta más y paga menos: eso es el mercado con memoria.
 - Vender 40 de sal en el abismo en reposo mueve el precio de 58 a 36, una caída del **37,93 %**. La frase del usuario decía "unos 35 %": es una ilustración del efecto, no un contrato de precisión, y la curva no se deforma para clavar el número.
 
+S120. **Dos cascos iguales no comparten identidad.** Reporte del usuario (verbatim): "tenia dos barcos del mismo tipo en la flota, y se han mezclado los datos de los dos cuando los he ido variando".
+- **Causa real**: en el guardado del mar (`barcos:game:v1`), el combatiente de la capitana vive bajo la llave `combat.player`, que es un **rol**, no una identidad. Al ascender a capitana a otra nave, el registro viejo se quedaba bajo `player` y el nuevo no se escribía: la capitana nueva heredaba el casco, la tripulación y los cañones de la vieja. Con dos cascos iguales el jugador no podía notarlo hasta que el daño aparecía en la nave equivocada.
+- **Arreglo**: al cambiar de capitana, los dos combatientes se mueven juntos (`savePurse` con `promoteFrom`/`promoteTo`): el viejo baja a `escorts[suId]` y el nuevo sube a `player`. Los loadouts de cada casco nunca se tocaron: el bug era de condición y tripulación, no del reformador.
+- **Prueba en rojo**: `scripts/smoke-two-hulls.mjs` recorre reformar A, reformar B, descartar A, reformar A dos veces, ascender capitana y transferir el mando en el mar. Sin el parche falla con "promotion missing combat player / condition / crew"; con el parche pasa entero.
+
 ## Tasks
 
 - T1 — S112: registro de astilleros, `shipyardAt`/`currentShipyard` y zona derivada. Ruta: inline. Commit: `a4b7b1e`.
@@ -80,3 +85,6 @@ L6: El usuario eligió la opción A: el reposo (60) es el centro de la banda; la
 L7: El usuario eligió la opción B: no se compra más de lo que tiene el puerto; el pedido entero se rechaza sin mover oro, bodega ni stock. Dos viajes idénticos de 20 unidades caben en el stock inicial. La venta separada de 40 de sal en el abismo ilustra «unos 35 %»: con la curva acordada el precio redondeado cae de 58 a 36, un 37,93 %, sin alterar `floorShare` para forzar el ejemplo.
 
 L8 (cierre de S119): `npm test` **717/717**. Smokes verificados uno por uno con su exit code: market, sale, fleet, dock, settings, tabs, sea, anchor-yard, shipyard-layout, todos en 0. Los dos smokes que el worker había saltado por miedo a escribir capturas fuera de su superficie no escriben en el repo: van a `/tmp/fleet.png` y `/tmp/sea.png`, que no están versionados.
+- T7 — S120: identidad de dos cascos iguales. El rol `combat.player` se movía sin la nave que lo ocupaba. Ruta: worker + verificación del orquestador en rojo y verde. Commit: `fix(fleet): two identical hulls no longer swap their combat record`.
+
+L9 (S120): el worker se colgó a los 4 minutos pero dejó el parche y el smoke. Verifiqué el rojo yo mismo con `git stash`: sin el parche el smoke falla con la capitana nueva heredando condición, tripulación y cañones de la vieja; con el parche pasa. `npm test` 717/717, y smokes market, fleet, sale, dock y tabs en 0.

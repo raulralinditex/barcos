@@ -1632,8 +1632,10 @@ function selectRefitShip(ship, { openRoom = true } = {}) {
 els.fleetList.addEventListener("click", (event) => {
   const promote = event.target.closest("[data-captain]");
   if (promote) {
+    const previousCaptainId = fleet.captainId;
     fleet = setCaptain(fleet, promote.dataset.captain);
     saveFleet();
+    savePurse(null, false, { promoteFrom: previousCaptainId, promoteTo: fleet.captainId });
     renderFleet();
     return;
   }
@@ -1808,7 +1810,7 @@ function damageSummary(damaged) {
  * fleet sheet on boot, so the captain's part and each escort's part both have to move,
  * or the repair is undone the next time the player puts to sea.
  */
-function savePurse(patchedShip = null, isCaptain = false, { refit = false } = {}) {
+function savePurse(patchedShip = null, isCaptain = false, { refit = false, promoteFrom = null, promoteTo = null } = {}) {
   let game = null;
   try {
     game = JSON.parse(localStorage.getItem(GAME_KEY) ?? "null");
@@ -1819,7 +1821,14 @@ function savePurse(patchedShip = null, isCaptain = false, { refit = false } = {}
   const combat = record.combat;
   const patch = patchedShip ? { condition: { ...patchedShip.condition }, crew: { ...patchedShip.crewAlive } } : null;
   let patchedCombat = combat;
-  if (patch && isCaptain && combat?.player) {
+  if (combat && promoteFrom && promoteTo && promoteFrom !== promoteTo) {
+    // `player` belongs to the old captain, not to whichever hull is captain now.
+    // Move both saved combatants before a refit or sea boot can read them by role.
+    const { player, ...rest } = combat;
+    const { [promoteTo]: nextPlayer, ...escorts } = combat.escorts ?? {};
+    if (player) escorts[promoteFrom] = player;
+    patchedCombat = { ...rest, escorts, ...(nextPlayer ? { player: nextPlayer } : {}) };
+  } else if (patch && isCaptain && combat?.player) {
     const player = refit ? { ...combat.player, crew: patch.crew } : { ...combat.player, ...patch };
     if (refit) delete player.pieces;
     patchedCombat = { ...combat, player };
