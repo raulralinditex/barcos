@@ -17,6 +17,7 @@
 
 import { CONVENTIONS, crewRoleById, pieceById } from "../data/naval-data.js";
 import { gunnersRequired } from "./gunnery.js";
+import { TURNING, lightLoadTurnFactor } from "./turning.js";
 
 /** Shot mass in kg carried by one piece of a battery entry. */
 export function shotMassKg(pieceId, shotsPerPiece) {
@@ -200,6 +201,18 @@ export function validateShip(input, budget = computeBudget(input)) {
 
   if (budget.draftM > hull.draftRefM + 0.9) {
     issues.push(issue(WARN, "deep-draft", { draft: budget.draftM.toFixed(2) }));
+  }
+
+  // A hull that floats too high steers badly (S110): the rudder needs weight in the
+  // water. It is a warning, not an error — an empty hull still sails, just clumsily.
+  if (budget.loadFraction < TURNING.lightLoadThreshold) {
+    issues.push(
+      issue(WARN, "light-load", {
+        load: Math.round(budget.loadFraction * 100),
+        needed: Math.round(TURNING.lightLoadThreshold * 100),
+        factor: Math.round(lightLoadTurnFactor(budget.loadFraction) * 100),
+      }),
+    );
   }
 
   if (counts.marino < hull.crewMin) {

@@ -4,6 +4,18 @@ Estado: cerrada S97-S104, salvo lo que queda abierto abajo. S97+. Refactor de la
 
 ## Specs
 
+S110. **Un casco que flota demasiado alto gobierna mal.** Pedido (verbatim): "mi pregunta sobre carga es que si un barco no tiene ninguna carga, este es beneficiado, deberia de haber un minimo de carga para cada barco para que pueda salir? esot es correcto?" — implementado como camino 3 (física), no como mínimo obligatorio.
+- Medido antes: mismo casco, 0 kg de carga 6,92 kn contra 40.000 kg 5,98 kn. Ir vacío era la configuración más rápida y legal: la carga sólo costaba.
+- Regla: por debajo de `TURNING.lightLoadThreshold` (20 % de la capacidad) el timón pierde hasta un 25 % de su tasa (`lightLoadFactor` 0,75), porque la quilla no muerde el agua. La penalización **entra gradualmente** con la carga: no hay acantilado.
+- Vale para el jugador, las escoltas y los enemigos: es la misma física (S57). Un valor desconocido o ausente falla **abierto** (factor 1): una partida vieja no se penaliza por un campo que no tenía.
+- El constructor avisa con `issue.light-load` y los números que el jugador necesita (carga actual, umbral, timón restante). Es **aviso, no error**: el barco vacío sigue zarpando, sólo gobierna mal.
+- Ambos números son configurables desde la pantalla de Configuración.
+
+S111. **La carga cuenta en el coste de reparación y en el valor de la nave.** Pedido (verbatim): "despues de implementqr el 1 y 3 tenerlo en cuenta a la hora de reparar en coste y valores".
+- `shipValue` es el número contra el que se miden **dos** precios: la reparación y la venta. Se le suma el valor de la carga: `loadValueFactor` = 1 + `REPAIR.loadValueShare` × (carga / capacidad), con 0,25 por defecto.
+- Se mide sobre la **carga sola**, no sobre la fracción de carga total: toda nave lleva tripulación y víveres, y cobrar por eso inflaría el precio de un barco que sólo está tripulado. Esto se descubrió con 5 regresiones en los tests de S40/S45 y se corrigió en el modelo.
+- El valor **persistido** (`paidGold`) sigue siendo el base (`hullValue`): el reformador lo escribe, y guardar ahí el valor con recargo lo compondría en cada reforma. Otra regresión real que el test de S50 cazó.
+
 S108. **Las acciones de cada nave viven en un panel común.** Pedido (verbatim): "vamos a quitar los botones reparar y vender de cada barco in el listado de flota, y los vamos a poner comuner en un panel en la primera lolumna abajo, cuando se selecciona un buque, se activan y actualizan los botones igual que estan ahora". Y antes: "añademe un panel en el tab 'tu flota' mostrando las barritas de daño etc en la columna izquierda abajo".
 - El listado de flota queda con una línea limpia por casco: cheque de zarpe, nombre, casco, capitana. **Sin** botones de reparar ni vender por fila.
 - Debajo del listado, en la columna izquierda, un panel con el casco seleccionado: nombre, tipo, sus cuatro barras (casco, aparejo, tripulación, moral) y los botones Reparar y Vender.
@@ -90,6 +102,8 @@ S104. **Verificación.**
 - T124 — `index.html` + `src/ui/app.js` + `styles.css` + i18n: S108, panel común del casco seleccionado con sus barras y sus dos acciones; filas de flota sin botones. `S108` — inline — hecho, commit `62be33e`
 - T125 — `src/ui/app.js` + `src/ui/sea.js`: S109, el boot no elige room y el mar desembarca en `#comprar`. `S109` — inline — hecho, commit `62be33e`
 - T126 — smokes: reparar y vender ahora pasan por el panel del casco elegido; los que desembarcan entran al tab Flota y aceptan la URL con hash. `S108,S109` — inline — hecho, commit `62be33e`
+- T127 — `src/model/turning.js` + `ship-model.js` + `src/ui/sea.js` + settings + i18n: S110, regla de maniobra por casco ligero, cableada en capitana, escoltas y enemigos, con aviso en el constructor. `S110` — inline — hecho, commit `pending`
+- T128 — `src/model/repair.js` + `refit.js`: S111, la carga suma al valor y por tanto al coste de reparar y al precio de venta; `hullValue` separa el valor persistido. `S111` — inline — hecho, commit `pending`
 - T119 — cierre: `pendientes.md` al día, espejo Engram del documento, log de la ficha con evidencia. `S104` — inline — hecho, commit `2bad095`
 
 ## Log

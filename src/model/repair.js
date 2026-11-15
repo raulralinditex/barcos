@@ -28,6 +28,12 @@ export const REPAIR = {
    * unfixable because its quote rounded to zero.
    */
   minCost: 1,
+  /**
+   * What her cargo and stores add to her worth (S111): a laden hull is a richer prize
+   * and a dearer repair, because there is more in her to save and more to lose. 0.25
+   * means a hull at full capacity is worth a quarter more than the same hull empty.
+   */
+  loadValueShare: 0.25,
 };
 
 const SEGMENTS = ["hull", "rigging", "crew", "morale"];
@@ -71,11 +77,43 @@ export function damageShare(ship) {
  * what the fee is based on; a hull from an older save without it falls back to its
  * hull price, so the dock still quotes something sane.
  */
+/**
+ * How much her cargo adds to her worth, as a factor of 1 (S111). It is measured on the
+ * cargo alone, not on the total load fraction: every hull carries crew and provisions,
+ * so charging for the whole fraction would inflate the price of a ship that is simply
+ * manned. A hull with no cargo on record adds nothing, so a save written before this rule
+ * reads exactly as it did.
+ */
+export function loadValueFactor(ship) {
+  const cargo = Number(ship?.cargoKg);
+  const capacity = Number(ship?.capacityKg);
+  if (!Number.isFinite(cargo) || cargo <= 0) return 1;
+  if (!Number.isFinite(capacity) || capacity <= 0) return 1;
+  const share = Math.max(0, Math.min(1, cargo / capacity));
+  return 1 + Math.max(0, Number(REPAIR.loadValueShare) || 0) * share;
+}
+
+/**
+ * What one hull cost, before her cargo is counted (S111). `paidGold` already stores a
+ * base value — the refit writes it back — so anything that persists a value must use this
+ * one, or the surcharge would compound every time she is reformed.
+ */
+export function hullValue(ship) {
+  const paid = Number(ship?.paidGold);
+  const base = Number.isFinite(paid) && paid > 0
+    ? paid
+    : Number(hullById(ship?.hullId)?.priceGold);
+  return Number.isFinite(base) && base > 0 ? base : 0;
+}
+
+/**
+ * What one hull is worth (S40, S111): what she cost plus the worth of what she carries.
+ * This is the number both the repair fee and the sale price are measured against, so a
+ * laden hull is worth more and costs more to put right — one rule, two prices.
+ */
 export function shipValue(ship) {
   const paid = Number(ship?.paidGold);
-  if (Number.isFinite(paid) && paid > 0) return paid;
-  const price = Number(hullById(ship?.hullId)?.priceGold);
-  return Number.isFinite(price) && price > 0 ? price : 0;
+  return hullValue(ship) * loadValueFactor(ship);
 }
 
 /**

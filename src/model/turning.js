@@ -20,7 +20,33 @@ export const TURNING = {
   minFactor: 0.25,
   /** The quickest a boat may turn, as a share of the base rate. */
   maxFactor: 1.6,
+  /**
+   * A hull that floats too high steers badly (S110). Below this share of her own
+   * capacity she has no weight in the water for the rudder to bite: her keel skates and
+   * the helm answers late. 0.20 means a hull loaded under a fifth of what she can carry.
+   * It is physics, not a fee: nothing is charged, the helm simply does not answer.
+   */
+  lightLoadThreshold: 0.2,
+  /** How much of the turn rate she keeps when she is empty: 0.75 is a quarter lost. */
+  lightLoadFactor: 0.75,
 };
+
+/**
+ * How well a hull with this load fraction answers her helm (S110). A light hull turns
+ * slower than the same hull properly laden, because the rudder needs water pressure to
+ * bite. The penalty fades to nothing at `lightLoadThreshold`; an unknown load is treated
+ * as laden, so a ship with no record steers exactly as she always did.
+ */
+export function lightLoadTurnFactor(loadFraction) {
+  // An empty string is what a blank input hands back, and `Number("")` is 0 — which
+  // would read as "she floats at zero load" and punish a ship for a missing field. Only
+  // a real number may trigger the penalty; anything else fails open.
+  if (typeof loadFraction !== "number" || !Number.isFinite(loadFraction)) return 1;
+  const load = loadFraction;
+  if (load >= TURNING.lightLoadThreshold) return 1;
+  const share = Math.max(0, load) / TURNING.lightLoadThreshold;
+  return TURNING.lightLoadFactor + (1 - TURNING.lightLoadFactor) * share;
+}
 
 /**
  * The share of the base turn rate a hull of `massKg` gets. A missing or broken weight
@@ -36,6 +62,15 @@ export function turnRateFactor(massKg) {
 /** The factor of a catalogue hull, from its own displacement; 1 for an unknown hull. */
 export function hullTurnFactor(hullId) {
   return turnRateFactor(hullById(hullId)?.displacementKg);
+}
+
+/**
+ * The turn factor a ship actually gets (S48, S110): her hull's own share of the rudder
+ * rate, held back further when she floats too high to steer. This is the one number the
+ * sea and the fight both read, so a light hull handles badly in both.
+ */
+export function shipTurnFactor(hullId, loadFraction) {
+  return hullTurnFactor(hullId) * lightLoadTurnFactor(loadFraction);
 }
 
 /**

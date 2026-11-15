@@ -86,6 +86,8 @@ export const SETTINGS_FIELDS = [
   { group: "repair", key: "shareOfPrice", label: "settings.repair.share", scale: "percent", min: 0, max: 1, step: 0.01 },
   { group: "repair", key: "restored", label: "settings.repair.restored", scale: "percent100", min: 10, max: 100, step: 5 },
   { group: "repair", key: "minCost", label: "settings.repair.minCost", scale: "gold", min: 0, max: 500, step: 1 },
+  // S111: what her cargo adds to her worth, and so to her repair and her sale price.
+  { group: "repair", key: "loadValueShare", label: "settings.repair.loadValue", scale: "percent", min: 0, max: 2, step: 0.05 },
 
   { group: "loot", key: "hullShare", label: "settings.loot.hullShare", scale: "percent", min: 0, max: 1, step: 0.01, target: "loot", targetKey: "hullShare" },
   { group: "loot", key: "flatGold", label: "settings.loot.flatGold", scale: "gold", min: 0, max: 2000, step: 10, target: "loot", targetKey: "flatGold" },
@@ -97,6 +99,9 @@ export const SETTINGS_FIELDS = [
   { group: "turning", key: "exponent", label: "settings.turning.exponent", scale: "factor", min: 0.1, max: 2, step: 0.05, target: "turning", targetKey: "exponent" },
   { group: "turning", key: "minFactor", label: "settings.turning.minFactor", scale: "factor", min: 0.05, max: 1, step: 0.05, target: "turning", targetKey: "minFactor" },
   { group: "turning", key: "maxFactor", label: "settings.turning.maxFactor", scale: "factor", min: 1, max: 3, step: 0.05, target: "turning", targetKey: "maxFactor" },
+  // S110: a hull that floats too high steers badly; the threshold and the floor are tuned here.
+  { group: "turning", key: "lightLoadThreshold", label: "settings.turning.lightLoad", scale: "percent", min: 0, max: 1, step: 0.05, target: "turning", targetKey: "lightLoadThreshold" },
+  { group: "turning", key: "lightLoadFactor", label: "settings.turning.lightFactor", scale: "percent", min: 0.1, max: 1, step: 0.05, target: "turning", targetKey: "lightLoadFactor" },
 
   { group: "escort", key: "stationM", label: "settings.escort.station", scale: "metres", min: 20, max: 600, step: 10, target: "escort", targetKey: "stationM" },
   { group: "escort", key: "columnM", label: "settings.escort.column", scale: "metres", min: 10, max: 400, step: 5, target: "escort", targetKey: "columnM" },

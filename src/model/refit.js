@@ -1,6 +1,6 @@
 /** Refit an owned hull without treating it as a new purchase (S50). */
 import { hullPrice, normaliseGold, priceShip } from "./economy.js";
-import { crewAliveOf, shipValue } from "./repair.js";
+import { crewAliveOf, hullValue } from "./repair.js";
 import { buildShip, toRuntimeShip } from "./shipyard.js";
 
 export const REFIT = { refundShare: 0.5 };
@@ -66,7 +66,9 @@ export function applyRefit(ship, config, gold) {
     ship: {
       ...rebuilt, id: ship.id, country: ship.country, sails: ship.sails,
       condition: { ...ship.condition }, crewAlive,
-      paidGold: Math.max(hullPrice(ship.hullId), shipValue(ship) + quote.paid - quote.removed),
+      // The stored value is the base one: her cargo is priced where it is measured, not
+      // frozen into `paidGold`, or every reform would compound the surcharge (S111).
+      paidGold: Math.max(hullPrice(ship.hullId), hullValue(ship) + quote.paid - quote.removed),
     },
   };
 }

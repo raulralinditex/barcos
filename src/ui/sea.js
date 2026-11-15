@@ -83,7 +83,7 @@ import {
   occupyFort,
   portClosed,
 } from "../model/fort.js";
-import { hullTurnFactor } from "../model/turning.js";
+import { hullTurnFactor, shipTurnFactor } from "../model/turning.js";
 import { createTrail, stepTrail, trailWidthPx } from "../model/damage-trail.js";
 import { normaliseAutoFire, targetForSide } from "../model/autofire.js";
 import { priceWithPurse } from "../model/repair.js";
@@ -1755,7 +1755,7 @@ function handOverCommand() {
     ...world,
     ship: {
       x: next.x, y: next.y, heading: next.heading, currentSpeedKn: next.currentSpeedKn,
-      speedKn: next.speedKn, turnFactor: hullTurnFactor(runtimeShip.hullId),
+      speedKn: next.speedKn, turnFactor: shipTurnFactor(runtimeShip.hullId, runtimeShip.loadFraction),
     },
     escorts: escorts.map(({ combat, ...rest }) => rest),
   };
@@ -2367,7 +2367,7 @@ function boot() {
 
   // The captain turns at her own hull's rate (S48), whatever the saved sea says: she may
   // not be the hull that last sailed it.
-  world = { ...world, ship: { ...world.ship, turnFactor: hullTurnFactor(runtimeShip.hullId) } };
+  world = { ...world, ship: { ...world.ship, turnFactor: shipTurnFactor(runtimeShip.hullId, runtimeShip.loadFraction) } };
 
   gold = normaliseGold(savedGame?.gold);
   // The reserve starts as the captain's bought days of provisions (S67), and the sea
@@ -2420,7 +2420,7 @@ function boot() {
     refreshStatus(combatant);
     const place = (world.escorts ?? []).find((entry) => entry.id === ship.id);
     const escort = createEscort(
-      { id: ship.id, speedKn: ship.speedKn, turnFactor: hullTurnFactor(ship.hullId) },
+      { id: ship.id, speedKn: ship.speedKn, turnFactor: shipTurnFactor(ship.hullId, ship.loadFraction) },
       world.ship,
       index,
     );
