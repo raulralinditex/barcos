@@ -631,6 +631,48 @@ export const ZONES = [
   },
 ];
 
+/**
+ * The mooring radius of the home port (S112). A hull inside it is at the yard, which is
+ * what opens the shipyard screen (S51); the other yards declare their own.
+ */
+export const SHIPYARD_MOORING_M = 110;
+
+/**
+ * The shipyards of the sea (S112). One per zone, and the list is meant to grow: a new
+ * yard is a row here plus her mark on the chart, and no trade rule changes.
+ *
+ * `zoneId` is deliberately absent. A yard's market is her water, and her water is
+ * derived from `x`/`y` by `zoneAtRadius` (world.js), so a new yard cannot be built in
+ * the coastal band and trade at abyssal prices.
+ */
+export const SHIPYARDS = [
+  {
+    id: "puerto-casa",
+    nameKey: "shipyard.puerto-casa",
+    x: 0,
+    y: 0,
+    mooringM: SHIPYARD_MOORING_M,
+    /** The port a voyage starts from, so the builder screen opens here (S51). */
+    home: true,
+  },
+  {
+    id: "ensenada-abierta",
+    nameKey: "shipyard.ensenada-abierta",
+    x: 2400,
+    y: 0,
+    mooringM: 140,
+  },
+  {
+    id: "cala-del-abismo",
+    nameKey: "shipyard.cala-del-abismo",
+    x: 4600,
+    y: 0,
+    mooringM: 160,
+  },
+];
+
+export const shipyardById = (id) => byId(SHIPYARDS, id);
+
 export const STARTING_GOLD = 12000;
 
 /**
@@ -646,3 +688,19 @@ export const hullById = (id) => byId(HULLS, id);
 export const pieceById = (id) => byId(PIECES, id);
 export const ammoById = (id) => byId(AMMO, id);
 export const crewRoleById = (id) => byId(CREW_ROLES, id);
+
+/**
+ * The shipyard whose water holds `position`, or null in open water (S112). The edge of
+ * the mooring counts as inside, so a hull cannot sit exactly on the line and be refused.
+ * A broken position resolves to no yard at all: a corrupted save never gets a market.
+ */
+export function shipyardAt(position) {
+  const x = position?.x;
+  const y = position?.y;
+  if (!Number.isFinite(x) || !Number.isFinite(y)) return null;
+  for (const yard of SHIPYARDS) {
+    const radius = Number.isFinite(yard.mooringM) && yard.mooringM > 0 ? yard.mooringM : 0;
+    if (Math.hypot(x - yard.x, y - yard.y) <= radius) return yard;
+  }
+  return null;
+}

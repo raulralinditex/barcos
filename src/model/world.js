@@ -9,7 +9,7 @@
  * (canvas y grows downward). Distances are metres; speeds are knots.
  */
 
-import { ZONES, HULLS } from "../data/naval-data.js";
+import { ZONES, HULLS, SHIPYARDS, shipyardAt } from "../data/naval-data.js";
 import { escortStation, stepEscort } from "./formation.js";
 import { referenceSpeedKn } from "./ship-model.js";
 import { windAt, windEffect } from "./wind.js";
@@ -161,6 +161,34 @@ export function zoneAtRadius(radiusM) {
     ZONE_BANDS.find((b) => radiusM < bandRadius(b)) ?? ZONE_BANDS[ZONE_BANDS.length - 1];
   const zone = ZONES.find((z) => z.id === band.id);
   return { ...zone, ...band, maxRadiusM: bandRadius(band) };
+}
+
+/**
+ * The zone a shipyard trades in, read from her position (S112). It lives here and not in
+ * the data table because the band a position falls in is the world's rule, not a fact
+ * about the yard: one function answers "which water is this?" for every caller.
+ *
+ * A yard with a broken position has no zone, and a yard with no zone has no market. This
+ * never guesses a default: an unknown yard must not silently trade at coastal prices.
+ */
+export function shipyardZone(yard) {
+  if (!yard || !Number.isFinite(yard.x) || !Number.isFinite(yard.y)) return null;
+  return zoneAtRadius(Math.hypot(yard.x, yard.y));
+}
+
+/** The shipyard holding `position`, or null in open water (S112). */
+export function currentShipyard(position) {
+  return shipyardAt(position);
+}
+
+/** The shipyard the captain's hull is moored at right now, or null at sea (S112). */
+export function shipyardOfCaptain(world) {
+  return currentShipyard(world?.ship ?? null);
+}
+
+/** The yard a voyage starts from, so the builder screen knows where it opens (S112). */
+export function homeShipyard() {
+  return SHIPYARDS.find((yard) => yard.home) ?? SHIPYARDS[0] ?? null;
 }
 
 /**
