@@ -1,0 +1,18 @@
+src/model/settings.js
+  h_8b9b8fe190c867 17,125-128,148
+src/model/sinking.js
+  h_8b9b8fe190c867 1-81
+test/sinking.test.js
+  h_8b9b8fe190c867 1-86
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.6",
+  "base_commit_sha": "06cebbe96bb1f36975786e3362e1de57a3fb7d5a",
+  "prompts": {},
+  "humans": {
+    "h_8b9b8fe190c867": {
+      "author": "Raul Ripoll <raulral@ext.inditex.com>"
+    }
+  }
+}
