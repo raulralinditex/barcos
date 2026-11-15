@@ -124,12 +124,25 @@ if (captured) {
 }
 
 // And the port is closed: the repair key refuses.
+//
+// The notice is looked for over the whole time the banner stays up (3 s), not read once
+// after a fixed wait. The squadron is still on the yard, and the sea's own enemy-proximity
+// warning rewrites the banner every 6 s: a single read 400 ms after the key landed on it
+// in roughly one run in four and failed with «¡Vela hostil a 305 m!», which is a different
+// notice and not a defect of the refusal. The text must also be the translated one: the
+// old pattern (`/port/`) matched the raw catalogue key `sea.banner.portClosed`, so it
+// passed while the player was shown an untranslated key.
 await page.keyboard.press("r");
-await page.waitForTimeout(400);
-const banner = await page.locator("#banner").textContent();
+const REFUSAL = /astillero.*enemig|enemig.*astillero/i;
+let banner = "";
+for (let waited = 0; waited <= 2500; waited += 100) {
+  banner = (await page.locator("#banner").textContent()) ?? "";
+  if (REFUSAL.test(banner)) break;
+  await page.waitForTimeout(100);
+}
 check(
-  /enemig|astillero|port/i.test(banner ?? ""),
-  `S74: a taken yard should refuse repairs with a notice, the banner says "${banner}"`,
+  REFUSAL.test(banner) && !/^sea\./.test(banner.trim()),
+  `S74: a taken yard should refuse repairs with a notice, the last banner read says "${banner}"`,
 );
 
 await page.close();

@@ -90,3 +90,8 @@ Evidencia de T112: `scripts/smoke-fort-recovery.mjs` verde (partida vieja sin oc
 
 L60: `scripts/smoke-fort-combat.mjs` (S74, preexistente) falla de forma **intermitente**: 2 fallos en 7 corridas sobre el código actual, con el banner «¡Vela hostil a 305 m!» en lugar del aviso de puerto cerrado; el commit base `4fc055e` pasó 2 de 2. Un sondeo muestra que tras apretar `R` el banner dice el aviso correcto durante todo el intervalo. La hipótesis, **no confirmada**, es una carrera preexistente: el aviso de proximidad de enemigos pisa el banner cada 6 s y la aserción lee el banner una sola vez a los 400 ms. Nota aparte: esa aserción aceptaba la clave cruda `sea.banner.portClosed` (contiene "port"), así que en el base pasaba mostrando la clave sin traducir. Por la regla global no se edita ese smoke sin confirmación del usuario.
 
+
+L61 (autorización del usuario: "continua con 1 y 2"): se edita `scripts/smoke-fort-combat.mjs`, un smoke de S74 preexistente, y se suben los commits.
+- Causa del intermitente, ahora confirmada por el RED: la aserción leía el banner una sola vez a los 400 ms de apretar `R`, y el aviso de proximidad de enemigos, que se repite cada 6 s mientras el escuadrón sigue sobre el astillero, lo pisaba (2 fallos en 7 corridas con «¡Vela hostil a 305 m!»; el commit base pasó 2 de 2).
+- Cambio: el aviso se busca durante los 3 s que dura el banner, y se exige el texto traducido (`/astillero.*enemig/`), porque el patrón viejo `/port/` aceptaba la clave sin traducir `sea.banner.portClosed`.
+- Evidencia: RED observado quitando la traducción de `es.js` (falla: nunca aparece el aviso traducido en toda la ventana), restaurado con `cmp`; luego 3 corridas verdes de 3.
