@@ -1,0 +1,19 @@
+scripts/smoke-fort-combat.mjs
+  s_8ca75549fb5486::t_d4b7db3590552a 127-134,136-142,144-145
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.6",
+  "base_commit_sha": "ca3864b1581bad10b7b1339cdd5957b00621714d",
+  "prompts": {},
+  "sessions": {
+    "s_8ca75549fb5486": {
+      "agent_id": {
+        "tool": "pi",
+        "id": "01a1dc00-69e3-7628-b102-1d36f2ff622f",
+        "model": "claude-sonnet-5.5"
+      },
+      "human_author": "Raul Ripoll <raulral@ext.inditex.com>"
+    }
+  }
+}
