@@ -61,6 +61,9 @@ await page.addInitScript(([f]) => {
 
 await page.goto("http://localhost:8765/index.html", { waitUntil: "networkidle" });
 await page.waitForTimeout(1200);
+// The fleet strip lives in the Flota room (S105, S108): enter it before reading the list.
+await page.click('.screen-tab[data-screen="flota"]');
+await page.waitForTimeout(200);
 
 const readFleet = () =>
   page.evaluate(() => JSON.parse(localStorage.getItem("barcos:fleet:v1")).ships.map((s) => ({
@@ -68,18 +71,33 @@ const readFleet = () =>
   })));
 const readGold = () => page.evaluate(() => JSON.parse(localStorage.getItem("barcos:game:v1") ?? "{}").gold);
 
-/* --------------------------------------------- the button exists, one per hull */
+/* --------------------------------------------- the actions belong to the picked hull */
 
-const buttons = await page.evaluate(() =>
+// S108: the rows carry no actions any more; picking a hull fills the panel under the
+// list with her bars and her two buttons.
+const rows = await page.evaluate(() =>
   [...document.querySelectorAll(".fleet-item")].map((el) => ({
     id: el.dataset.shipId,
-    repair: el.querySelector("[data-repair]")?.textContent?.trim() ?? "",
-    disabled: el.querySelector("[data-repair]")?.disabled ?? true,
+    rowActions: el.querySelectorAll("[data-repair], [data-sell]").length,
   })),
 );
-check(buttons.length === 2, `expected two fleet entries, got ${buttons.length}`);
-check(buttons.every((b) => /reparar/i.test(b.repair)), `a hull has no repair button: ${JSON.stringify(buttons)}`);
-check(buttons.every((b) => !b.disabled), "a damaged hull's repair button is disabled");
+check(rows.length === 2, `expected two fleet entries, got ${rows.length}`);
+check(rows.every((r) => r.rowActions === 0), `a fleet row still carries its actions: ${JSON.stringify(rows)}`);
+
+// Each hull's own buttons answer when she is picked.
+const perHull = [];
+for (const id of ["a", "b"]) {
+  await page.locator(`.fleet-item[data-ship-id="${id}"] [data-refit]`).click();
+  perHull.push(await page.evaluate(() => ({
+    name: document.querySelector("#fleet-detail-name")?.textContent ?? "",
+    bars: document.querySelectorAll("#fleet-bars .fleet-bar-row").length,
+    repair: document.querySelector("#fleet-repair-btn")?.textContent?.trim() ?? "",
+    disabled: document.querySelector("#fleet-repair-btn")?.disabled ?? true,
+  })));
+}
+check(perHull.every((h) => /reparar/i.test(h.repair)), `a hull has no repair action: ${JSON.stringify(perHull)}`);
+check(perHull.every((h) => h.bars === 4), `a hull is missing her condition bars: ${JSON.stringify(perHull)}`);
+check(perHull.every((h) => !h.disabled), "a damaged hull's repair action is disabled");
 
 /* --------------------------------------------- repairing is manual and per hull */
 
@@ -87,10 +105,8 @@ const goldBefore = await readGold();
 const fleetBefore = await readFleet();
 check(fleetBefore.find((s) => s.id === "a").hull === 40, "the seeded captain is not damaged");
 
-// The flota room owns this control now (S105).
-await page.click('.screen-tab[data-screen="flota"]').catch(() => {});
-
-await page.locator('.fleet-item[data-ship-id="a"] [data-repair]').dispatchEvent("click");
+await page.locator('.fleet-item[data-ship-id="a"] [data-refit]').click();
+await page.locator("#fleet-repair-btn").dispatchEvent("click");
 await page.waitForTimeout(900);
 
 const fleetAfter = await readFleet();
@@ -114,7 +130,7 @@ check(!dialogOpen, "the dock dialog still opens by itself on entering the shipya
 
 await browser.close();
 
-const result = { errors, buttons, goldBefore, goldAfter, fleetBefore, fleetAfter, dialogOpen, failures };
+const result = { errors, rows, perHull, goldBefore, goldAfter, fleetBefore, fleetAfter, dialogOpen, failures };
 console.log(JSON.stringify(result, null, 2));
 
 if (errors.length) failures.push(`console errors: ${errors.join(" | ")}`);
@@ -122,4 +138,4 @@ if (failures.length) {
   console.error(`SMOKE FAILED:\n- ${failures.join("\n- ")}`);
   process.exit(1);
 }
-console.log("SMOKE OK: repairing is a button per hull, and the shipyard spends nothing on its own");
+console.log("SMOKE OK: repairing belongs to the picked hull's panel, and the shipyard spends nothing on its own");

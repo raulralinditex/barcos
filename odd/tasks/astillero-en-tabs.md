@@ -4,6 +4,16 @@ Estado: cerrada S97-S104, salvo lo que queda abierto abajo. S97+. Refactor de la
 
 ## Specs
 
+S108. **Las acciones de cada nave viven en un panel común.** Pedido (verbatim): "vamos a quitar los botones reparar y vender de cada barco in el listado de flota, y los vamos a poner comuner en un panel en la primera lolumna abajo, cuando se selecciona un buque, se activan y actualizan los botones igual que estan ahora". Y antes: "añademe un panel en el tab 'tu flota' mostrando las barritas de daño etc en la columna izquierda abajo".
+- El listado de flota queda con una línea limpia por casco: cheque de zarpe, nombre, casco, capitana. **Sin** botones de reparar ni vender por fila.
+- Debajo del listado, en la columna izquierda, un panel con el casco seleccionado: nombre, tipo, sus cuatro barras (casco, aparejo, tripulación, moral) y los botones Reparar y Vender.
+- Los botones se activan, deshabilitan y actualizan su precio exactamente como antes, pero para el casco seleccionado. Sin selección, el panel está oculto y se ve una pista para elegir una nave.
+- El casco seleccionado es el mismo que edita el reformador: elegir en la lista y elegir para reformar son el mismo gesto.
+
+S109. **Al llegar al astillero se abre el tab de comprar buque.** Pedido (verbatim): "cuando llegas al astillero el panel activo que se muestra es el de tu flota en vez de crear buque".
+- Causa: `selectRefitShip(captain)` en el boot llamaba `showScreen("flota")`, así que la selección inicial de la capitana decidía el room.
+- El mar vuelve con `./index.html#comprar` en sus tres salidas (desembarco, hundimiento y mar sin casco), y el boot deja el room a la regla de entrada, no a la selección del reformador.
+
 S106. **El tab Flota aprovecha todo el espacio.** Pedido (verbatim): "vamos refinando el tab flota, aprovecha todo el espacio horizontal, amplia el panel 'tu flota' y el panel 'el buque' para que coja todo el espacio lateral".
 - La columna de flota crece (`minmax(320px, 24%`) y corre el alto completo del room.
 - El panel del buque y el del aparejo ocupan **todo el ancho restante**: el buque arriba, el aparejo debajo. Ninguna tercera columna vacía.
@@ -77,6 +87,9 @@ S104. **Verificación.**
 - T121 — smokes: entrar al room que posee cada control (flota/comprar/astillero) antes de operarlo; aserciones de smoke-tabs al comportamiento nuevo. `S105` — inline — hecho, commit `d895d04`
 - T122 — `src/ui/styles.css`: S106, plantilla propia de los rooms de flota/astillero, slots transparentes, panel de flota a alto completo. `S106` — inline — hecho, commit `70162f1`
 - T123 — `src/ui/sea.js` + `scripts/smoke-escort-range.mjs`: S107, arcos de tiro para toda la línea; smoke con RED observado (arcos desde un solo casco) y GREEN. `S107` — inline — hecho, commit `70162f1`
+- T124 — `index.html` + `src/ui/app.js` + `styles.css` + i18n: S108, panel común del casco seleccionado con sus barras y sus dos acciones; filas de flota sin botones. `S108` — inline — hecho, commit `pending`
+- T125 — `src/ui/app.js` + `src/ui/sea.js`: S109, el boot no elige room y el mar desembarca en `#comprar`. `S109` — inline — hecho, commit `pending`
+- T126 — smokes: reparar y vender ahora pasan por el panel del casco elegido; los que desembarcan entran al tab Flota y aceptan la URL con hash. `S108,S109` — inline — hecho, commit `pending`
 - T119 — cierre: `pendientes.md` al día, espejo Engram del documento, log de la ficha con evidencia. `S104` — inline — hecho, commit `2bad095`
 
 ## Log

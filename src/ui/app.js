@@ -49,7 +49,7 @@ import {
   serializeFleet,
   setCaptain,
 } from "../model/fleet.js";
-import { damagedShips, priceWithPurse, repairCost, repairFleetShip, repairReport } from "../model/repair.js";
+import { conditionOf, damagedShips, priceWithPurse, repairCost, repairFleetShip, repairReport } from "../model/repair.js";
 import { buildShip, toRuntimeShip } from "../model/shipyard.js";
 import { repaintSettingsForLanguage } from "./settings-tab.js";
 import { applyRefit, configFromShip, quoteRefit } from "../model/refit.js";
@@ -192,6 +192,13 @@ const els = {
   purchaseNotice: $("#purchase-notice"),
   fleetList: $("#fleet-list"),
   fleetCount: $("#fleet-count"),
+  fleetDetail: $("#fleet-detail"),
+  fleetDetailName: $("#fleet-detail-name"),
+  fleetDetailHull: $("#fleet-detail-hull"),
+  fleetBars: $("#fleet-bars"),
+  fleetRepairBtn: $("#fleet-repair-btn"),
+  fleetSellBtn: $("#fleet-sell-btn"),
+  fleetEmptyHint: $("#fleet-empty-hint"),
   eraseBtn: $("#erase-btn"),
   eraseDialog: $("#erase-dialog"),
   eraseCancel: $("#erase-cancel"),
@@ -1341,21 +1348,71 @@ function renderFleet() {
             <span class="fleet-hull">${ship.hullName}</span>
           </button>
           ${isCaptain ? `<span class="fleet-tag" title="${t("fleet.isCaptain")}">${t("fleet.captain")}</span>` : `<button class="fleet-captain-button" type="button" data-captain="${ship.id}" title="${t("fleet.promote")}">${t("shipyard.refit.captain")}</button>`}
-          <button class="fleet-repair" type="button" data-repair="${ship.id}"
-            ${repairCost(ship) > 0 ? "" : "disabled"}
-            title="${repairCost(ship) > 0 ? t("fleet.repairTitle", { name: ship.name, gold: gold(priceWithPurse(repairCost(ship), state.gold)) }) : t("fleet.repairSound", { name: ship.name })}"
-          >${repairCost(ship) > 0 ? t("fleet.repair", { gold: gold(priceWithPurse(repairCost(ship), state.gold)) }) : t("fleet.repairNone")}</button>
-          <button class="fleet-sell" type="button" data-sell="${ship.id}"
-            ${canSellShip(fleet, ship.id) ? "" : "disabled"}
-            title="${canSellShip(fleet, ship.id) ? t("shipyard.sellTitle", { name: ship.name, gold: gold(salePrice(ship)) }) : t("shipyard.sellLast")}"
-          >${t("shipyard.sell", { gold: gold(salePrice(ship)) })}</button>
         </li>`;
     })
     .join("");
+
+  renderFleetDetail();
+}
+
+/**
+ * The selected hull's panel (S108): her condition bars and the repair and sell actions
+ * that used to sit on every row. They live here once, so the list reads as a list and
+ * the actions belong to whoever is selected — which is also who the refit editor holds.
+ */
+function renderFleetDetail() {
+  const ship = fleet.ships.find((entry) => entry.id === refitId) ?? null;
+  if (!els.fleetDetail) return;
+  const hasFleet = !isEmptyFleet(fleet);
+  els.fleetDetail.hidden = !ship;
+  els.fleetEmptyHint.hidden = !hasFleet || Boolean(ship);
+  if (!ship) return;
+
+  els.fleetDetailName.textContent = ship.name ?? "";
+  els.fleetDetailHull.textContent = ship.hullName ?? "";
+
+  // The same segments the sea paints (S21), in the dock's order, with the dock's words.
+  const condition = conditionOf(ship);
+  els.fleetBars.textContent = "";
+  for (const segment of ["hull", "rigging", "crew", "morale"]) {
+    const value = Math.max(0, Math.min(100, Math.round(Number(condition[segment]) || 0)));
+    const row = document.createElement("div");
+    row.className = `fleet-bar-row is-${segment}`;
+    const label = document.createElement("span");
+    label.textContent = t(DOCK_SEGMENT_KEY[segment]);
+    const track = document.createElement("div");
+    track.className = "fleet-bar-track";
+    const fill = document.createElement("div");
+    fill.className = `fleet-bar-fill is-${segment}`;
+    fill.style.width = `${value}%`;
+    track.append(fill);
+    const pct = document.createElement("span");
+    pct.className = "fleet-bar-pct";
+    pct.textContent = `${value}%`;
+    row.append(label, track, pct);
+    els.fleetBars.append(row);
+  }
+
+  // Repair and sell, priced and gated exactly as they were on the row.
+  const cost = repairCost(ship);
+  els.fleetRepairBtn.disabled = !(cost > 0);
+  els.fleetRepairBtn.textContent = cost > 0
+    ? t("fleet.repair", { gold: gold(priceWithPurse(cost, state.gold)) })
+    : t("fleet.repairNone");
+  els.fleetRepairBtn.title = cost > 0
+    ? t("fleet.repairTitle", { name: ship.name, gold: gold(priceWithPurse(cost, state.gold)) })
+    : t("fleet.repairSound", { name: ship.name });
+
+  const canSell = canSellShip(fleet, ship.id);
+  els.fleetSellBtn.disabled = !canSell;
+  els.fleetSellBtn.textContent = t("shipyard.sell", { gold: gold(salePrice(ship)) });
+  els.fleetSellBtn.title = canSell
+    ? t("shipyard.sellTitle", { name: ship.name, gold: gold(salePrice(ship)) })
+    : t("shipyard.sellLast");
 }
 
 /** Select an owned ship and copy her bought configuration into the refit editor. */
-function selectRefitShip(ship) {
+function selectRefitShip(ship, { openRoom = true } = {}) {
   const config = configFromShip(ship);
   refitId = ship.id;
   for (const key of ["hullId", "batteries", "crew", "days", "cargoKg", "ballastKg", "equipmentKg", "reserveKg"]) {
@@ -1365,54 +1422,12 @@ function selectRefitShip(ship) {
   els.shipName.value = state.shipName;
   // The refit editor is the Flota tab's business (S98, S105): the ship+rig panels move
   // into the fleet room, which now reads like the old build screen in refit mode.
-  showScreen("flota");
+  // The boot picks the captain only to fill the editor, so it must not choose the room
+  // the player lands in (S109).
+  if (openRoom) showScreen("flota");
 }
 
 els.fleetList.addEventListener("click", (event) => {
-  const repair = event.target.closest("[data-repair]");
-  if (repair) {
-    // Repairing is the player's decision, one hull at a time (S86): the sea no longer
-    // repairs on arrival, so this button is where a damaged hull is put right.
-    const captain = captainShip(fleet);
-    const result = repairFleetShip(fleet, repair.dataset.repair, state.gold, { allowCaptain: true });
-    if (!result.repaired) return;
-    fleet = result.fleet;
-    state.gold = result.gold;
-    saveFleet();
-    const repaired = fleet.ships.find((ship) => ship.id === repair.dataset.repair) ?? null;
-    savePurse(repaired, repair.dataset.repair === captain?.id);
-    els.goldValue.textContent = gold(state.gold);
-    lastNoticeKey = "fleet.repaired";
-    lastAddedName = repaired?.name ?? null;
-    els.purchaseNotice.textContent = t("fleet.repaired", {
-      name: repaired?.name ?? "",
-      gold: gold(result.spent ?? 0),
-    });
-    dockSignature = null;
-    renderFleet();
-    render();
-    return;
-  }
-
-  const sell = event.target.closest("[data-sell]");
-  if (sell) {
-    // Selling pays a share of the hull's value and takes her out of the fleet (S62).
-    // The last hull is refused by the model, and her button is already disabled.
-    const result = sellShip(fleet, sell.dataset.sell, state.gold);
-    if (!result) return;
-    fleet = result.fleet;
-    state.gold = result.gold;
-    // A hull being refitted cannot be sold under the player's feet.
-    if (refitId && !fleet.ships.some((entry) => entry.id === refitId)) refitId = null;
-    saveFleet();
-    savePurse();
-    els.goldValue.textContent = gold(state.gold);
-    lastNoticeKey = null;
-    els.purchaseNotice.textContent = t("shipyard.sold", { name: result.ship.name, gold: gold(result.price) });
-    renderFleet();
-    render();
-    return;
-  }
   const promote = event.target.closest("[data-captain]");
   if (promote) {
     fleet = setCaptain(fleet, promote.dataset.captain);
@@ -1420,10 +1435,61 @@ els.fleetList.addEventListener("click", (event) => {
     renderFleet();
     return;
   }
+  // Any click on a row selects that hull (S108): her bars and her actions live in the
+  // panel below the list, so picking her is what fills it. The row's own button is the
+  // refit editor's door as it always was.
   const select = event.target.closest("[data-refit]");
   const ship = fleet.ships.find((entry) => entry.id === select?.dataset.refit);
   if (!ship) return;
   selectRefitShip(ship);
+  renderFleet();
+  render();
+});
+
+/* ---------------------------------------------------------------- fleet actions (S108) */
+
+// Repairing is the player's decision, one hull at a time (S86): the sea no longer repairs
+// on arrival, so this button is where a damaged hull is put right. It acts on the hull
+// the fleet list has selected.
+els.fleetRepairBtn.addEventListener("click", () => {
+  const target = fleet.ships.find((entry) => entry.id === refitId);
+  if (!target) return;
+  const captain = captainShip(fleet);
+  const result = repairFleetShip(fleet, target.id, state.gold, { allowCaptain: true });
+  if (!result.repaired) return;
+  fleet = result.fleet;
+  state.gold = result.gold;
+  saveFleet();
+  const repaired = fleet.ships.find((ship) => ship.id === target.id) ?? null;
+  savePurse(repaired, target.id === captain?.id);
+  els.goldValue.textContent = gold(state.gold);
+  lastNoticeKey = "fleet.repaired";
+  lastAddedName = repaired?.name ?? null;
+  els.purchaseNotice.textContent = t("fleet.repaired", {
+    name: repaired?.name ?? "",
+    gold: gold(result.spent ?? 0),
+  });
+  dockSignature = null;
+  renderFleet();
+  render();
+});
+
+// Selling pays a share of the hull's value and takes her out of the fleet (S62). The last
+// hull is refused by the model, and the button is already disabled in that case.
+els.fleetSellBtn.addEventListener("click", () => {
+  const target = fleet.ships.find((entry) => entry.id === refitId);
+  if (!target) return;
+  const result = sellShip(fleet, target.id, state.gold);
+  if (!result) return;
+  fleet = result.fleet;
+  state.gold = result.gold;
+  // A hull being refitted cannot be sold under the player's feet.
+  if (refitId && !fleet.ships.some((entry) => entry.id === refitId)) refitId = null;
+  saveFleet();
+  savePurse();
+  els.goldValue.textContent = gold(state.gold);
+  lastNoticeKey = null;
+  els.purchaseNotice.textContent = t("shipyard.sold", { name: result.ship.name, gold: gold(result.price) });
   renderFleet();
   render();
 });
@@ -1763,7 +1829,9 @@ if (els.langSelect) els.langSelect.value = translator.language;
 loadConfig();
 loadGold();
 const captain = captainShip(fleet);
-if (captain) selectRefitShip(captain);
+// The boot fills the editor with the captain but leaves the room to the entry rule
+// below (S109): landing on the fleet was the boot's side effect, not a decision.
+if (captain) selectRefitShip(captain, { openRoom: false });
 renderFleet();
 renderCountry();
 renderHulls();

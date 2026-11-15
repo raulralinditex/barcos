@@ -23,6 +23,8 @@ export const en = {
   "shipyard.tab.astillero": "Shipyard",
   "shipyard.tab.configuracion": "Settings",
   "fleet.refitHint": "Pick a ship from the fleet to refit her, or buy a new one on its tab.",
+  "fleet.pickOne": "Pick a ship from the list to see her condition.",
+  "fleet.condition": "Ship condition",
   "shipyard.fort.repair": "Repair ({gold} gold)",
   "shipyard.fort.repairPlain": "Repair",
   "shipyard.fort.bought.one": "One gun bought for the defence.",

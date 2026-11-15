@@ -79,14 +79,17 @@ const expectedSpare = salePrice(spare);
 // The flota room owns this control now (S105).
 await page.click('.screen-tab[data-screen="flota"]');
 await page.waitForTimeout(150);
-const buttonLabel = await page.locator(`[data-sell="${spare.id}"]`).textContent();
+// The sell action belongs to the hull the fleet list holds (S108): pick her, then read
+// the shared button in the panel under the list.
+await page.locator(`.fleet-item[data-ship-id="${spare.id}"] [data-refit]`).click();
+const buttonLabel = await page.locator("#fleet-sell-btn").textContent();
 check(
   buttonLabel.replace(/[^\d]/g, "") === String(expectedSpare).replace(/[^\d]/g, ""),
   `S62: the sell button should offer ${expectedSpare}, it says "${buttonLabel}"`,
 );
 
 const before = await purse();
-await page.locator(`[data-sell="${spare.id}"]`).click();
+await page.locator("#fleet-sell-btn").click();
 await page.waitForTimeout(400);
 const after = await purse();
 
@@ -97,11 +100,12 @@ check((await fleetIds()).includes(captain.id), "S62: selling one hull must not t
 // The last hull cannot be sold: with one left, her button is disabled and clicking it
 // does nothing, so the fleet and the purse must not move.
 const lastPurse = await purse();
+await page.locator(`.fleet-item[data-ship-id="${captain.id}"] [data-refit]`).click();
 check(
-  await page.locator(`[data-sell="${captain.id}"]`).isDisabled(),
+  await page.locator("#fleet-sell-btn").isDisabled(),
   "S62: the only remaining hull must not be sellable",
 );
-await page.locator(`[data-sell="${captain.id}"]`).click({ force: true }).catch(() => {});
+await page.locator("#fleet-sell-btn").click({ force: true }).catch(() => {});
 await page.waitForTimeout(300);
 check((await purse()) === lastPurse, "S62: a refused sale must not pay anything");
 check((await fleetIds()).length === 1, "S62: the refused sale must leave the fleet alone");

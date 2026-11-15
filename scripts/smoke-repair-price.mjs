@@ -68,7 +68,8 @@ assert.equal(await page.locator("#dock-dialog").isHidden(), true);
 // The flota room owns this control now (S105).
 await page.click('.screen-tab[data-screen="flota"]').catch(() => {});
 
-const yard = await page.locator(`.fleet-item[data-ship-id="${ship.id}"] [data-repair]`).textContent();
+await page.locator(`.fleet-item[data-ship-id="${ship.id}"] [data-refit]`).click();
+const yard = await page.locator("#fleet-repair-btn").textContent();
 if (!shows(yard, PURSE)) failures.push(`fleet repair button: should show ${PURSE}, got "${yard.trim()}"`);
 if (shows(yard, FULL)) failures.push(`fleet repair button: shows the full price ${FULL}: "${yard.trim()}"`);
 await page.close();
@@ -83,8 +84,11 @@ await page.close();
 // 3. Arrival spends nothing; the button quotes and spends the capped price once.
 page = await open("sea.html", true);
 for (let i = 0; i < 4; i++) await page.keyboard.press("w");
-await page.waitForURL("**/index.html", { timeout: 15000 });
+await page.waitForURL("**/index.html*", { timeout: 15000 });
 await page.waitForLoadState("networkidle");
+// Arriving opens the buy room (S109); the fleet list lives in hers (S105).
+await page.click('.screen-tab[data-screen="flota"]');
+await page.waitForTimeout(200);
 const snapshot = () => page.evaluate(() => ({
   game: JSON.parse(localStorage.getItem("barcos:game:v1")),
   fleet: JSON.parse(localStorage.getItem("barcos:fleet:v1")),
@@ -96,7 +100,8 @@ assert.equal((await page.locator("#purchase-notice").textContent()).trim(), "");
 // The flota room owns the fleet strip now (S105).
 await page.click('.screen-tab[data-screen="flota"]');
 await page.waitForTimeout(150);
-const button = page.locator(`.fleet-item[data-ship-id="${ship.id}"] [data-repair]`);
+await page.locator(`.fleet-item[data-ship-id="${ship.id}"] [data-refit]`).click();
+const button = page.locator("#fleet-repair-btn");
 const arrivalQuote = await button.textContent();
 if (!shows(arrivalQuote, PURSE) || shows(arrivalQuote, FULL)) failures.push(`arrival fleet quote has wrong price: "${arrivalQuote.trim()}"`);
 await button.click();

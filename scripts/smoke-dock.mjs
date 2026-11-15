@@ -114,14 +114,23 @@ const hurtCaptain = () => {
   return captain;
 };
 
-/** The repair button of one fleet entry, as the player sees it. */
-const repairButton = (page, shipId) => page.locator(`.fleet-item[data-ship-id="${shipId}"] [data-repair]`);
+/**
+ * The repair button for one hull, as the player sees it (S108): she picks the hull from
+ * the list, and the panel under it carries the repair and sell actions.
+ */
+async function repairButton(page, shipId) {
+  await page.locator(`.fleet-item[data-ship-id="${shipId}"] [data-refit]`).click();
+  return page.locator("#fleet-repair-btn");
+}
 
 async function sailIn(page) {
   for (let press = 0; press < 4; press += 1) await page.keyboard.press("w");
-  await page.waitForURL("**/index.html", { timeout: 15000 });
+  await page.waitForURL("**/index.html*", { timeout: 15000 });
   await page.waitForLoadState("networkidle");
   await page.waitForTimeout(400);
+  // Arriving opens the buy room (S109); the fleet list lives in hers (S105).
+  await page.click('.screen-tab[data-screen="flota"]');
+  await page.waitForTimeout(200);
 }
 
 /* ------------------------------------------- 1: arriving repairs nothing and costs nothing */
@@ -160,7 +169,7 @@ page = await openPage({
 // The flota room owns the fleet strip now (S105).
 await page.click('.screen-tab[data-screen="flota"]');
 await page.waitForTimeout(150);
-const leadButton = repairButton(page, lead.id);
+const leadButton = await repairButton(page, lead.id);
 check(await leadButton.count() === 1, "the captain has no repair button in the fleet panel");
 check(await leadButton.isEnabled(), "a damaged captain's repair button is disabled");
 const purseBefore = await page.locator("#gold-value").textContent();
@@ -186,7 +195,7 @@ check(
   `the displayed purse was not updated ("${purseBefore}" -> "${purseAfter}")`,
 );
 check(
-  await repairButton(page, lead.id).isDisabled(),
+  await (await repairButton(page, lead.id)).isDisabled(),
   "a sound hull still offers a repair",
 );
 
@@ -205,7 +214,7 @@ page = await openPage({
 });
 await page.click('.screen-tab[data-screen="flota"]');
 await page.waitForTimeout(150);
-const poorButton = repairButton(page, poorCaptain.id);
+const poorButton = await repairButton(page, poorCaptain.id);
 check(await poorButton.isEnabled(), "the repair button is disabled with a short but non-empty purse");
 await poorButton.click();
 await page.waitForTimeout(500);
@@ -218,7 +227,7 @@ check(
 check(saved.game.gold === 0, `the short purse was not exhausted: ${saved.game.gold}`);
 // With an empty purse the button stays clickable on purpose: the model refuses and
 // nothing is charged, so the player sees why instead of a dead control.
-await repairButton(page, poorCaptain.id).click();
+await (await repairButton(page, poorCaptain.id)).click();
 await page.waitForTimeout(300);
 const afterEmpty = await fleetOf(page);
 check(afterEmpty.game.gold === 0, "an empty purse was charged by a second click");
@@ -283,9 +292,13 @@ page = await openPage({
   path: "index.html", ships: [englishCaptain], gold: 5000, locale: "en",
   flag: "barcos:smoke-dock-5",
 });
+// S108: the repair action lives in the panel under the list, for the picked hull.
+await page.click('.screen-tab[data-screen="flota"]');
+await page.waitForTimeout(150);
+await page.locator(`.fleet-item[data-ship-id="${englishCaptain.id}"] [data-refit]`).click();
 const english = await page.evaluate(() => ({
-  button: document.querySelector("[data-repair]")?.textContent.trim() ?? "",
-  title: document.querySelector("[data-repair]")?.title ?? "",
+  button: document.querySelector("#fleet-repair-btn")?.textContent.trim() ?? "",
+  title: document.querySelector("#fleet-repair-btn")?.title ?? "",
   dialog: document.querySelector("#dock-dialog")?.classList.contains("is-hidden"),
 }));
 check(/repair/i.test(english.button), `the English repair button is not translated: "${english.button}"`);

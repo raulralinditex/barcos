@@ -23,7 +23,7 @@ try {
   }, { ship, world });
   await page.goto("http://localhost:8765/sea.html", { waitUntil: "networkidle" });
   for (let i = 0; i < 4; i++) await page.keyboard.press("w");
-  await page.waitForURL("**/index.html", { timeout: 15000 });
+  await page.waitForURL("**/index.html*", { timeout: 15000 });
   const saved = await page.evaluate(() => ({
     fleet: JSON.parse(localStorage.getItem("barcos:fleet:v1")),
     game: JSON.parse(localStorage.getItem("barcos:game:v1")),
@@ -37,7 +37,7 @@ try {
   // The flota room owns this control now (S105).
   await page.click('.screen-tab[data-screen="flota"]');
   await page.waitForTimeout(150);
-  await page.locator(`.fleet-item[data-ship-id="${ship.id}"] [data-repair]`).click();
+  await page.locator(`.fleet-item[data-ship-id="${ship.id}"] [data-refit]`).click().then(() => page.click("#fleet-repair-btn"));
   const repaired = await page.evaluate(() => ({
     fleet: JSON.parse(localStorage.getItem("barcos:fleet:v1")),
     game: JSON.parse(localStorage.getItem("barcos:game:v1")),
@@ -64,7 +64,7 @@ try {
   }, { staleCaptain, escort, ashore, liveCaptain, liveEscort, world });
   await livePage.goto("http://localhost:8765/sea.html", { waitUntil: "networkidle" });
   for (let i = 0; i < 4; i++) await livePage.keyboard.press("w");
-  await livePage.waitForURL("**/index.html", { timeout: 15000 });
+  await livePage.waitForURL("**/index.html*", { timeout: 15000 });
   const liveSaved = await livePage.evaluate(() => ({
     fleet: JSON.parse(localStorage.getItem("barcos:fleet:v1")),
     game: JSON.parse(localStorage.getItem("barcos:game:v1")),
@@ -78,7 +78,7 @@ try {
   // The flota room owns this control now (S105).
   await livePage.click('.screen-tab[data-screen="flota"]');
   await livePage.waitForTimeout(150);
-  await livePage.locator(`.fleet-item[data-ship-id="${escort.id}"] [data-repair]`).click();
+  await livePage.locator(`.fleet-item[data-ship-id="${escort.id}"] [data-refit]`).click().then(() => livePage.click("#fleet-repair-btn"));
   const picked = await livePage.evaluate(() => ({
     fleet: JSON.parse(localStorage.getItem("barcos:fleet:v1")),
     game: JSON.parse(localStorage.getItem("barcos:game:v1")),
@@ -99,7 +99,7 @@ try {
   }, { ship, world });
   await emptyPage.goto("http://localhost:8765/sea.html", { waitUntil: "networkidle" });
   for (let i = 0; i < 4; i++) await emptyPage.keyboard.press("w");
-  await emptyPage.waitForURL("**/index.html", { timeout: 15000 });
+  await emptyPage.waitForURL("**/index.html*", { timeout: 15000 });
   const empty = await emptyPage.evaluate(() => ({
     fleet: JSON.parse(localStorage.getItem("barcos:fleet:v1")),
     game: JSON.parse(localStorage.getItem("barcos:game:v1")),
@@ -112,7 +112,7 @@ try {
   // The flota room owns this control now (S105).
   await emptyPage.click('.screen-tab[data-screen="flota"]');
   await emptyPage.waitForTimeout(150);
-  await emptyPage.locator(`.fleet-item[data-ship-id="${ship.id}"] [data-repair]`).click();
+  await emptyPage.locator(`.fleet-item[data-ship-id="${ship.id}"] [data-refit]`).click().then(() => emptyPage.click("#fleet-repair-btn"));
   const afterEmptyClick = await emptyPage.evaluate(() => ({
     fleet: JSON.parse(localStorage.getItem("barcos:fleet:v1")),
     game: JSON.parse(localStorage.getItem("barcos:game:v1")),

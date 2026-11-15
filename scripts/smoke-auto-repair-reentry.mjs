@@ -83,7 +83,7 @@ async function sailUntil(target, done, label, seconds = 120) {
       s = await state();
     } catch (error) {
       if (!/navigation|context was destroyed/i.test(error.message)) throw error;
-      await page.waitForURL("**/index.html", { timeout: 15000 });
+      await page.waitForURL("**/index.html*", { timeout: 15000 });
       return state();
     }
     if (done(s)) return s;
@@ -120,7 +120,7 @@ if (out.gold !== GOLD || JSON.stringify(out.condition) !== JSON.stringify(ship.c
 
 // 3. Back in: arrival saves and navigates, without repair or payment.
 await sailUntil({ x: 0, y: 0 }, (s) => Math.hypot(s.x, s.y) <= PORT_RADIUS, "coming back into the port");
-await page.waitForURL("**/index.html", { timeout: 15000 });
+await page.waitForURL("**/index.html*", { timeout: 15000 });
 await page.waitForLoadState("networkidle");
 await page.waitForTimeout(600);
 const settled = await state();
@@ -133,7 +133,7 @@ if (!(await page.locator("#dock-dialog").isHidden())) failures.push("arrival ope
 // The flota room owns this control now (S105).
 await page.click('.screen-tab[data-screen="flota"]').catch(() => {});
 
-await page.locator(`.fleet-item[data-ship-id="${ship.id}"] [data-repair]`).click();
+await page.locator(`.fleet-item[data-ship-id="${ship.id}"] [data-refit]`).click().then(() => page.click("#fleet-repair-btn"));
 const repaired = await state();
 if (repaired.hull !== 100) failures.push(`manual repair did not fix the hull (${repaired.hull})`);
 if (repaired.gold !== GOLD - price) failures.push(`manual repair should cost ${price}: gold ${GOLD} -> ${repaired.gold}`);

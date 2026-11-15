@@ -685,8 +685,9 @@ h3 {
 
 /* Each room lays out like the original three-column build screen (user S105): the
    moved-in column takes the left panel's slot, the ship and rig panels follow.
-   The fleet and yard rooms give their left column more room: the fleet strip and the
-   fort need it more than a hull shelf does (user S106). */
+   The fleet and yard rooms keep exactly that shape (user S108): the fleet strip takes
+   the hull shelf's place and the other two panels stay where they are, so every room
+   reads with the same block structure as the buy screen. */
 .screen-panel.is-active {
   display: grid;
   grid-template-columns: minmax(300px, 22%) minmax(420px, 1fr) minmax(320px, 28%);
@@ -697,23 +698,6 @@ h3 {
 
 @media (max-width: 1180px) {
   .screen-panel.is-active {
-    grid-template-columns: 1fr;
-    grid-template-areas: "left" "ship" "rig";
-  }
-}
-
-/* The fleet and yard rooms give their left column more room, and let the ship panel
-   run the full remaining width: the hull takes the top and the rig sits under her, so
-   neither is squeezed into a narrow third column (user S106). */
-.screen-panel-fleet.is-active {
-  grid-template-columns: minmax(320px, 24%) minmax(0, 1fr);
-  grid-template-areas:
-    "left ship"
-    "left rig";
-}
-
-@media (max-width: 1180px) {
-  .screen-panel-fleet.is-active {
     grid-template-columns: 1fr;
     grid-template-areas: "left" "ship" "rig";
   }
@@ -741,11 +725,6 @@ h3 {
 
 .panel-fleet {
   padding: 10px 12px;
-  /* The fleet column runs the full height of the room, so her list has room to breathe
-     instead of hugging the top (user S106). */
-  align-self: stretch;
-  display: flex;
-  flex-direction: column;
 }
 
 .fleet-column .fleet-bar,
@@ -761,13 +740,98 @@ h3 {
 }
 
 .fleet-column .fleet-list {
-  max-height: none;
-  flex: 1;
+  max-height: 320px;
   overflow-y: auto;
 }
 
-.fleet-column .fleet-bar {
+/* The selected hull's panel (S108): her condition bars and the two actions that used to
+   ride on every row. It sits under the list, in the fleet column. */
+.fleet-detail {
+  margin-top: 10px;
+  padding: 8px 9px;
+  border: 1px solid rgba(23, 54, 93, 0.18);
+  border-radius: 6px;
+  background: rgba(23, 54, 93, 0.04);
+  display: grid;
+  gap: 7px;
+}
+
+.fleet-detail-head {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+.fleet-detail-name {
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--navy);
+}
+
+.fleet-detail-hull {
+  font-size: 10.5px;
+  color: var(--ink-soft);
+}
+
+.fleet-bars {
+  display: grid;
+  gap: 4px;
+}
+
+.fleet-bar-row {
+  display: grid;
+  grid-template-columns: 62px 1fr 34px;
+  align-items: center;
+  gap: 6px;
+}
+
+.fleet-bar-row > span:first-child {
+  font-size: 10px;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: var(--ink-soft);
+}
+
+.fleet-bar-track {
+  height: 7px;
+  border-radius: 4px;
+  background: rgba(23, 54, 93, 0.12);
+  overflow: hidden;
+}
+
+.fleet-bar-fill {
+  height: 100%;
+  border-radius: 4px;
+  transition: width 0.25s ease;
+}
+
+.fleet-bar-fill.is-hull { background: #a13c2c; }
+.fleet-bar-fill.is-rigging { background: #6b5b95; }
+.fleet-bar-fill.is-crew { background: #2f6b47; }
+.fleet-bar-fill.is-morale { background: #b8860b; }
+
+.fleet-bar-pct {
+  font-size: 10px;
+  text-align: right;
+  color: var(--ink-soft);
+  font-variant-numeric: tabular-nums;
+}
+
+.fleet-detail-actions {
+  display: flex;
+  gap: 6px;
+}
+
+.fleet-detail-actions > button {
   flex: 1;
+}
+
+.fleet-empty-hint {
+  margin: 10px 0 0;
+}
+
+.fleet-column .fleet-bar {
   align-content: start;
 }
 

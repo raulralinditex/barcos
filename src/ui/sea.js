@@ -493,7 +493,10 @@ function updatePortArrival() {
     /* storage disabled: continue to the shipyard */
   }
   saveGame();
-  window.location.href = "./index.html";
+  // Arriving at the yard opens the buy room (S109): the player comes back to buy or
+  // refit, not to stare at a fleet list she just sailed. The hash is the room's name,
+  // the same one config.html redirects with.
+  window.location.href = "./index.html#comprar";
   return true;
 }
 
@@ -1863,7 +1866,7 @@ els.gameoverBack.addEventListener("click", () => {
   } catch {
     /* nothing to remove */
   }
-  window.location.href = "./index.html";
+  window.location.href = "./index.html#comprar";
 });
 
 function drawFx(ctx) {
@@ -2495,6 +2498,7 @@ function boot() {
 if (runtimeShip) {
   boot();
 } else {
-  // No ship in the water: the sea has nothing to sail. Back to the shipyard.
-  window.location.replace("./index.html");
+  // No ship in the water: the sea has nothing to sail. Back to the shipyard, to the
+  // room that buys one (S109).
+  window.location.replace("./index.html#comprar");
 }

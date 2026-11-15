@@ -73,7 +73,9 @@ assert.equal(await page.locator("#dock-dialog").isHidden(), true);
 // The flota room owns this control now (S105).
 await page.click('.screen-tab[data-screen="flota"]').catch(() => {});
 
-const button = page.locator(`.fleet-item[data-ship-id="${escort.id}"] [data-repair]`);
+// The panel under the list carries the actions for the hull it holds (S108).
+await page.locator(`.fleet-item[data-ship-id="${escort.id}"] [data-refit]`).click();
+const button = page.locator("#fleet-repair-btn");
 assert.equal(await button.count(), 1, "the escort must have a fleet repair button");
 await button.click();
 await page.waitForTimeout(400);

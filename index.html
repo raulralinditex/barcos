@@ -147,7 +147,7 @@
 
       <!-- Flota (S98): the fleet column takes the left panel's place; the ship and rig
            panels are the SAME DOM as the buy room's, re-parented here for the refit. -->
-      <section class="screen-panel screen-panel-fleet" data-screen-panel="flota">
+      <section class="screen-panel" data-screen-panel="flota">
         <div class="builder-slot fleet-column">
           <section class="panel panel-fleet" aria-labelledby="fleet-title">
             <div class="fleet-bar">
@@ -158,6 +158,21 @@
               <ul class="fleet-list" id="fleet-list"></ul>
             </div>
             <p class="hint fleet-hint" id="fleet-hint" data-i18n="fleet.refitHint">Elegí una nave de la flota para reformarla, o comprá una nueva en su tab.</p>
+            <!-- The selected hull's own panel (S108): her condition bars and the two
+                 actions that used to ride on every row. Nothing here answers until a
+                 hull is picked, so the list stays one clean line per ship. -->
+            <div class="fleet-detail" id="fleet-detail" hidden>
+              <div class="fleet-detail-head">
+                <span class="fleet-detail-name" id="fleet-detail-name"></span>
+                <span class="fleet-detail-hull" id="fleet-detail-hull"></span>
+              </div>
+              <div class="fleet-bars" id="fleet-bars"></div>
+              <div class="fleet-detail-actions">
+                <button class="fleet-repair" id="fleet-repair-btn" type="button"></button>
+                <button class="fleet-sell" id="fleet-sell-btn" type="button"></button>
+              </div>
+            </div>
+            <p class="hint fleet-empty-hint" id="fleet-empty-hint" data-i18n="fleet.pickOne">Elegí una nave de la lista para ver su estado.</p>
           </section>
         </div>
         <div id="flota-builder-slot" class="builder-slot" hidden></div>
@@ -165,7 +180,7 @@
 
       <!-- Astillero (S100): the yard column takes the left panel's place, with her
            reinforcement actions; the ship and rig panels are again the SAME DOM. -->
-      <section class="screen-panel screen-panel-fleet" data-screen-panel="astillero">
+      <section class="screen-panel" data-screen-panel="astillero">
         <div class="builder-slot yard-column">
           <div id="fort-panel" class="fort-panel">
             <div class="fort-head">

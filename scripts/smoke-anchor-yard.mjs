@@ -29,7 +29,7 @@ try {
     assert.equal(await page.locator('a[href="./index.html"]').count(), 0);
     assert.equal(await page.locator("#gameover-back").count(), 1);
     for (let i = 0; i < 4; i++) await page.keyboard.press("w");
-    await page.waitForURL("**/index.html", { timeout: 15000 });
+    await page.waitForURL("**/index.html*", { timeout: 15000 });
     const saved = await page.evaluate(() => ({
       game: JSON.parse(localStorage.getItem("barcos:game:v1")),
       fleet: JSON.parse(localStorage.getItem("barcos:fleet:v1")),
@@ -46,7 +46,7 @@ try {
 // The flota room owns this control now (S105).
 await page.click('.screen-tab[data-screen="flota"]').catch(() => {});
 
-    await page.locator(`.fleet-item[data-ship-id="${ship.id}"] [data-repair]`).click();
+    await page.locator(`.fleet-item[data-ship-id="${ship.id}"] [data-refit]`).click().then(() => page.click("#fleet-repair-btn"));
     const repaired = await page.evaluate(() => ({
       game: JSON.parse(localStorage.getItem("barcos:game:v1")),
       fleet: JSON.parse(localStorage.getItem("barcos:fleet:v1")),
@@ -78,7 +78,7 @@ await page.click('.screen-tab[data-screen="flota"]').catch(() => {});
   }, { ship, world, enemy });
   await fight.goto("http://localhost:8765/sea.html", { waitUntil: "networkidle" });
   for (let i = 0; i < 4; i++) await fight.keyboard.press("w");
-  await fight.waitForURL("**/index.html", { timeout: 15000 });
+  await fight.waitForURL("**/index.html*", { timeout: 15000 });
   let savedEnemy = await fight.evaluate(() => JSON.parse(JSON.parse(localStorage.getItem("barcos:game:v1")).world).encounters.find(e => e.id === 901));
   assert.equal(savedEnemy.combat.status, "fighting");
   assert.equal(savedEnemy.combat.condition.hull, 73);

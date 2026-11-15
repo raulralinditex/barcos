@@ -21,6 +21,8 @@ export const es = {
   "shipyard.tab.astillero": "Astillero",
   "shipyard.tab.configuracion": "Configuración",
   "fleet.refitHint": "Elegí una nave de la flota para reformarla, o comprá una nueva en su tab.",
+  "fleet.pickOne": "Elegí una nave de la lista para ver su estado.",
+  "fleet.condition": "Estado de la nave",
   "shipyard.fort.repair": "Reparar ({gold} dl)",
   "shipyard.fort.repairPlain": "Reparar",
   "shipyard.fort.bought.one": "Un cañón comprado para la defensa.",
