@@ -102,8 +102,8 @@ S104. **Verificación.**
 - T124 — `index.html` + `src/ui/app.js` + `styles.css` + i18n: S108, panel común del casco seleccionado con sus barras y sus dos acciones; filas de flota sin botones. `S108` — inline — hecho, commit `62be33e`
 - T125 — `src/ui/app.js` + `src/ui/sea.js`: S109, el boot no elige room y el mar desembarca en `#comprar`. `S109` — inline — hecho, commit `62be33e`
 - T126 — smokes: reparar y vender ahora pasan por el panel del casco elegido; los que desembarcan entran al tab Flota y aceptan la URL con hash. `S108,S109` — inline — hecho, commit `62be33e`
-- T127 — `src/model/turning.js` + `ship-model.js` + `src/ui/sea.js` + settings + i18n: S110, regla de maniobra por casco ligero, cableada en capitana, escoltas y enemigos, con aviso en el constructor. `S110` — inline — hecho, commit `pending`
-- T128 — `src/model/repair.js` + `refit.js`: S111, la carga suma al valor y por tanto al coste de reparar y al precio de venta; `hullValue` separa el valor persistido. `S111` — inline — hecho, commit `pending`
+- T127 — `src/model/turning.js` + `ship-model.js` + `src/ui/sea.js` + settings + i18n: S110, regla de maniobra por casco ligero, cableada en capitana, escoltas y enemigos, con aviso en el constructor. `S110` — inline — hecho, commit `a7b00f3`
+- T128 — `src/model/repair.js` + `refit.js`: S111, la carga suma al valor y por tanto al coste de reparar y al precio de venta; `hullValue` separa el valor persistido. `S111` — inline — hecho, commit `a7b00f3`
 - T119 — cierre: `pendientes.md` al día, espejo Engram del documento, log de la ficha con evidencia. `S104` — inline — hecho, commit `2bad095`
 
 ## Log
