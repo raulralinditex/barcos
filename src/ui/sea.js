@@ -1150,26 +1150,41 @@ function drawWake(ctx) {
  * It is an arc, not a full circle: a broadside cannot fire through its own hull, so a
  * full ring would advertise the stern as a firing bearing. The arc spans the same 120°
  * the guns actually cover, centred on the beam.
+ *
+ * The whole line draws hers (S107): every hull that sails with the captain shows the
+ * reach of her own guns, so the player can see which escort actually covers the enemy
+ * instead of guessing from a hull that looks like the others.
  */
 function drawRangeCircles(ctx) {
   if (!playerCombat || !world) return;
-  const hull = { x: world.ship.x, y: world.ship.y };
-  const heading = world.ship.heading ?? 0;
+  drawRangeArcs(ctx, playerCombat, world.ship.x, world.ship.y, world.ship.heading ?? 0, { captain: true });
+  for (const escort of escorts) {
+    if (!escort.combat) continue;
+    drawRangeArcs(ctx, escort.combat, escort.x, escort.y, escort.heading ?? 0, { captain: false });
+  }
+}
 
+/**
+ * One combatant's two beams (S68, S107). The captain's arcs are the bright ones: hers are
+ * the guns the player is aiming, and an escort's arc must not read as loud as that.
+ */
+function drawRangeArcs(ctx, combatant, x, y, heading, { captain }) {
   for (const side of ["babor", "estribor"]) {
-    const radius = rangeCircleM(playerCombat, side);
+    const radius = rangeCircleM(combatant, side);
     if (!(radius > 0)) continue;
     // Starboard bears at heading + 90°, port at heading - 90°, as everywhere else.
     const centre = heading + (side === "estribor" ? 1 : -1) * (Math.PI / 2);
     // A beam whose guns are all loaded and ready is drawn solid: that is the beam that
     // can fire right now, so the arcs also say which side is live (S71).
-    const ready = loadedShare(playerCombat, side) >= 1;
-    const opening = openingBonus(playerCombat, side).damage > 1;
+    const ready = loadedShare(combatant, side) >= 1;
+    const opening = captain && openingBonus(combatant, side).damage > 1;
     ctx.beginPath();
-    ctx.arc(hull.x, hull.y, radius, centre - COMBAT.arcHalf, centre + COMBAT.arcHalf);
+    ctx.arc(x, y, radius, centre - COMBAT.arcHalf, centre + COMBAT.arcHalf);
     const hue = side === "estribor" ? "143,208,255" : "224,168,21";
-    ctx.strokeStyle = ready ? `rgba(${hue},0.85)` : `rgba(${hue},0.26)`;
-    ctx.lineWidth = ready ? 9 : 6;
+    // An escort's reach is thinner and fainter: it is information, not the player's aim.
+    const alpha = captain ? (ready ? 0.85 : 0.26) : (ready ? 0.5 : 0.16);
+    ctx.strokeStyle = `rgba(${hue},${alpha})`;
+    ctx.lineWidth = captain ? (ready ? 9 : 6) : (ready ? 5 : 3.5);
     // The opening volley gets a brighter arc still: the player can see the bonus is live.
     if (opening) ctx.strokeStyle = side === "estribor" ? "rgba(180,235,255,0.95)" : "rgba(255,215,120,0.95)";
     ctx.setLineDash(ready ? [] : [40, 34]);

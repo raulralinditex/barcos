@@ -4,6 +4,17 @@ Estado: cerrada S97-S104, salvo lo que queda abierto abajo. S97+. Refactor de la
 
 ## Specs
 
+S106. **El tab Flota aprovecha todo el espacio.** Pedido (verbatim): "vamos refinando el tab flota, aprovecha todo el espacio horizontal, amplia el panel 'tu flota' y el panel 'el buque' para que coja todo el espacio lateral".
+- La columna de flota crece (`minmax(320px, 24%`) y corre el alto completo del room.
+- El panel del buque y el del aparejo ocupan **todo el ancho restante**: el buque arriba, el aparejo debajo. Ninguna tercera columna vacía.
+- Los slots de aparcamiento son transparentes a la grilla (`display: contents`), así un slot con dos paneles no los apila en una sola columna.
+- Causa del defecto: los tres rooms usaban la plantilla de tres columnas, pero en Flota el aparejo quedaba como hijo del mismo slot que el buque, así que ambos se apilaban en la columna central y la tercera quedaba **vacía** (350 px perdidos).
+
+S107. **El radio de tiro se ve para toda la línea, no sólo para la capitana.** Pedido (verbatim): "vamos a mostras el radio de distancia de tiro tambien para el resto de naves propias aparte de la capitana".
+- Cada casco propio en el mar dibuja los arcos de sus dos bandas, con el alcance real de la munición cargada (`rangeCircleM`, S68).
+- Los arcos de la capitana mantienen su brillo; los de las escoltas son más finos y tenues: informan, no compiten con la puntería del jugador.
+- El bonus de la primera andanada sólo se marca en la capitana: es su privilegio de apertura (S69).
+
 S105. **Cada tab lee como la pantalla original, cambiando sólo el panel izquierdo.** Pedido (verbatim): "el tab de crear buque se deberia de ver exactamente igual que antes, pero sin el panel de flota y sin los botones que no son necesarios para crear un buque. el tab de flota se debe de ver igual que el primer tab pero reemplazando el panel de casco por el de flota, y añadiendo los botones relacionados con la flota, el panel de astillero se tendria que ver como el primero pero reemplazando el panel de cascos por el de astillero con los botones relacionados con astillero, el panel de configuracion tendria que tener varias colummnas en ver de todos los paneles de valores en una".
 - Los tres rooms de juego (Comprar buque, Flota, Astillero) muestran las **tres columnas** de la pantalla original: panel izquierdo propio, panel del buque, panel del aparejo.
 - **Comprar buque**: panel izquierdo = catálogo de cascos (con país). Acciones del pie: precio, "Añadir a la flota", veredicto. Sin tira de flota, sin Zarpar, sin Borrar partida.
@@ -64,6 +75,8 @@ S104. **Verificación.**
 - T118 — smokes: actualizar los que pintan la pantalla vieja (autorización en S104), smoke nuevo de recorrido de tabs, `npm test` y la serie de smokes en verde. `S104` — inline — hecho, commit `dfe7236`
 - T120 — `index.html` + `src/ui/styles.css` + `src/ui/app.js`: S105, cada room con la grilla original de tres columnas y su panel izquierdo propio; configuración en varias columnas; slots de aparcamiento destapados al mudar los paneles. `S105` — inline — hecho, commit `d895d04`
 - T121 — smokes: entrar al room que posee cada control (flota/comprar/astillero) antes de operarlo; aserciones de smoke-tabs al comportamiento nuevo. `S105` — inline — hecho, commit `d895d04`
+- T122 — `src/ui/styles.css`: S106, plantilla propia de los rooms de flota/astillero, slots transparentes, panel de flota a alto completo. `S106` — inline — hecho, commit `pending`
+- T123 — `src/ui/sea.js` + `scripts/smoke-escort-range.mjs`: S107, arcos de tiro para toda la línea; smoke con RED observado (arcos desde un solo casco) y GREEN. `S107` — inline — hecho, commit `pending`
 - T119 — cierre: `pendientes.md` al día, espejo Engram del documento, log de la ficha con evidencia. `S104` — inline — hecho, commit `2bad095`
 
 ## Log

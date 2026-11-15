@@ -684,10 +684,12 @@ h3 {
 }
 
 /* Each room lays out like the original three-column build screen (user S105): the
-   moved-in column takes the left panel's slot, the ship and rig panels follow. */
+   moved-in column takes the left panel's slot, the ship and rig panels follow.
+   The fleet and yard rooms give their left column more room: the fleet strip and the
+   fort need it more than a hull shelf does (user S106). */
 .screen-panel.is-active {
   display: grid;
-  grid-template-columns: 250px minmax(380px, 1fr) 350px;
+  grid-template-columns: minmax(300px, 22%) minmax(420px, 1fr) minmax(320px, 28%);
   gap: 14px;
   align-items: start;
   grid-template-areas: "left ship rig";
@@ -700,10 +702,36 @@ h3 {
   }
 }
 
-.screen-panel > .builder-slot:first-child { grid-area: left; }
-.screen-panel > .builder-slot:nth-child(2) { grid-area: ship; }
-.screen-panel > .builder-slot:nth-child(3) { grid-area: rig; }
+/* The fleet and yard rooms give their left column more room, and let the ship panel
+   run the full remaining width: the hull takes the top and the rig sits under her, so
+   neither is squeezed into a narrow third column (user S106). */
+.screen-panel-fleet.is-active {
+  grid-template-columns: minmax(320px, 24%) minmax(0, 1fr);
+  grid-template-areas:
+    "left ship"
+    "left rig";
+}
+
+@media (max-width: 1180px) {
+  .screen-panel-fleet.is-active {
+    grid-template-columns: 1fr;
+    grid-template-areas: "left" "ship" "rig";
+  }
+}
+
+/* The slots are transparent to the grid: their panels are placed by the room's own
+   template, so a slot holding two panels does not stack them into one column. */
+.screen-panel.is-active > .builder-slot {
+  display: contents;
+}
+
 .screen-panel > .builder-slot[hidden] { display: none; }
+
+.screen-panel.is-active > .builder-slot > .panel-hulls { grid-area: left; }
+.screen-panel.is-active > .builder-slot > .panel-fleet { grid-area: left; }
+.screen-panel.is-active > .builder-slot > .yard-column { grid-area: left; }
+.screen-panel.is-active > .builder-slot > .panel-ship { grid-area: ship; }
+.screen-panel.is-active > .builder-slot > .panel-build { grid-area: rig; }
 
 /* The settings room is the one exception to the three-column shape (user S105): she
    stacks as a normal block across the whole row; her card grid gives the columns. */
@@ -713,6 +741,11 @@ h3 {
 
 .panel-fleet {
   padding: 10px 12px;
+  /* The fleet column runs the full height of the room, so her list has room to breathe
+     instead of hugging the top (user S106). */
+  align-self: stretch;
+  display: flex;
+  flex-direction: column;
 }
 
 .fleet-column .fleet-bar,
@@ -728,7 +761,14 @@ h3 {
 }
 
 .fleet-column .fleet-list {
-  max-height: 320px;
+  max-height: none;
+  flex: 1;
+  overflow-y: auto;
+}
+
+.fleet-column .fleet-bar {
+  flex: 1;
+  align-content: start;
 }
 
 .builder-slot > .panel {
