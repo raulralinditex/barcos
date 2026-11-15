@@ -1,0 +1,86 @@
+src/ui/sea.js
+  s_8ca75549fb5486::t_d4cf83a84d2822 1374-1379,1391,1403-1411,1413-1418,1423,1431-1434,1445-1446
+  s_8ca75549fb5486::t_01e2549dd937ac 1530,1534,1541-1542
+  s_8ca75549fb5486::t_4b32e7a4135a56 266-280,2369-2377
+  s_8ca75549fb5486::t_e84c86f6233fc9 1577-1582,1587
+  s_8ca75549fb5486::t_518344b760dfc6 1584,1591,1628
+  s_8ca75549fb5486::t_de1c538362f1e0 78,80,82-83
+  s_8ca75549fb5486::t_3282258ccf6998 1412
+  s_8ca75549fb5486::t_eec1f83a2e1b37 1532-1533
+  s_8ca75549fb5486::t_0437593e43b378 81
+  s_8ca75549fb5486::t_c0d52a2ee6d19d 937-938,946,948-950,952-954
+  s_8ca75549fb5486::t_87f673b80f90e1 1588-1590
+  s_8ca75549fb5486::t_f03389ae79c0c3 1380-1389
+  s_8ca75549fb5486::t_c2fb6f7298de17 705-719
+  s_8ca75549fb5486::t_220eb647fd27ff 939-943,951,1535-1540
+  s_8ca75549fb5486::t_1650d0abd2eb55 1946-1953
+  s_8ca75549fb5486::t_0bd9d62dc20507 1575-1576,1583,1585-1586,1592-1615,1929-1930
+  s_8ca75549fb5486::t_18c34704ad0ad0 944-945,947,1390,1392-1402
+  s_8ca75549fb5486::t_dd1ed5d9b72b19 1484,1486-1487,1489-1491,1497-1498
+  s_8ca75549fb5486::t_ea3170f6bc644b 1627,1629
+  s_8ca75549fb5486::t_3ca8350d426e2c 1531
+src/i18n/es.js
+  s_8ca75549fb5486::t_0e4b050f72ab7b 197
+  s_8ca75549fb5486::t_6fd49b9d679cff 237-238
+src/ui/app.js
+  s_8ca75549fb5486::t_d53135b542ee05 1114-1115,1119-1121
+  s_8ca75549fb5486::t_93d5bc86e42dbd 1102-1105,1116-1117
+src/model/fort.js
+  s_8ca75549fb5486::t_d08dcedb5c8a3e 206-207
+  s_8ca75549fb5486::t_de0fbed273fa2a 176-183,208-213
+  s_8ca75549fb5486::t_b631847780fdcb 167-175,184-205,214-335
+scripts/smoke-fort-recovery.mjs
+  s_0eaa5da71828f9::t_a38b294ef9dc41 4-22,27-28,33,35-36,43-44,48-52,54,56-69,72-113,115-118,120-130,132,134-135,137,139-150,152-157,159-193,196-199
+  s_8ca75549fb5486::t_8142a34c4d47c4 1-3,23-26,29-32,34,37-42,45-47,53,55,70-71,114,119,131,133,151,158,194-195,200
+  s_0eaa5da71828f9::t_a8ec3d640b41db 136,138
+src/i18n/en.js
+  s_8ca75549fb5486::t_0e4b050f72ab7b 200
+  s_8ca75549fb5486::t_6fd49b9d679cff 240-241
+src/ui/styles.css
+  s_8ca75549fb5486::t_29700a241fa112 918-920
+  s_8ca75549fb5486::t_38fbab3c701f3e 916-917,921-930
+test/fort-recovery.test.js
+  s_8ca75549fb5486::t_9efc25437e8809 1-27,29-95,98-103,117-148,150-151,155
+  s_8ca75549fb5486::t_7293226d74ada0 28,96-97,104-116,149,152-154
+odd/tasks/recuperar-el-astillero.md
+  s_8ca75549fb5486::t_6fbaa49da79d47 1-22,28-35,41-46
+  s_8ca75549fb5486::t_61999ede2d59bd 36-40
+  s_8ca75549fb5486::t_e0100499c4f52d 47-76
+  s_8ca75549fb5486::t_99205b4e2ef2df 23-27
+test/escort-steady.test.js
+  s_8ca75549fb5486::t_b8dbf842414978 1-99
+src/model/formation.js
+  s_8ca75549fb5486::t_bd29e1db4bc8c0 135-139,142-144,155-161
+scripts/smoke-fort.mjs
+  s_8ca75549fb5486::t_5f5bc602c05dd7 5-6,8-16,28,51-55,57-58,61-98,106
+test/autofire.test.js
+  s_8ca75549fb5486::t_e319e5859c3207 101-143
+src/model/autofire.js
+  s_8ca75549fb5486::t_92cbc29ad9a379 36-40,42,48-57,60-63
+odd/tasks/pendientes.md
+  s_8ca75549fb5486::t_d002f4b221cb40 64-77
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.6",
+  "base_commit_sha": "f19a59728bfa7dc64c20406ca5e7422248e5f870",
+  "prompts": {},
+  "sessions": {
+    "s_0eaa5da71828f9": {
+      "agent_id": {
+        "tool": "pi",
+        "id": "01a1dd11-81d4-7662-9466-c97839bdc811",
+        "model": "gpt-6.1-terra"
+      },
+      "human_author": "Raul Ripoll <raulral@ext.inditex.com>"
+    },
+    "s_8ca75549fb5486": {
+      "agent_id": {
+        "tool": "pi",
+        "id": "01a1dc00-69e3-7628-b102-1d36f2ff622f",
+        "model": "deepseek-v4.1-flash_high"
+      },
+      "human_author": "Raul Ripoll <raulral@ext.inditex.com>"
+    }
+  }
+}
