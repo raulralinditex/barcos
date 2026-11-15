@@ -26,19 +26,19 @@ await page.reload({ waitUntil: "networkidle" });
 await page.waitForTimeout(300);
 
 const activePanel = () => page.evaluate(() => document.querySelector(".screen-panel.is-active")?.dataset.screenPanel);
-const builderRoom = () => page.evaluate(() => document.getElementById("builder")?.closest(".screen-panel")?.dataset.screenPanel ?? null);
-const builderCount = () => page.evaluate(() => document.querySelectorAll("#builder").length);
+const builderRoom = () => page.evaluate(() => document.querySelector(".panel-ship")?.closest(".screen-panel")?.dataset.screenPanel ?? null);
+const builderCount = () => page.evaluate(() => document.querySelectorAll(".panel-ship").length);
 
 // --- the boot room and the four doorways ---------------------------------------------
 check((await activePanel()) === "comprar", `an empty save opens on Comprar, got ${await activePanel()}`);
-check((await builderCount()) === 1, "there must be exactly one builder DOM");
-check((await builderRoom()) === "comprar", "the builder waits in the buy room before a fleet exists");
+check((await builderCount()) === 1, "there must be exactly one ship panel DOM");
+check((await builderRoom()) === "comprar", "the ship+rig panels open in the buy room");
 
 for (const room of ["flota", "astillero", "configuracion", "comprar"]) {
   await page.click(`.screen-tab[data-screen="${room}"]`);
   check((await activePanel()) === room, `tab ${room} did not open`);
 }
-check((await builderCount()) === 1, "tab switching must not clone the builder");
+check((await builderCount()) === 1, "tab switching must not clone the ship panel");
 
 // --- Comprar: build one and add her ---------------------------------------------------
 await page.click('.screen-tab[data-screen="comprar"]');
@@ -46,8 +46,8 @@ check((await page.locator("#launch-btn").textContent()).trim() === "Añadir a la
 await page.fill("#ship-name", "Nave del recorrido");
 await page.click("#launch-btn");
 await page.waitForTimeout(300);
-check((await activePanel()) === "flota", "a purchase lands on the fleet");
-check((await builderRoom()) === "comprar", "the sold builder goes back to waiting in Comprar");
+check((await activePanel()) === "comprar", "the buy screen stays put after a purchase (S105)");
+check((await builderRoom()) === "comprar", "the ship panels stay in the buy room");
 
 // --- Flota: the strip lives here; refit opens the builder inside the room -------------
 await page.click('.screen-tab[data-screen="flota"]');
@@ -55,7 +55,7 @@ check((await page.locator(".fleet-item .fleet-name").textContent()) === "Nave de
 await page.click(".fleet-item .fleet-ship");
 await page.waitForTimeout(200);
 check((await activePanel()) === "flota", "a refit opens inside the Flota tab");
-check((await builderRoom()) === "flota", "the refit builder moved into the fleet room");
+check((await builderRoom()) === "flota", "the ship panels moved into the fleet room");
 check((await page.locator("#launch-btn").textContent()).trim() === "Guardar reforma", "refit foot action is saving the refit");
 check((await page.locator("#set-sail-btn").isVisible()), "setting sail is the fleet room's action");
 check(String(await page.locator("#refit-mode").textContent()).includes("Nave del recorrido"), "the refit banner names her");

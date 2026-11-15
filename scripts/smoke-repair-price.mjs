@@ -65,6 +65,9 @@ const shows = (text, value) => numbers(text).includes(value);
 // 1. The shipyard fleet button offers the amount actually affordable.
 let page = await open("index.html");
 assert.equal(await page.locator("#dock-dialog").isHidden(), true);
+// The flota room owns this control now (S105).
+await page.click('.screen-tab[data-screen="flota"]').catch(() => {});
+
 const yard = await page.locator(`.fleet-item[data-ship-id="${ship.id}"] [data-repair]`).textContent();
 if (!shows(yard, PURSE)) failures.push(`fleet repair button: should show ${PURSE}, got "${yard.trim()}"`);
 if (shows(yard, FULL)) failures.push(`fleet repair button: shows the full price ${FULL}: "${yard.trim()}"`);
@@ -90,6 +93,9 @@ const arrival = await snapshot();
 assert.equal(arrival.game.gold, PURSE, "arrival must not spend the purse");
 assert.deepEqual(arrival.fleet.ships[0].condition, ship.condition, "arrival must not repair the ship");
 assert.equal((await page.locator("#purchase-notice").textContent()).trim(), "");
+// The flota room owns the fleet strip now (S105).
+await page.click('.screen-tab[data-screen="flota"]');
+await page.waitForTimeout(150);
 const button = page.locator(`.fleet-item[data-ship-id="${ship.id}"] [data-repair]`);
 const arrivalQuote = await button.textContent();
 if (!shows(arrivalQuote, PURSE) || shows(arrivalQuote, FULL)) failures.push(`arrival fleet quote has wrong price: "${arrivalQuote.trim()}"`);

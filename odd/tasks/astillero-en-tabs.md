@@ -4,6 +4,15 @@ Estado: cerrada S97-S104, salvo lo que queda abierto abajo. S97+. Refactor de la
 
 ## Specs
 
+S105. **Cada tab lee como la pantalla original, cambiando sólo el panel izquierdo.** Pedido (verbatim): "el tab de crear buque se deberia de ver exactamente igual que antes, pero sin el panel de flota y sin los botones que no son necesarios para crear un buque. el tab de flota se debe de ver igual que el primer tab pero reemplazando el panel de casco por el de flota, y añadiendo los botones relacionados con la flota, el panel de astillero se tendria que ver como el primero pero reemplazando el panel de cascos por el de astillero con los botones relacionados con astillero, el panel de configuracion tendria que tener varias colummnas en ver de todos los paneles de valores en una".
+- Los tres rooms de juego (Comprar buque, Flota, Astillero) muestran las **tres columnas** de la pantalla original: panel izquierdo propio, panel del buque, panel del aparejo.
+- **Comprar buque**: panel izquierdo = catálogo de cascos (con país). Acciones del pie: precio, "Añadir a la flota", veredicto. Sin tira de flota, sin Zarpar, sin Borrar partida.
+- **Flota**: panel izquierdo = panel de flota (lista con cheque de zarpe, capitana, reparar, vender). Pie: Zarpar y Borrar partida; al elegir una nave para reformar aparecen precio y "Guardar reforma". Sin catálogo de cascos (reformar no cambia casco, S26).
+- **Astillero**: panel izquierdo = panel del fuerte con sus botones (Reparar, Comprar cañón). Sin acciones de compra ni de flota en el pie.
+- **Configuración**: en varias columnas de tarjetas de valores, no en una sola columna.
+- El panel del buque y el del aparejo son **el mismo DOM** en los tres rooms: se re-parentan al cambiar de room (nunca se clonan).
+- Comprar un buque deja al jugador en Comprar buque, con el aviso de compra.
+
 S97. **La pantalla del Astillero se organiza en tabs.** Pedido (verbatim): "vamos a refractorizar la pantalla de astillero, creando tabs, uno para pa flota con el panel de buque, aparejo, y todo lo que es reformar y zarpar; otro tab para cuando quiero comprar un buque, otro para el astillero si quiero mejorar la defensa etc, otro para la configuracion etc".
 - Cuatro tabs: **Flota**, **Comprar buque**, **Astillero**, **Configuración**.
 - La barra de flota y el panel del fuerte dejan de estar siempre visibles arriba: cada uno vive dentro de su tab (decisión del usuario: "Limpios: cada cosa en su tab"). La barra superior queda con marca, bolsa e idioma; el pie queda con el veredicto, el precio y los botones.
@@ -53,6 +62,8 @@ S104. **Verificación.**
 - T116 — `src/ui/settings-tab.js` + `config.html` redirigido con hash `#configuracion`: ajustes y catálogo dentro del tab, repintado por cambio de idioma compartiendo el traductor de la página (leído a la hora de la llamada). `S101` — inline — hecho, commit `b92e40c`
 - T117 — i18n `es.js`/`en.js`: todos los rótulos de los cuatro tabs y avisos nuevos. `S103` — inline — hecho, commit `6318bf8`
 - T118 — smokes: actualizar los que pintan la pantalla vieja (autorización en S104), smoke nuevo de recorrido de tabs, `npm test` y la serie de smokes en verde. `S104` — inline — hecho, commit `dfe7236`
+- T120 — `index.html` + `src/ui/styles.css` + `src/ui/app.js`: S105, cada room con la grilla original de tres columnas y su panel izquierdo propio; configuración en varias columnas; slots de aparcamiento destapados al mudar los paneles. `S105` — inline — hecho, commit `pending`
+- T121 — smokes: entrar al room que posee cada control (flota/comprar/astillero) antes de operarlo; aserciones de smoke-tabs al comportamiento nuevo. `S105` — inline — hecho, commit `pending`
 - T119 — cierre: `pendientes.md` al día, espejo Engram del documento, log de la ficha con evidencia. `S104` — inline — hecho, commit `2bad095`
 
 ## Log

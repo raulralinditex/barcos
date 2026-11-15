@@ -43,6 +43,9 @@ try {
     assert.equal(saved.notice, "");
     assert.equal(saved.pending, null);
     assert.equal(await page.locator("#dock-dialog").isHidden(), true);
+// The flota room owns this control now (S105).
+await page.click('.screen-tab[data-screen="flota"]').catch(() => {});
+
     await page.locator(`.fleet-item[data-ship-id="${ship.id}"] [data-repair]`).click();
     const repaired = await page.evaluate(() => ({
       game: JSON.parse(localStorage.getItem("barcos:game:v1")),

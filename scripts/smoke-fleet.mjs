@@ -88,6 +88,9 @@ const captainTag = await page.locator(".fleet-item.is-captain .fleet-name").text
 check(captainTag === "Avispa", `the new hull should be captain, got ${captainTag}`);
 
 // --- the player can choose which ship to captain --------------------------
+// The flota room owns this control now (S105).
+await page.click('.screen-tab[data-screen="flota"]');
+await page.waitForTimeout(150);
 await page.locator('.fleet-captain-button[data-captain]').first().click();
 await page.waitForTimeout(250);
 const newCaptain = await page.locator(".fleet-item.is-captain .fleet-name").textContent();
@@ -117,6 +120,9 @@ await page.waitForTimeout(300);
 const fleetSurvivedSea = await fleetCount();
 check(fleetSurvivedSea === "2 naves", `sailing must not lose the fleet, got ${fleetSurvivedSea}`);
 
+// Erasing is the Flota room's action (S105).
+await page.click('.screen-tab[data-screen="flota"]');
+await page.waitForTimeout(150);
 await page.click("#erase-btn");
 await page.waitForTimeout(250);
 const dialogOpen = await page.locator("#erase-dialog").evaluate((el) => el.open);

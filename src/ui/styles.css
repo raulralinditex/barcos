@@ -311,16 +311,14 @@ h3 {
 
 .layout {
   flex: 1;
-  display: grid;
-  grid-template-columns: 250px minmax(380px, 1fr) 350px;
-  gap: 14px;
-  padding: 14px 20px;
-  align-items: start;
+  /* The rooms grid themselves (S97): the screen only stacks the four room panels. */
+  display: block;
+  padding: 0 20px 14px;
 }
 
 @media (max-width: 1180px) {
   .layout {
-    grid-template-columns: 1fr;
+    padding: 0 8px 10px;
   }
 }
 
@@ -685,8 +683,52 @@ h3 {
   display: none;
 }
 
+/* Each room lays out like the original three-column build screen (user S105): the
+   moved-in column takes the left panel's slot, the ship and rig panels follow. */
 .screen-panel.is-active {
+  display: grid;
+  grid-template-columns: 250px minmax(380px, 1fr) 350px;
+  gap: 14px;
+  align-items: start;
+  grid-template-areas: "left ship rig";
+}
+
+@media (max-width: 1180px) {
+  .screen-panel.is-active {
+    grid-template-columns: 1fr;
+    grid-template-areas: "left" "ship" "rig";
+  }
+}
+
+.screen-panel > .builder-slot:first-child { grid-area: left; }
+.screen-panel > .builder-slot:nth-child(2) { grid-area: ship; }
+.screen-panel > .builder-slot:nth-child(3) { grid-area: rig; }
+.screen-panel > .builder-slot[hidden] { display: none; }
+
+/* The settings room is the one exception to the three-column shape (user S105): she
+   stacks as a normal block across the whole row; her card grid gives the columns. */
+.screen-panel-wide.is-active {
   display: block;
+}
+
+.panel-fleet {
+  padding: 10px 12px;
+}
+
+.fleet-column .fleet-bar,
+.yard-column .fort-panel {
+  margin-top: 0;
+}
+
+.panel-fleet .fleet-bar {
+  padding: 0;
+  border: 0;
+  background: transparent;
+  min-width: 0;
+}
+
+.fleet-column .fleet-list {
+  max-height: 320px;
 }
 
 .builder-slot > .panel {
@@ -1709,7 +1751,7 @@ input[type="number"] {
   cursor: default;
 }
 
-/* ---------- settings screen (S33) ---------- */
+/* ---------- settings inside the shipyard's tab (S101) ---------- */
 
 /* Settings inside the shipyard's tab (S101): the old screen's grid re-made shallow,
    plus the actions row the old footer owned. */
@@ -1733,7 +1775,7 @@ input[type="number"] {
 
 .settings-groups {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
+  grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
   gap: 14px;
   align-items: start;
 }

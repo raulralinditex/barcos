@@ -37,6 +37,9 @@ async function openVoyage(selected) {
     localStorage.setItem("barcos:game:v1", JSON.stringify({ gold: 5000, world: worldJson }));
   }, [JSON.stringify(fleet), JSON.stringify(world)]);
   await page.goto("http://localhost:8765/index.html", { waitUntil: "networkidle" });
+// The flota room owns this control now (S105).
+await page.click('.screen-tab[data-screen="flota"]').catch(() => {});
+
   const checkbox = page.locator(`.fleet-check[data-sail="${escort.id}"]`);
   if (selected) await checkbox.check();
   assert.equal(await checkbox.isChecked(), selected);

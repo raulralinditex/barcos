@@ -232,6 +232,9 @@ check(
 );
 
 // Turning a check off must be saved with the fleet.
+// The flota room owns this control now (S105).
+await page.click('.screen-tab[data-screen="flota"]').catch(() => {});
+
 await page.locator(`.fleet-check[data-sail="${escort.id}"]`).click();
 await page.waitForTimeout(300);
 const stored = await page.evaluate(() => JSON.parse(localStorage.getItem("barcos:fleet:v1")));

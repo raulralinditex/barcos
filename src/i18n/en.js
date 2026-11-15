@@ -28,6 +28,7 @@ export const en = {
   "shipyard.fort.bought.one": "One gun bought for the defence.",
   "shipyard.fort.bought.many": "{count} guns bought for the defence.",
   "shipyard.fort.buyGun": "Buy a gun ({gold} gold)",
+  "shipyard.fort.buyGunPlain": "Buy a gun ({gold} gold)",
   "shipyard.fort.gunsCapped": "Battery at her cap",
   "shipyard.fort.takenNote": "The shipyard is in enemy hands: she sells and repairs nothing until you retake her.",
   "shipyard.fort.repaired": "The shipyard is repaired ({gold} gold).",

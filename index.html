@@ -40,23 +40,11 @@
     </nav>
 
     <main class="layout">
-      <!-- Flota (S98): the fleet strip lives here, the refit builder moves in when a hull
-           is picked, and setting sail is this tab's action. -->
-      <section class="screen-panel is-active" data-screen-panel="flota">
-        <div class="fleet-bar">
-          <div class="fleet-head">
-            <span class="fleet-label" data-i18n="fleet.title">Tu flota</span>
-            <span class="fleet-count" id="fleet-count"></span>
-          </div>
-          <ul class="fleet-list" id="fleet-list"></ul>
-        </div>
-        <p class="hint fleet-hint" id="fleet-hint" data-i18n="fleet.refitHint">Elegí una nave de la flota para reformarla.</p>
-        <div id="flota-builder-slot" class="builder-slot">
-          <div id="builder" class="builder">
-          <!-- The builder is ONE DOM (S99): these three panels are the constructor. In the
-               Flota tab they edit the refit target; app.js moves the whole #builder into
-               the Comprar tab's slot when the player is buying, so there are never two
-               build states. -->
+      <!-- Comprar buque (S99): the original three-panel build screen, with buy actions in
+           the foot. The builder is ONE DOM (S99): in the Flota tab the same panels serve
+           the refit; moving rooms re-parents only the left column's section. -->
+      <section class="screen-panel is-active" data-screen-panel="comprar">
+        <div id="comprar-builder-slot" class="builder-slot">
           <section class="panel panel-hulls" aria-labelledby="hulls-title">
             <h2 id="hulls-title" data-i18n="shipyard.hulls">Casco</h2>
             <div class="country-picker">
@@ -154,38 +142,52 @@
               <div id="supply-list" class="supply-list"></div>
             </div>
           </section>
-          </div>
         </div>
       </section>
 
-      <!-- Comprar buque (S99): the builder moves here from Flota when buying; its foot
-           action is adding the new hull to the fleet. -->
-      <section class="screen-panel" data-screen-panel="comprar">
-        <div id="comprar-builder-slot" class="builder-slot"></div>
+      <!-- Flota (S98): the fleet column takes the left panel's place; the ship and rig
+           panels are the SAME DOM as the buy room's, re-parented here for the refit. -->
+      <section class="screen-panel" data-screen-panel="flota">
+        <div class="builder-slot fleet-column">
+          <section class="panel panel-fleet" aria-labelledby="fleet-title">
+            <div class="fleet-bar">
+              <div class="fleet-head">
+                <span class="fleet-label" id="fleet-h2-title" data-i18n="fleet.title">Tu flota</span>
+                <span class="fleet-count" id="fleet-count"></span>
+              </div>
+              <ul class="fleet-list" id="fleet-list"></ul>
+            </div>
+            <p class="hint fleet-hint" id="fleet-hint" data-i18n="fleet.refitHint">Elegí una nave de la flota para reformarla, o comprá una nueva en su tab.</p>
+          </section>
+        </div>
+        <div id="flota-builder-slot" class="builder-slot" hidden></div>
       </section>
 
-      <!-- Astillero (S100): her state, her repairs and the guns the player buys. -->
+      <!-- Astillero (S100): the yard column takes the left panel's place, with her
+           reinforcement actions; the ship and rig panels are again the SAME DOM. -->
       <section class="screen-panel" data-screen-panel="astillero">
-        <div id="fort-panel" class="fort-panel">
-          <div class="fort-head">
-            <span class="fort-label" data-i18n="shipyard.fort.title">Astillero</span>
-            <span id="fort-state" class="fort-state">—</span>
+        <div class="builder-slot yard-column">
+          <div id="fort-panel" class="fort-panel">
+            <div class="fort-head">
+              <span class="fort-label" data-i18n="shipyard.fort.title">Astillero</span>
+              <span id="fort-state" class="fort-state">—</span>
+            </div>
+            <div class="fort-bars">
+              <div class="fort-bar"><span data-i18n="sea.hull">Casco</span><div class="fort-track"><div class="fort-fill fort-hull" id="fort-hull"></div></div></div>
+              <div class="fort-bar"><span data-i18n="sea.crew">Tripulación</span><div class="fort-track"><div class="fort-fill fort-crew" id="fort-crew"></div></div></div>
+            </div>
+            <p class="fort-detail" id="fort-detail">—</p>
+            <div class="fort-upgrades">
+              <button id="fort-repair-btn" class="btn" type="button" data-i18n="shipyard.fort.repairPlain">Reparar</button>
+              <button id="fort-gun-btn" class="btn" type="button" data-i18n="shipyard.fort.buyGunPlain">Comprar cañón</button>
+            </div>
+            <p class="fort-upgrade-note" id="fort-upgrade-note"></p>
           </div>
-          <div class="fort-bars">
-            <div class="fort-bar"><span data-i18n="sea.hull">Casco</span><div class="fort-track"><div class="fort-fill fort-hull" id="fort-hull"></div></div></div>
-            <div class="fort-bar"><span data-i18n="sea.crew">Tripulación</span><div class="fort-track"><div class="fort-fill fort-crew" id="fort-crew"></div></div></div>
-          </div>
-          <p class="fort-detail" id="fort-detail">—</p>
-          <div class="fort-upgrades">
-            <button id="fort-repair-btn" class="btn" type="button" data-i18n="shipyard.fort.repair">Reparar el fuerte</button>
-            <button id="fort-gun-btn" class="btn" type="button" data-i18n="shipyard.fort.buyGun">Comprar cañón</button>
-          </div>
-          <p class="fort-upgrade-note" id="fort-upgrade-note"></p>
         </div>
+        <div id="astillero-builder-slot" class="builder-slot" hidden></div>
       </section>
-
       <!-- Configuración (S101): the settings screen moves in; config.html redirects. -->
-      <section class="screen-panel" data-screen-panel="configuracion">
+      <section class="screen-panel screen-panel-wide" data-screen-panel="configuracion">
         <p class="hint settings-lead" data-i18n="settings.lead">
           Cada valor tiene un mínimo y un máximo: lo que quede fuera se ajusta al límite. Los
           cambios entran al cargar el mar o el astillero.

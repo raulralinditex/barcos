@@ -71,8 +71,13 @@ try {
     check(Math.round(saved.fleet?.ships[0]?.paidGold) === price && Math.abs(saved.game?.gold - (40000 - saved.fleet?.ships[0]?.paidGold)) < 1e-8, `${language}: purchase charges exact price`);
 
     if (hasSail) {
+      // Sailing is the Flota room's action now (S105): the buy room hides it on purpose.
+      await page.click('.screen-tab[data-screen="flota"]');
+      await page.waitForTimeout(150);
       check(!(await sail.isDisabled()), `${language}: first purchase enables sailing`);
       await page.reload({ waitUntil: "networkidle" });
+      await page.click('.screen-tab[data-screen="flota"]');
+      await page.waitForTimeout(150);
       check(!(await sail.isDisabled()), `${language}: saved fleet enables sailing on reload`);
       await sail.focus();
       check(await sail.evaluate((el) => document.activeElement === el), `${language}: sail button is keyboard reachable`);
@@ -124,6 +129,9 @@ try {
   await fleetPage.fill("#ship-name", "Avispa");
   await fleetPage.click("#launch-btn");
   check((await fleetPage.locator(".fleet-item.is-captain .fleet-name").textContent()) === "Avispa", "second purchase becomes captain");
+  // The fleet strip lives in the Flota room (S105).
+  await fleetPage.click('.screen-tab[data-screen="flota"]');
+  await fleetPage.waitForTimeout(150);
   await fleetPage.locator(".fleet-item").first().locator(".fleet-check").uncheck();
   const selected = await fleetPage.evaluate(() => JSON.parse(localStorage.getItem("barcos:fleet:v1")));
   check(selected.ships[0].sails === false && selected.captainId === selected.ships[1].id, "fleet checkbox and captain are saved");

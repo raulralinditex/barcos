@@ -76,6 +76,9 @@ const fleetIds = () =>
   page.evaluate(() => JSON.parse(localStorage.getItem("barcos:fleet:v1")).ships.map((ship) => ship.id));
 
 const expectedSpare = salePrice(spare);
+// The flota room owns this control now (S105).
+await page.click('.screen-tab[data-screen="flota"]');
+await page.waitForTimeout(150);
 const buttonLabel = await page.locator(`[data-sell="${spare.id}"]`).textContent();
 check(
   buttonLabel.replace(/[^\d]/g, "") === String(expectedSpare).replace(/[^\d]/g, ""),

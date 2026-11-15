@@ -26,6 +26,7 @@ export const es = {
   "shipyard.fort.bought.one": "Un cañón comprado para la defensa.",
   "shipyard.fort.bought.many": "{count} cañones comprados para la defensa.",
   "shipyard.fort.buyGun": "Comprar cañón ({gold} dl)",
+  "shipyard.fort.buyGunPlain": "Comprar cañón ({gold} dl)",
   "shipyard.fort.gunsCapped": "Batería al tope",
   "shipyard.fort.takenNote": "El astillero está en manos enemigas: no vende ni repara hasta recuperarlo.",
   "shipyard.fort.repaired": "El astillero quedó reparado ({gold} dl).",

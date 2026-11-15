@@ -130,6 +130,9 @@ if (settled.gold !== GOLD) failures.push(`coming back in charged the purse (${se
 const banner = (await page.locator("#purchase-notice").textContent()) ?? "";
 if (banner.trim() !== "") failures.push(`arrival unexpectedly announced a repair: "${banner.trim()}"`);
 if (!(await page.locator("#dock-dialog").isHidden())) failures.push("arrival opened the repair dialog");
+// The flota room owns this control now (S105).
+await page.click('.screen-tab[data-screen="flota"]').catch(() => {});
+
 await page.locator(`.fleet-item[data-ship-id="${ship.id}"] [data-repair]`).click();
 const repaired = await state();
 if (repaired.hull !== 100) failures.push(`manual repair did not fix the hull (${repaired.hull})`);

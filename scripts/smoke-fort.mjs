@@ -48,11 +48,17 @@ await page.addInitScript(([f, fort]) => {
 await page.goto("http://localhost:8765/index.html", { waitUntil: "networkidle" });
 await page.waitForTimeout(600);
 
-// The shipyard screen says the yard is taken, and says it as a warning.
+// The shipyard screen says the yard is taken, and says it as a warning. Her panel
+// lives in the Astillero room (S105).
+await page.click('.screen-tab[data-screen="astillero"]');
+await page.waitForTimeout(150);
 const fortState = await page.locator("#fort-state").textContent();
 check(/enemig|enemy/i.test(fortState ?? ""), `S74: the shipyard should report the yard as taken, it says "${fortState}"`);
 
 // S92: set sail still sails. The warning is shown, in the error style, about repairs.
+// Setting sail is the Flota room's action (S105).
+await page.click('.screen-tab[data-screen="flota"]');
+await page.waitForTimeout(150);
 await page.locator("#set-sail-btn").click();
 await page.waitForURL("**/sea.html", { timeout: 15000 });
 check(true, "");

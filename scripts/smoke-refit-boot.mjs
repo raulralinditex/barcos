@@ -49,12 +49,16 @@ try {
   }
   if (initialGuns !== "4") failures.push(`boot guns: expected 4, got ${initialGuns}`);
   if (failures.length) throw new Error(failures.join("\n"));
+  // A boot with a fleet selects the captain for the refit and lands in Flota (S105).
   assert.equal(await page.locator("#ship-name").inputValue(), captain.name);
   assert.equal(await page.locator("#refit-mode").textContent(), `Reformando: ${captain.name}`);
   assert.ok(await page.locator(`[data-ship-id="${captain.id}"]`).evaluate((el) => el.classList.contains("is-refitting")));
   assert.deepEqual(JSON.parse(await page.evaluate(() => localStorage.getItem("barcos:fleet:v1"))), JSON.parse(fleetJson));
 
-  // Existing explicit selection still copies the other ship's config.
+  // Existing explicit selection still copies the other ship's config. The fleet strip
+  // lives in the Flota room (S105) and a boot with a fleet already opens there.
+  await page.click('.screen-tab[data-screen="flota"]');
+  await page.waitForTimeout(150);
   await page.locator(`[data-refit="${escort.id}"]`).click();
   assert.deepEqual(await rows(), [
     { name: "Minion de 4 libras", side: "babor", qty: 1 },

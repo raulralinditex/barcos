@@ -34,6 +34,9 @@ try {
   assert.deepEqual(saved.game.combat.player.condition, ship.condition);
   assert.equal(saved.banner, "");
   assert.equal(await page.locator("#dock-dialog").isHidden(), true);
+  // The flota room owns this control now (S105).
+  await page.click('.screen-tab[data-screen="flota"]');
+  await page.waitForTimeout(150);
   await page.locator(`.fleet-item[data-ship-id="${ship.id}"] [data-repair]`).click();
   const repaired = await page.evaluate(() => ({
     fleet: JSON.parse(localStorage.getItem("barcos:fleet:v1")),
@@ -72,6 +75,9 @@ try {
   assert.deepEqual(liveSaved.game.combat.player.condition, liveCaptain);
   assert.deepEqual(liveSaved.game.combat.escorts[escort.id].condition, liveEscort);
   assert.equal(liveSaved.banner, "");
+  // The flota room owns this control now (S105).
+  await livePage.click('.screen-tab[data-screen="flota"]');
+  await livePage.waitForTimeout(150);
   await livePage.locator(`.fleet-item[data-ship-id="${escort.id}"] [data-repair]`).click();
   const picked = await livePage.evaluate(() => ({
     fleet: JSON.parse(localStorage.getItem("barcos:fleet:v1")),
@@ -103,6 +109,9 @@ try {
   assert.equal(empty.game.gold, 0);
   assert.deepEqual(empty.fleet.ships[0].condition, ship.condition);
   assert.equal(empty.banner, "");
+  // The flota room owns this control now (S105).
+  await emptyPage.click('.screen-tab[data-screen="flota"]');
+  await emptyPage.waitForTimeout(150);
   await emptyPage.locator(`.fleet-item[data-ship-id="${ship.id}"] [data-repair]`).click();
   const afterEmptyClick = await emptyPage.evaluate(() => ({
     fleet: JSON.parse(localStorage.getItem("barcos:fleet:v1")),

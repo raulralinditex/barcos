@@ -157,6 +157,9 @@ const leadCost = repairCost(lead);
 page = await openPage({
   path: "index.html", ships: [lead, escort], gold: 5000, flag: "barcos:smoke-dock-2",
 });
+// The flota room owns the fleet strip now (S105).
+await page.click('.screen-tab[data-screen="flota"]');
+await page.waitForTimeout(150);
 const leadButton = repairButton(page, lead.id);
 check(await leadButton.count() === 1, "the captain has no repair button in the fleet panel");
 check(await leadButton.isEnabled(), "a damaged captain's repair button is disabled");
@@ -200,6 +203,8 @@ const poorCaptain = hurtCaptain();
 page = await openPage({
   path: "index.html", ships: [poorCaptain], gold: 10, flag: "barcos:smoke-dock-3",
 });
+await page.click('.screen-tab[data-screen="flota"]');
+await page.waitForTimeout(150);
 const poorButton = repairButton(page, poorCaptain.id);
 check(await poorButton.isEnabled(), "the repair button is disabled with a short but non-empty purse");
 await poorButton.click();

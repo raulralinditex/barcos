@@ -1050,11 +1050,10 @@ function launch() {
     /* the ship still exists in memory for this session */
   }
 
-  // The purchase is fleet business (S98): the fleet strip is what the player wants to
-  // see next, and the builder waits in the Comprar slot for the next sale.
+  // The buy screen reads like the old one (S105): the purchase answers in her notice
+  // and the player stays where she was building.
   renderFleet();
-  moveBuilder("comprar");
-  showScreen("flota");
+  showScreen("comprar");
   arrivalNotice = null;
   lastAddedName = name;
   lastNoticeKey = "shipyard.added";
@@ -1102,15 +1101,23 @@ document.querySelectorAll(".tab").forEach((tab) => {
   });
 });
 
-/* ---------------------------------------------------------------- screen tabs (S97) */
+/* ---------------------------------------------------------------- screen tabs (S97, S105) */
 
-/** The screen's four rooms. The builder is one DOM (S99): it is re-parented, never cloned. */
+/** The screen's four rooms. The ship+rig panels are one DOM (S99): re-parented, not cloned. */
 const SCREENS = ["flota", "comprar", "astillero", "configuracion"];
 let activeScreen = "flota";
-let builderScreen = "flota"; // where the builder DOM currently lives (it boots in Flota)
+/** Where the ship+rig column lives while nobody is building (user S105). */
+let builderScreen = "comprar";
 
-const builderEl = document.getElementById("builder");
+const $shipAndRig = () => [document.querySelector(".panel-ship"), document.querySelector(".panel-build")];
 
+/**
+ * Make the room read like the original build screen (user S105). Buying shows the hull
+ * shelf; the fleet and the yard rooms show their own column instead, and the shared
+ * ship+rig panels move in behind it so every room keeps the same three-column shape.
+ * Only the room's own foot actions show: no refit banner while buying, no price while
+ * reading the fort.
+ */
 function showScreen(next) {
   if (!SCREENS.includes(next)) return;
   activeScreen = next;
@@ -1122,32 +1129,46 @@ function showScreen(next) {
   for (const panel of document.querySelectorAll(".screen-panel")) {
     panel.classList.toggle("is-active", panel.dataset.screenPanel === next);
   }
-  // The footer shows only what the room needs (S98/S99): buying shows the price and the
-  // add button; refitting shows the price and the save button; the fleet shows setting
-  // sail; the yard and the settings own none of them.
+  // The hull shelf belongs to the buy room alone: the fleet and the yard rooms hold
+  // their own column in its place (S105).
+  document.querySelector(".panel-hulls").toggleAttribute("hidden", next !== "comprar");
+  // The ship+rig panels stand in every build-like room (S105): buying, refitting, the
+  // fleet room and the yard room all read like the original three-column screen, with
+  // only the left column swapped. In pure-reading rooms they still render.
+  const standIn = next !== "configuracion";
+  for (const node of $shipAndRig()) node.toggleAttribute("hidden", !standIn);
+  const slot = document.getElementById(standIn ? `${next}-builder-slot` : null);
+  if (standIn && slot) {
+    // The parking slots ship hidden so an empty room shows no gap; a slot that holds
+    // the ship+rig panels must be visible, or her children inherit the hidden state.
+    slot.removeAttribute("hidden");
+    for (const node of $shipAndRig()) slot.appendChild(node);
+  }
+
+  // The footer shows only what the room needs (S98/S99, S105): buying shows the price
+  // and the add button; refitting shows the price and the save button; the fleet shows
+  // setting sail; the yard and the settings own none of them. In the fleet and yard
+  // rooms the ship+rig panels render read-only: their foot actions stay hidden.
   const buying = next === "comprar";
   const refitting = next === "flota" && Boolean(refitId);
-  els.priceStrip.style.display = buying || refitting ? "" : "none";
-  els.launchBtn.style.display = buying || refitting ? "" : "none";
+  const editing = buying || refitting;
+  els.priceStrip.style.display = editing ? "" : "none";
+  els.launchBtn.style.display = editing ? "" : "none";
   els.setSailBtn.style.display = next === "flota" ? "" : "none";
   els.eraseBtn.style.display = next === "flota" ? "" : "none";
-  els.verdictIssues.style.display = buying || refitting ? "" : "none";
-  if (buying || refitting) render();
+  els.verdictIssues.style.display = editing ? "" : "none";
+  // The ship+rig panels stand in read-only rooms too (S105): her banner, her verdict
+  // chips and her button states must not leak the mode the room came from, so the
+  // render runs here as well with the refit target already cleared.
+  if (next !== "configuracion") render();
   // The yard's room repaints on entry: her state may have changed at sea since the
   // last look (S100).
   if (next === "astillero") renderFort();
+  if (next === "configuracion") repaintSettingsForLanguage();
 }
 
-/**
- * Move the builder DOM to the slot the mode needs (S99). One builder, one build state:
- * switching rooms re-parents it, and the mode is decided by the room, not by a flag
- * the code could forget.
- */
+/** Where the ship+rig column currently lives, for the boot decision and the tests. */
 function moveBuilder(toScreen) {
-  if (!builderEl || builderScreen === toScreen) return;
-  const slot = document.getElementById(`${toScreen}-builder-slot`);
-  if (!slot) return;
-  slot.appendChild(builderEl);
   builderScreen = toScreen;
 }
 
@@ -1159,7 +1180,6 @@ for (const tab of document.querySelectorAll(".screen-tab")) {
       refitId = null;
       renderFleet();
     }
-    if (next === "comprar" || next === "flota") moveBuilder(next);
     showScreen(next);
   });
 }
@@ -1266,7 +1286,7 @@ function renderFort() {
   els.fortGunBtn.disabled = taken || headroom <= 0 || state.gold < fortGunCost();
   els.fortGunBtn.textContent = headroom <= 0
     ? t("shipyard.fort.gunsCapped")
-    : t("shipyard.fort.buyGun", { gold: gold(fortGunCost()) });
+    : t("shipyard.fort.buyGunPlain", { gold: gold(fortGunCost()) });
   els.fortRepairBtn.textContent = quote.repairable
     ? t("shipyard.fort.repair", { gold: gold(priceWithPurse(quote.cost, state.gold)) })
     : t("shipyard.fort.repairPlain");
@@ -1343,9 +1363,8 @@ function selectRefitShip(ship) {
   }
   state.shipName = config.name ?? "";
   els.shipName.value = state.shipName;
-  // The refit editor is the Flota tab's business (S98): the builder moves there and the
-  // room switch hides the strip that does not belong to the mode.
-  moveBuilder("flota");
+  // The refit editor is the Flota tab's business (S98, S105): the ship+rig panels move
+  // into the fleet room, which now reads like the old build screen in refit mode.
   showScreen("flota");
 }
 
@@ -1754,9 +1773,8 @@ render();
 // The yard opens on the fleet (S97); the builder waits in the Comprar slot until a refit
 // or the buy tab asks for it.
 // Old settings links land on their room too: config.html now redirects with the hash.
-const entryScreen = captain ? "flota" : "comprar";
+const entryScreen = "comprar";
 const targetScreen = SCREENS.includes(window.location.hash.slice(1)) ? window.location.hash.slice(1) : entryScreen;
-if (!captain) moveBuilder("comprar");
 showScreen(targetScreen);
 try {
   arrivalNotice = parseArrivalNotice(localStorage.getItem(ARRIVAL_NOTICE_KEY));

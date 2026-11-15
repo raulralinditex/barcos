@@ -87,6 +87,9 @@ const goldBefore = await readGold();
 const fleetBefore = await readFleet();
 check(fleetBefore.find((s) => s.id === "a").hull === 40, "the seeded captain is not damaged");
 
+// The flota room owns this control now (S105).
+await page.click('.screen-tab[data-screen="flota"]').catch(() => {});
+
 await page.locator('.fleet-item[data-ship-id="a"] [data-repair]').dispatchEvent("click");
 await page.waitForTimeout(900);
 
