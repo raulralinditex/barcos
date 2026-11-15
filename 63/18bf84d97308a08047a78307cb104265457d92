@@ -1,59 +1,59 @@
-index.html
-  s_e799e77daffe3c::t_4e40aa56f3d52e 36-39
-  s_e799e77daffe3c::t_15d55e98628a68 54,56,60-69,71-78,80-83,85-88,90,92-108,110-117,119-127,129-130,132-136,138-156,159,161-162
-  s_e799e77daffe3c::t_1fd0e0799163cf 55,57-59
-  s_e799e77daffe3c::t_31b37b152f3694 10-12,35,40-41,43-51,53,163-183,185,187-202,212-213
-scripts/smoke-fleet.mjs
-  s_e799e77daffe3c::t_7607c0d81dc073 57-59
+scripts/smoke-refit.mjs
+  s_e799e77daffe3c::t_ab6caddab72f1d 113-115
+  s_e799e77daffe3c::t_ce1ce7194a61d1 64-65
+  s_e799e77daffe3c::t_594bd0a5bca693 117-118
+  s_e799e77daffe3c::t_99ff7086f6f9c4 39-40
+src/ui/styles.css
+  s_e799e77daffe3c::t_26f14554f79b10 657-699
 scripts/smoke-shipyard-buttons.mjs
-  s_e799e77daffe3c::t_db77f2272cb1db 97-99,107-108
   s_e799e77daffe3c::t_c5c4c8d66f0a48 119-120,123,130
   s_e799e77daffe3c::t_aa83834da7b4b5 93-94
+  s_e799e77daffe3c::t_db77f2272cb1db 97-99,107-108
   s_e799e77daffe3c::t_3bf329b5617ee6 100-103
-src/i18n/en.js
-  s_e799e77daffe3c::t_4e40aa56f3d52e 21-24
-  s_e799e77daffe3c::t_6aad1edcb97f59 317-318
-  s_e799e77daffe3c::t_79dbd13e002360 25,30-34
-  s_e799e77daffe3c::t_5f28a4808d1f15 26-29
+scripts/smoke-fleet.mjs
+  s_e799e77daffe3c::t_7607c0d81dc073 57-59
 odd/tasks/astillero-en-tabs.md
   s_e799e77daffe3c::t_0d44c415c20bce 65
   s_e799e77daffe3c::t_804fbef6d2b742 1-64
-scripts/smoke-images.mjs
-  s_e799e77daffe3c::t_e3ce2fff9562ad 85-87
-scripts/smoke-refit.mjs
-  s_e799e77daffe3c::t_ce1ce7194a61d1 64-65
-  s_e799e77daffe3c::t_99ff7086f6f9c4 39-40
-  s_e799e77daffe3c::t_ab6caddab72f1d 113-115
-  s_e799e77daffe3c::t_594bd0a5bca693 117-118
 src/i18n/es.js
-  s_e799e77daffe3c::t_6aad1edcb97f59 314-315
-  s_e799e77daffe3c::t_79dbd13e002360 23,28-32
   s_e799e77daffe3c::t_4e40aa56f3d52e 19-22
+  s_e799e77daffe3c::t_79dbd13e002360 23,28-32
   s_e799e77daffe3c::t_5f28a4808d1f15 24-27
-src/ui/styles.css
-  s_e799e77daffe3c::t_26f14554f79b10 657-699
-scripts/smoke-settings.mjs
-  s_e799e77daffe3c::t_eb50777fe6d351 79-80
+  s_e799e77daffe3c::t_6aad1edcb97f59 314-315
 src/ui/app.js
-  s_e799e77daffe3c::t_26a2a6ed737471 186-188
+  s_e799e77daffe3c::t_d312358830d64c 1026-1028,1050-1051,1053-1054
   s_e799e77daffe3c::t_efb85ff7032546 1127
-  s_e799e77daffe3c::t_6d4c7c10fd3e95 1109
-  s_e799e77daffe3c::t_03ed82b23907c1 1415-1425,1427-1442,1444-1451
-  s_e799e77daffe3c::t_4360f6dda8cbb7 684
-  s_e799e77daffe3c::t_20f911526bc817 1748-1751
-  s_e799e77daffe3c::t_52c6065eeaa89f 1343-1346
-  s_e799e77daffe3c::t_11d5bbce2e6518 1269,1273,1426,1443
-  s_e799e77daffe3c::t_08e45a8dbdd10e 1531-1538
-  s_e799e77daffe3c::t_03c58b83f787d2 1133-1135
-  s_e799e77daffe3c::t_5b165c098d8b9c 56
-  s_e799e77daffe3c::t_23e66f116b9efe 176
   s_e799e77daffe3c::t_c570a71184a556 1147
+  s_e799e77daffe3c::t_11d5bbce2e6518 1269,1273,1426,1443
+  s_e799e77daffe3c::t_4360f6dda8cbb7 684
+  s_e799e77daffe3c::t_577cbd6f72a340 1007-1010
+  s_e799e77daffe3c::t_23e66f116b9efe 176
   s_e799e77daffe3c::t_6dea15539dc86a 1107
   s_e799e77daffe3c::t_d1eae762ad56da 1215,1217,1219,1221-1239,1245,1251,1253,1257-1268,1270-1272,1274
-  s_e799e77daffe3c::t_d312358830d64c 1026-1028,1050-1051,1053-1054
+  s_e799e77daffe3c::t_52c6065eeaa89f 1343-1346
+  s_e799e77daffe3c::t_5b165c098d8b9c 56
+  s_e799e77daffe3c::t_6d4c7c10fd3e95 1109
+  s_e799e77daffe3c::t_20f911526bc817 1748-1751
+  s_e799e77daffe3c::t_03ed82b23907c1 1415-1425,1427-1442,1444-1451
   s_e799e77daffe3c::t_47ca6e82481bac 52
+  s_e799e77daffe3c::t_08e45a8dbdd10e 1531-1538
   s_e799e77daffe3c::t_9cce7d504b85e9 1102-1106,1108,1110-1126,1128-1132,1136-1146,1148-1163
-  s_e799e77daffe3c::t_577cbd6f72a340 1007-1010
+  s_e799e77daffe3c::t_26a2a6ed737471 186-188
+  s_e799e77daffe3c::t_03c58b83f787d2 1133-1135
+src/i18n/en.js
+  s_e799e77daffe3c::t_79dbd13e002360 25,30-34
+  s_e799e77daffe3c::t_6aad1edcb97f59 317-318
+  s_e799e77daffe3c::t_4e40aa56f3d52e 21-24
+  s_e799e77daffe3c::t_5f28a4808d1f15 26-29
+index.html
+  s_e799e77daffe3c::t_4e40aa56f3d52e 36-39
+  s_e799e77daffe3c::t_31b37b152f3694 10-12,35,40-41,43-51,53,163-183,185,187-202,212-213
+  s_e799e77daffe3c::t_15d55e98628a68 54,56,60-69,71-78,80-83,85-88,90,92-108,110-117,119-127,129-130,132-136,138-156,159,161-162
+  s_e799e77daffe3c::t_1fd0e0799163cf 55,57-59
+scripts/smoke-images.mjs
+  s_e799e77daffe3c::t_e3ce2fff9562ad 85-87
+scripts/smoke-settings.mjs
+  s_e799e77daffe3c::t_eb50777fe6d351 79-80
 ---
 {
   "schema_version": "authorship/3.0.0",
