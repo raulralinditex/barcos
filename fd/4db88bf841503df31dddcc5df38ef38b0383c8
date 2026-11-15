@@ -1,0 +1,19 @@
+odd/tasks/astillero-en-tabs.md
+  s_e799e77daffe3c::t_8e2699da434c84 56
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.6",
+  "base_commit_sha": "fd4db88bf841503df31dddcc5df38ef38b0383c8",
+  "prompts": {},
+  "sessions": {
+    "s_e799e77daffe3c": {
+      "agent_id": {
+        "tool": "pi",
+        "id": "01a1dd53-286b-7706-89b0-1d3f9c78baaa",
+        "model": "glm-5.3-flash"
+      },
+      "human_author": "Raul Ripoll <raulral@ext.inditex.com>"
+    }
+  }
+}
