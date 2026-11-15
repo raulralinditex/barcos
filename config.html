@@ -3,49 +3,14 @@
   <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
-    <title data-i18n="settings.title">Configuración — Juego de barcos</title>
-    <link rel="stylesheet" href="./src/ui/styles.css" />
+    <!-- Settings moved into the shipyard's Configuración tab (S101); old links land on
+         the same room through the hash, which app.js reads on boot. -->
+    <script>
+      window.location.replace("./index.html#configuracion");
+    </script>
+    <title>Configuración — Juego de barcos</title>
   </head>
   <body>
-    <header class="topbar">
-      <div class="brand">
-        <span class="brand-mark">⚙</span>
-        <div>
-          <h1 data-i18n="settings.brand">Configuración</h1>
-          <p class="brand-sub" data-i18n="settings.brandSub">Los números con los que se juega</p>
-        </div>
-      </div>
-      <label class="lang-picker">
-        <span class="lang-label" data-i18n="app.language">Idioma</span>
-        <select id="lang-select">
-          <option value="es">Español</option>
-          <option value="en">English</option>
-        </select>
-      </label>
-      <a class="btn" href="./index.html" data-i18n="settings.back">Volver al astillero</a>
-    </header>
-
-    <main class="settings-layout">
-      <p class="hint settings-lead" data-i18n="settings.lead">
-        Cada valor tiene un mínimo y un máximo: lo que quede fuera se ajusta al límite. Los
-        cambios entran al cargar el mar o el astillero.
-      </p>
-      <div id="settings-groups" class="settings-groups"></div>
-      <div id="settings-catalogue" class="settings-catalogue"></div>
-    </main>
-
-    <footer class="footer">
-      <p class="settings-status" id="settings-status" aria-live="polite"></p>
-      <div class="launch">
-        <button id="settings-reset" class="btn btn-erase" type="button" data-i18n="settings.reset">
-          Restablecer todo
-        </button>
-        <button id="settings-apply" class="btn btn-launch" type="button" data-i18n="settings.apply">
-          Guardar
-        </button>
-      </div>
-    </footer>
-
-    <script type="module" src="./src/ui/config.js"></script>
+    <p>La configuración vive ahora dentro del Astillero. Redirigiendo…</p>
   </body>
 </html>

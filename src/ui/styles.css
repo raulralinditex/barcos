@@ -1711,6 +1711,14 @@ input[type="number"] {
 
 /* ---------- settings screen (S33) ---------- */
 
+/* Settings inside the shipyard's tab (S101): the old screen's grid re-made shallow,
+   plus the actions row the old footer owned. */
+.settings-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 8px;
+}
+
 .settings-layout {
   flex: 1;
   padding: 14px 20px;

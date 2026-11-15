@@ -51,6 +51,7 @@ import {
 } from "../model/fleet.js";
 import { damagedShips, priceWithPurse, repairCost, repairFleetShip, repairReport } from "../model/repair.js";
 import { buildShip, toRuntimeShip } from "../model/shipyard.js";
+import { repaintSettingsForLanguage } from "./settings-tab.js";
 import { applyRefit, configFromShip, quoteRefit } from "../model/refit.js";
 import { canSellShip, salePrice, sellShip } from "../model/sale.js";
 import { FORT, buyFortGun, fortBoughtGuns, fortGunCost, fortGunHeadroom, fortGunsPerSide, fortRepair, fortRepairQuote } from "../model/fort.js";
@@ -112,11 +113,13 @@ const $ = (selector) => document.querySelector(selector);
 
 /* ---------------------------------------------------------------- i18n (S11-S13) */
 
-/** One translator for the whole screen; the sea screen builds its own. */
-const translator = createAppTranslator(
+/** One translator for the whole screen; the sea screen builds its own. Shared with the
+ * settings tab so both repaints read the same language (S101). */
+window.__barcosTranslator = createAppTranslator(
   typeof localStorage === "undefined" ? null : localStorage,
   typeof navigator === "undefined" ? undefined : navigator.language,
 );
+const translator = window.__barcosTranslator;
 const t = translator.t;
 
 /**
@@ -1717,6 +1720,9 @@ if (els.langSelect) {
   els.langSelect.value = translator.language;
   els.langSelect.addEventListener("change", (event) => {
     applyLanguage(translator, localStorage, event.target.value);
+    // Every room speaks when the language changes (S13, S101): the settings tab keeps
+    // her own DOM, so she paints herself too.
+    repaintSettingsForLanguage();
     repaintForLanguage();
   });
 }
@@ -1747,8 +1753,11 @@ if (state.shipName) els.shipName.value = state.shipName;
 render();
 // The yard opens on the fleet (S97); the builder waits in the Comprar slot until a refit
 // or the buy tab asks for it.
+// Old settings links land on their room too: config.html now redirects with the hash.
+const entryScreen = captain ? "flota" : "comprar";
+const targetScreen = SCREENS.includes(window.location.hash.slice(1)) ? window.location.hash.slice(1) : entryScreen;
 if (!captain) moveBuilder("comprar");
-showScreen(captain ? "flota" : "comprar");
+showScreen(targetScreen);
 try {
   arrivalNotice = parseArrivalNotice(localStorage.getItem(ARRIVAL_NOTICE_KEY));
   localStorage.removeItem(ARRIVAL_NOTICE_KEY);
