@@ -1,18 +1,16 @@
-src/ui/styles.css
-  s_e799e77daffe3c::t_63ba41a8e3f7c6 705-721
-  s_e799e77daffe3c::t_8a48c4bb8a5d4b 744-748,764-771
-  s_e799e77daffe3c::t_a7132a857f8b72 687-689,692,722-727,730-734
-  s_e799e77daffe3c::t_e6e2dde063cd03 735
 src/ui/sea.js
   s_e799e77daffe3c::t_1707e298ef7693 1153-1156,1160-1165,1167-1171,1173,1179-1180,1182,1184-1187
-scripts/smoke-escort-range.mjs
-  s_e799e77daffe3c::t_fc38b17815156a 47-49
-  s_e799e77daffe3c::t_c55b8e5921a9b6 35-37,40-41,43,45-46,50-53
-  s_e799e77daffe3c::t_3794929dff10e3 1-34,38-39,42,44,54-89
 index.html
   s_e799e77daffe3c::t_89be0c864e4058 150,168
-odd/tasks/astillero-en-tabs.md
-  s_e799e77daffe3c::t_65bb810be59505 7-17,78-79
+src/ui/styles.css
+  s_e799e77daffe3c::t_63ba41a8e3f7c6 705-721
+  s_e799e77daffe3c::t_a7132a857f8b72 687-689,692,722-727,730-734
+  s_e799e77daffe3c::t_8a48c4bb8a5d4b 744-748,764-771
+  s_e799e77daffe3c::t_80fccabfc265f3 735
+scripts/smoke-escort-range.mjs
+  s_e799e77daffe3c::t_c55b8e5921a9b6 35-37,40-41,43,45-46,50-53
+  s_e799e77daffe3c::t_3794929dff10e3 1-34,38-39,42,44,54-89
+  s_e799e77daffe3c::t_fc38b17815156a 47-49
 ---
 {
   "schema_version": "authorship/3.0.0",
