@@ -1,0 +1,19 @@
+odd/tasks/pendientes.md
+  s_e799e77daffe3c::t_20853ae5235f85 55-84
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.6",
+  "base_commit_sha": "df4cec461329c6af13f093d869a4d32d69716b7b",
+  "prompts": {},
+  "sessions": {
+    "s_e799e77daffe3c": {
+      "agent_id": {
+        "tool": "pi",
+        "id": "01a1dd53-286b-7706-89b0-1d3f9c78baaa",
+        "model": "deepseek-v4.1-flash_high"
+      },
+      "human_author": "Raul Ripoll <raulral@ext.inditex.com>"
+    }
+  }
+}
