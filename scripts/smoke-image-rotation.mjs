@@ -19,10 +19,15 @@ page.on("pageerror", (e) => errors.push(`pageerror: ${e.message}`));
 await page.addInitScript(() => localStorage.setItem("barcos:lang:v1", "es"));
 await page.goto("http://localhost:8765/index.html", { waitUntil: "networkidle" });
 await page.waitForTimeout(600);
+// The hull shelf lives in the builder (S97): buying owns it when no fleet sails yet.
+await page.click('.screen-tab[data-screen="comprar"]').catch(() => {});
+await page.waitForTimeout(200);
 
 // The shipyard sells only the active country's hulls (S26), and the default is England.
 // `barca-costera` is English and has two pictures, so it is on the shelf from the start.
-await page.locator('[data-hull-id="barca-costera"]').click();
+// The catalogue editor now shares the page (S101): the shelf's cards are addressed by
+// their class, so a catalogue record with the same id cannot be clicked by mistake.
+await page.locator('.hull-card[data-hull-id="barca-costera"]').click();
 await page.waitForTimeout(500);
 
 const src = () => page.locator("#ship-photo").getAttribute("src");
