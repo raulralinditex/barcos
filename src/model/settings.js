@@ -14,6 +14,7 @@ import { PIECES, PRICES, START } from "../data/naval-data.js";
 import { GUNNERY } from "./gunnery.js";
 import { REPAIR } from "./repair.js";
 import { SALES } from "./sale.js";
+import { SINKING } from "./sinking.js";
 import { GAME_TIME } from "./game-time.js";
 import { FORT, FORT_UPGRADE } from "./fort.js";
 import { WIND } from "./wind.js";
@@ -121,6 +122,10 @@ export const SETTINGS_FIELDS = [
 
   { group: "sales", key: "share", label: "settings.sales.share", scale: "percent", min: 0, max: 1, step: 0.05, target: "sales", targetKey: "share" },
 
+  // S117: what a sunk hull becomes. Off is the game as it always played (she is gone);
+  // on leaves her waiting in a yard as a wreck that can be floated again.
+  { group: "sinking", key: "keepWreck", label: "settings.sinking.keepWreck", scale: "factor", min: 0, max: 1, step: 1, target: "sinking", targetKey: "keepWreck" },
+
   // Minimum 2500: the cheapest playable hull of the dearest country (Portugal) costs 2036,
   // so a poorer start would leave a whole nation's captain unable to buy a single ship.
   { group: "prices", key: "startGold", label: "settings.prices.startGold", scale: "gold", min: 2500, max: 1000000, step: 500, target: "start", targetKey: "gold" },
@@ -140,7 +145,7 @@ export const SETTINGS_FIELDS = [
 /** The automatic-fire switch as a live block, so it is a setting like any other (S88). */
 export const AUTOFIRE = { enabled: AUTOFIRE_DEFAULT ? 1 : 0 };
 
-export const SETTINGS_BLOCKS = { wind: WIND, world: WORLD, combat: COMBAT, repair: REPAIR, prices: PRICES, gunnery: GUNNERY, gunners: GUNNERY.gunnersPerGun, zones: ZONE_DAMAGE, loot: LOOT, sales: SALES, time: GAME_TIME, fort: FORT, fortUpgrade: FORT_UPGRADE, start: START, turning: TURNING, escort: ESCORT, trail: TRAIL, bars: BAR_SCALE, autofire: AUTOFIRE };
+export const SETTINGS_BLOCKS = { wind: WIND, world: WORLD, combat: COMBAT, repair: REPAIR, prices: PRICES, gunnery: GUNNERY, gunners: GUNNERY.gunnersPerGun, zones: ZONE_DAMAGE, loot: LOOT, sales: SALES, time: GAME_TIME, fort: FORT, fortUpgrade: FORT_UPGRADE, start: START, turning: TURNING, escort: ESCORT, trail: TRAIL, bars: BAR_SCALE, autofire: AUTOFIRE, sinking: SINKING };
 
 /**
  * The design constant blocks S79 promises to expose, by name.
