@@ -913,6 +913,21 @@ input[type="number"] {
   font-size: 13px;
 }
 
+/*
+ * A warning the player must not mistake for good news (S91). The footer is laid out with
+ * space-between, so the notice sits at the far end from the button that raises it: it has
+ * to be loud enough to carry across that distance. The closed port used to be reported in
+ * the success green, which is why pressing set sail looked like nothing happened.
+ */
+.purchase-notice.is-error {
+  color: var(--red);
+  font-weight: 600;
+}
+
+.purchase-notice.is-error::before {
+  content: "⚠ ";
+}
+
 .purchase-notice:empty {
   display: none;
 }

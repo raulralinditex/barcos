@@ -197,7 +197,7 @@ export const en = {
   "shipyard.fort.ours": "In your hands",
   "shipyard.fort.taken": "Taken by the enemy",
   "shipyard.fort.detail": "{guns} guns · {victories} victories · {needed} to the next",
-  "shipyard.fort.closed": "The shipyard is in enemy hands: you cannot sail until you take it back.",
+  "shipyard.fort.closed": "The shipyard is in enemy hands: you can sail, but nothing is repaired until you take it back.",
   "sea.banner.noSupply": "No provisions left! The crew goes on short rations",
   "sea.banner.ammo": "{ammo}: {switched} guns loaded",
   "sea.banner.ammoMixed": "{ammo}: {switched} guns loaded · {kept} keep theirs",
@@ -237,6 +237,8 @@ export const en = {
   "sea.port.fleetHull": "Hull {hull}%",
   "sea.port.fleetDone": "Repaired: the {name} is in fighting order again ({gold} doubloons)",
   "sea.banner.repairAway": "Repairs are done at the home port: sail back to the island you left from",
+  "sea.banner.portClosed": "The shipyard is in enemy hands: nothing is repaired until you take it back.",
+  "sea.banner.fortRetaken": "Shipyard retaken! The port is open again.",
 
   "sea.banner.autoRepair": "Repaired {count} ships for {gold} doubloons",
   "sea.banner.autoRepairShort": "Repaired {count} ships for {gold} doubloons · ships remain damaged for lack of gold",

@@ -1099,8 +1099,10 @@ els.launchBtn.addEventListener("click", launch);
 // design number lives. Nothing on this screen owns it any more.
 
 els.setSailBtn.addEventListener("click", () => {
-  // A yard in enemy hands takes the sailing with her (S74): the player has to win it
-  // back before putting to sea again.
+  // A yard in enemy hands closes the repairs, not the sailing (S92). The player has to be
+  // able to put to sea to go and take her back; blocking the departure is what used to
+  // lock the whole save, because from inside the shipyard there was no other way out.
+  // The warning still shows, so nobody sails without knowing the port is closed to them.
   const game = (() => {
     try {
       return JSON.parse(localStorage.getItem(GAME_KEY) ?? "null");
@@ -1109,9 +1111,14 @@ els.setSailBtn.addEventListener("click", () => {
     }
   })();
   const fort = game?.fort;
-  if (fort && (fort.status === "surrendered" || fort.status === "sunk")) {
+  const heldByEnemy = Boolean(fort && (fort.status === "surrendered" || fort.status === "sunk"));
+  if (heldByEnemy) {
+    // Sailing is allowed; the notice is a warning, not a refusal (S91: it reads as an error).
+    els.purchaseNotice.classList.add("is-error");
     els.purchaseNotice.textContent = t("shipyard.fort.closed");
-    return;
+  } else {
+    els.purchaseNotice.classList.remove("is-error");
+    els.purchaseNotice.textContent = "";
   }
   saveConfig();
   window.location.href = "./sea.html";

@@ -75,7 +75,12 @@ import {
   canAssaultFort,
   createFortCombatant,
   damageFort,
+  damageOccupiedFort,
   fortFire,
+  fortHeldByEnemy,
+  fortOccupierCondition,
+  occupierFire,
+  occupyFort,
   portClosed,
 } from "../model/fort.js";
 import { hullTurnFactor } from "../model/turning.js";
@@ -258,7 +263,21 @@ function saveGame() {
       supplyLeftS,
       victories,
       fort: fortCombat
-        ? { condition: { ...fortCombat.condition }, crew: { ...fortCombat.crew }, status: fortCombat.status }
+        ? {
+            condition: { ...fortCombat.condition },
+            crew: { ...fortCombat.crew },
+            status: fortCombat.status,
+            // The occupiers travel with the save (S93): a half-broken occupation has to
+            // come back half-broken, or the player would retake her for free on reload.
+            occupation: fortCombat.occupation
+              ? {
+                  condition: { ...fortCombat.occupation.condition },
+                  crew: { ...fortCombat.occupation.crew },
+                  initialCrew: fortCombat.occupation.initialCrew,
+                  crewDamagePool: fortCombat.occupation.crewDamagePool,
+                }
+              : undefined,
+          }
         : undefined,
       world: serializeWorld(world),
       combat: playerCombat
@@ -683,6 +702,21 @@ function drawSea(ctx) {
   ctx.textAlign = "center";
   ctx.fillText("⚓", 0, 32);
 
+  // A yard the enemy holds flies her colours over the anchor (S93): the player has to be
+  // able to see, from the water, that the harbour she is sailing into is not hers.
+  if (fortCombat && fortHeldByEnemy(fortCombat)) {
+    ctx.beginPath();
+    ctx.arc(0, 0, 190, 0, Math.PI * 2);
+    ctx.strokeStyle = "rgba(161,60,44,0.9)";
+    ctx.lineWidth = 16;
+    ctx.setLineDash([40, 30]);
+    ctx.stroke();
+    ctx.setLineDash([]);
+    ctx.fillStyle = "#a13c2c";
+    ctx.font = "600 120px ui-sans-serif, system-ui, sans-serif";
+    ctx.fillText("⚔", 0, 44);
+  }
+
   drawRangeCircles(ctx);
   drawEncounters(ctx);
   drawWake(ctx);
@@ -897,6 +931,24 @@ function drawShipBars(ctx) {
       distance: Math.hypot(encounter.x - world.ship.x, encounter.y - world.ship.y),
       heading: encounter.heading ?? 0,
       toughness: encounter.combat.hullToughness ?? 1,
+    });
+  }
+
+  // A yard the enemy holds carries her garrison's bar among the hostiles (S93): the
+  // player has to see how much of the occupation is left, because that is the fight.
+  //
+  // The bar is drawn from the yard itself with the occupiers' crew condition swapped in,
+  // not from the bare occupation record: the renderer also reads her beams and the damage
+  // they have dealt, and the occupation only records men. A record without `pieces` used
+  // to crash the whole animation loop the moment the yard was on screen.
+  const occupiedBar = occupiedFortCombatant();
+  if (occupiedBar && inGunshot({ x: 0, y: 0 })) {
+    targets.push({
+      combatant: occupiedBar,
+      at: toScreen(0, 0),
+      distance: Math.hypot(world.ship.x, world.ship.y),
+      heading: 0,
+      toughness: fortCombat.hullToughness ?? 1,
     });
   }
 
@@ -1319,11 +1371,56 @@ function playerMaxRangeM() {
   return Math.max(0, ...playerCombat.pieces.map((p) => pieceById(p.pieceId).rangeM));
 }
 
+/**
+ * The yard as a target for the player's guns (S93). A yard the enemy holds is a fixed
+ * hostile at the origin: she is not an encounter, so she never drifts, the safe zone does
+ * not shove her and she never becomes a wreck. `null` while she is ours or already
+ * retaken, so the guns fall back to the sails they always had.
+ */
+/**
+ * The yard the enemy holds, as a combatant the guns can actually shoot at (S93).
+ *
+ * The yard's own record is `"surrendered"` — that is what "she is taken" means — and every
+ * targeting rule in the game rejects a combatant that is not `"fighting"`. Handing the bare
+ * record to the guns is why the player could not aim at her at all: the guns answered "no
+ * target" while she sat there firing back. This façade carries the occupiers' condition
+ * under a fighting status, so she is a legitimate target without rewriting the saved
+ * `status`, which is what closes the port.
+ */
+function occupiedFortCombatant() {
+  if (!fortCombat || !fortHeldByEnemy(fortCombat)) return null;
+  return {
+    ...fortCombat,
+    status: "fighting",
+    condition: { ...fortCombat.condition, crew: fortOccupierCondition(fortCombat) },
+  };
+}
+
+function occupiedFortTarget() {
+  const combat = occupiedFortCombatant();
+  if (!combat) return null;
+  return { id: "fort", type: "fort", name: t("sea.fort.name"), x: 0, y: 0, combat };
+}
+
+/**
+ * One hit on the yard the enemy holds (S93): the men holding her take it, never her hull.
+ * The recovery itself is the model's rule; the sea only applies it and announces it.
+ */
+function hitOccupiedFort(damage) {
+  if (!fortCombat || !fortHeldByEnemy(fortCombat)) return;
+  damageOccupiedFort(fortCombat, damage);
+  if (!fortHeldByEnemy(fortCombat)) {
+    // The occupiers broke: the yard is ours again and the port reopens (S93).
+    showBanner(t("sea.banner.fortRetaken"), "gold", 5000);
+    saveGame();
+  }
+}
+
 /** Fire one side's guns at the nearest enemy that side bears on. */
 function firePlayerBroadside(side, { auto = false } = {}) {
   if (!playerCombat || gameOver || playerCombat.status !== "fighting") return;
 
-  const hit = targetForSide(world.ship, world.encounters, side, playerMaxRangeM());
+  const hit = targetForSide(world.ship, world.encounters, side, playerMaxRangeM(), [occupiedFortTarget()].filter(Boolean));
   if (!hit) {
     // The automatic fire looks every tick: it stays silent when nothing bears.
     if (!auto) showBanner(t("sea.banner.noTarget", { side: t(`sea.sides.${side}`) }), "info", 1500);
@@ -1331,7 +1428,10 @@ function firePlayerBroadside(side, { auto = false } = {}) {
   }
   const { target, distance: targetDistance } = hit;
 
-  const targetCombat = ensureEnemyCombat(target);
+  // The yard the enemy holds is not a sail: there is no combatant to create and no
+  // drifting position to read. Her damage goes through her own rule (S93).
+  const isFort = target.id === "fort";
+  const targetCombat = isFort ? fortCombat : ensureEnemyCombat(target);
   if (!targetCombat) return;
   const { volley } = fireBroadside(playerCombat, side, targetDistance, rnd);
   if (volley.length === 0) {
@@ -1342,7 +1442,8 @@ function firePlayerBroadside(side, { auto = false } = {}) {
   for (const shot of volley) {
     pushFx("tracer", world.ship.x, world.ship.y, target.x, target.y, 0.3);
     if (shot.hit) {
-      applyDamage(targetCombat, shot.damage);
+      if (isFort) hitOccupiedFort(shot.damage);
+      else applyDamage(targetCombat, shot.damage);
       pushFx("hit", target.x, target.y, target.x, target.y, 0.5);
     } else {
       pushFx("splash", target.x + (rnd() - 0.5) * 70, target.y + (rnd() - 0.5) * 70, 0, 0, 0.6);
@@ -1380,18 +1481,21 @@ function allies() {
 /** Each escort fires on its own when a hostile bears, with its own reloads. */
 function escortsFire() {
   if (gameOver) return;
+  const fortTarget = occupiedFortTarget();
   for (const escort of escorts) {
-    const target = closestTarget(
-      world.encounters.filter((e) => e.type === "enemy" && e.combat?.status === "fighting"),
-      escort,
-    );
+    const sails = world.encounters.filter((e) => e.type === "enemy" && e.combat?.status === "fighting");
+    const target = closestTarget(fortTarget ? [...sails, fortTarget] : sails, escort);
     if (!target) continue;
+    // A yard the enemy holds takes its damage through the occupiers' rule (S93).
+    const isFort = target.id === "fort";
+    if (isFort && !fortHeldByEnemy(fortCombat)) continue;
     const { volley, side } = escortFire(escort, target, rnd);
     if (!volley.length) continue;
     for (const shot of volley) {
       pushFx("tracer", escort.x, escort.y, target.x, target.y, 0.3);
       if (shot.hit) {
-        applyDamage(target.combat, shot.damage);
+        if (isFort) hitOccupiedFort(shot.damage);
+        else applyDamage(target.combat, shot.damage);
         pushFx("hit", target.x, target.y, target.x, target.y, 0.5);
       } else {
         pushFx("splash", target.x + (rnd() - 0.5) * 70, target.y + (rnd() - 0.5) * 70, 0, 0, 0.6);
@@ -1423,7 +1527,19 @@ function dropDisengagedTargets() {
  * back. Her damage and her garrison live in the save, like a hull's.
  */
 function updateFortCombat(dt) {
-  if (!fortCombat || portClosed(fortCombat)) return;
+  if (!fortCombat) return;
+
+  // The moment she strikes, the enemy walks in (S93). The occupiers have to exist before
+  // the player can shoot at them, and their strength is what she has to break to be ours
+  // again. This runs even while the port is closed, which is exactly when she is held.
+  //
+  // The guard is `portClosed`, not `fortHeldByEnemy`: the latter already requires an
+  // occupation to exist, so a save written before this rule (a yard taken with no
+  // occupiers recorded) would never be given one and could never be retaken.
+  // `occupyFort` is idempotent and ignores a yard that is still fighting.
+  if (portClosed(fortCombat)) occupyFort(fortCombat);
+
+  if (portClosed(fortCombat)) return;
   tickCombatant(fortCombat, dt);
 
   for (const encounter of world.encounters) {
@@ -1456,6 +1572,47 @@ function updateFortCombat(dt) {
   }
 }
 
+/**
+ * The occupiers' counter-attack (S93). A yard the enemy holds is not a shelter: while she
+ * is theirs she shoots at whoever comes to take her back, with the yard's own guns.
+ *
+ * She respects the safe zone like every other hostile (S66). That is not a detail: the
+ * player opens the sea inside the port, and a battery firing at point-blank range on a
+ * captain who has not yet weighed anchor sinks her before she can even set sail. The zone
+ * exists precisely so nobody shoots into the harbour; a taken yard is not the exception.
+ */
+function occupiedFortFire(dt) {
+  if (!world || !fortCombat || !fortHeldByEnemy(fortCombat)) return;
+  if (!playerCombat || playerCombat.status !== "fighting") return;
+  if (insideSafeZone(world.ship)) return;
+  // The occupiers' guns reload on the sea's own clock, exactly as the yard's do while she
+  // is ours. Ticking with 0 left them permanently loaded at the first volley and reloading
+  // never; their 120 s reload is meant to be felt.
+  tickCombatant(fortCombat, dt);
+  const distance = Math.hypot(world.ship.x, world.ship.y);
+  for (const side of ["babor", "estribor"]) {
+    const { volley } = occupierFire(fortCombat, side, distance, rnd);
+    for (const shot of volley) {
+      if (!shot.hit) {
+        pushFx("splash", world.ship.x + (rnd() - 0.5) * 70, world.ship.y + (rnd() - 0.5) * 70, 0, 0, 0.6);
+        continue;
+      }
+      const piece = pieceById(shot.pieceId);
+      const ammo = ammoById(shot.ammoId);
+      if (!piece || !ammo) continue;
+      const falloff = 1 - 0.5 * (distance / piece.rangeM);
+      const total = piece.shotKg * ammo.massFactor * COMBAT.damageScale * falloff;
+      applyDamage(playerCombat, {
+        hull: total * ammo.damageSplit.hull,
+        rigging: total * ammo.damageSplit.rigging,
+        crew: total * ammo.damageSplit.crew,
+      });
+      pushFx("tracer", 0, 0, world.ship.x, world.ship.y, 0.3);
+      pushFx("hit", world.ship.x, world.ship.y, world.ship.x, world.ship.y, 0.5);
+    }
+  }
+}
+
 /** Enemies inside the engage radius think, move and shoot. */
 function processCombat(dt, now) {
   if (!playerCombat || gameOver) return;
@@ -1466,6 +1623,9 @@ function processCombat(dt, now) {
 
   // Escorts shoot first: they answer whatever hostile is nearest to them.
   escortsFire();
+
+  // A yard the enemy holds answers the player who came for her (S93).
+  occupiedFortFire(dt);
 
   // The fleet loses a hull for good when it sinks or strikes (S36).
   pruneLostEscorts();
@@ -1766,7 +1926,8 @@ function updateDuelPanel() {
   }
 
   // The yard fights as one of ours (S74), so her hull and her garrison read in the same
-  // panel as the ships in the fight.
+  // panel as the ships in the fight. A yard the enemy holds is theirs now (S93): she
+  // belongs on the other side of the roster, not this one.
   if (fortCombat && !portClosed(fortCombat) && fortInFight()) {
     own.push({ id: "fort", name: t("sea.fort.name"), x: 0, y: 0, combat: fortCombat });
   }
@@ -1781,6 +1942,14 @@ function updateDuelPanel() {
       y: encounter.y,
       combat: encounter.combat,
     }));
+
+  // The yard the enemy holds is a hostile of her own (S93): she belongs on their side of
+  // the roster, with the occupiers' garrison as her crew, so the player can read the fight
+  // she has to win.
+  const occupiedRow = occupiedFortCombatant();
+  if (occupiedRow) {
+    hostile.push({ id: "fort", name: t("sea.fort.name"), x: 0, y: 0, combat: occupiedRow });
+  }
 
   const roster = duelRoster({
     ours: own,
@@ -2197,6 +2366,15 @@ function boot() {
     fortCombat.condition = { ...fortCombat.condition, ...savedFort.condition };
     fortCombat.crew = { ...fortCombat.crew, ...savedFort.crew };
     if (savedFort.status) fortCombat.status = savedFort.status;
+    // A yard the enemy held when the player left is still theirs (S93).
+    if (savedFort.occupation && typeof savedFort.occupation === "object") {
+      fortCombat.occupation = {
+        condition: { ...savedFort.occupation.condition },
+        crew: { ...savedFort.occupation.crew },
+        initialCrew: Math.max(1, Number(savedFort.occupation.initialCrew) || 1),
+        crewDamagePool: Number(savedFort.occupation.crewDamagePool) || 0,
+      };
+    }
     refreshStatus(fortCombat);
   }
   goldEarned = normaliseGold(world.gold);

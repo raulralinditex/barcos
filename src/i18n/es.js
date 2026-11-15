@@ -194,7 +194,7 @@ export const es = {
   "shipyard.fort.ours": "En tus manos",
   "shipyard.fort.taken": "Tomado por el enemigo",
   "shipyard.fort.detail": "{guns} cañones · {victories} victorias · faltan {needed} para el próximo",
-  "shipyard.fort.closed": "El astillero está en manos enemigas: no se puede zarpar hasta recuperarlo.",
+  "shipyard.fort.closed": "El astillero está en manos enemigas: se puede zarpar, pero no se repara hasta recuperarlo.",
   "sea.banner.noSupply": "¡Sin provisiones! La tripulación pasa a ración corta",
   "sea.banner.ammo": "{ammo}: {switched} piezas cargadas",
   "sea.banner.ammoMixed": "{ammo}: {switched} piezas cargadas · {kept} mantienen la suya",
@@ -234,6 +234,8 @@ export const es = {
   "sea.port.fleetHull": "Casco {hull}%",
   "sea.port.fleetDone": "Reparada: {name} vuelve a estar en condiciones ({gold} doblones)",
   "sea.banner.repairAway": "Sólo se repara en el puerto base: volvé a la isla del origen",
+  "sea.banner.portClosed": "El astillero está en manos enemigas: no se repara hasta recuperarlo.",
+  "sea.banner.fortRetaken": "¡Astillero recuperado! El puerto vuelve a estar abierto.",
 
   "sea.banner.autoRepair": "Reparadas {count} naves por {gold} doblones",
   "sea.banner.autoRepairShort": "Reparadas {count} naves por {gold} doblones · quedan naves dañadas por falta de oro",
