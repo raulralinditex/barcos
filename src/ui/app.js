@@ -56,6 +56,18 @@ import { applyRefit, configFromShip, quoteRefit } from "../model/refit.js";
 import { canSellShip, salePrice, sellShip } from "../model/sale.js";
 import { FORT, buyFortGun, fortBoughtGuns, fortGunCost, fortGunHeadroom, fortGunsPerSide, fortRepair, fortRepairQuote } from "../model/fort.js";
 import { ARRIVAL_NOTICE_KEY, parseArrivalNotice } from "../model/arrival-notice.js";
+import {
+  affordableUnits,
+  buyCargo,
+  marketBoard,
+  marketOf,
+  sellCargo,
+  shipHold,
+  withHold,
+} from "../model/commerce.js";
+import { currentShipyard, shipyardZone } from "../model/world.js";
+import { COMMODITIES, SHIPYARDS } from "../data/naval-data.js";
+import { floatsAgain, isWreck, refloatCost } from "../model/sinking.js";
 
 const STORAGE_KEY = "barcos:config:v1";
 const GAME_KEY = "barcos:game:v1";
@@ -189,6 +201,11 @@ const els = {
   fortRepairBtn: $("#fort-repair-btn"),
   fortGunBtn: $("#fort-gun-btn"),
   fortUpgradeNote: $("#fort-upgrade-note"),
+  marketYard: $("#market-yard"),
+  marketZone: $("#market-zone"),
+  marketHold: $("#market-hold"),
+  marketBoard: $("#market-board"),
+  marketStatus: $("#market-status"),
   purchaseNotice: $("#purchase-notice"),
   fleetList: $("#fleet-list"),
   fleetCount: $("#fleet-count"),
@@ -1111,7 +1128,7 @@ document.querySelectorAll(".tab").forEach((tab) => {
 /* ---------------------------------------------------------------- screen tabs (S97, S105) */
 
 /** The screen's four rooms. The ship+rig panels are one DOM (S99): re-parented, not cloned. */
-const SCREENS = ["flota", "comprar", "astillero", "configuracion"];
+const SCREENS = ["flota", "comprar", "astillero", "mercado", "configuracion"];
 let activeScreen = "flota";
 /** Where the ship+rig column lives while nobody is building (user S105). */
 let builderScreen = "comprar";
@@ -1171,7 +1188,154 @@ function showScreen(next) {
   // The yard's room repaints on entry: her state may have changed at sea since the
   // last look (S100).
   if (next === "astillero") renderFort();
+  // The market belongs to the yard she is moored at (S118), so it repaints on entry.
+  if (next === "mercado") renderMarket();
   if (next === "configuracion") repaintSettingsForLanguage();
+}
+
+
+/* ---------------------------------------------------------------- market (S118) */
+
+/**
+ * Which yard the astillero screen is trading with (S118).
+ *
+ * The screen is a place, so it trades with the yard the captain is moored at. When the
+ * save carries no voyage — the player is ashore, between voyages — it trades with the
+ * home port, which is where she would walk to. Anything unreadable resolves to the home
+ * port as well, so a broken save opens the market instead of an empty screen.
+ */
+function screenShipyard() {
+  const game = readFortSave();
+  const ship = game?.ship;
+  const yard = ship && Number.isFinite(ship.x) && Number.isFinite(ship.y)
+    ? currentShipyard({ x: ship.x, y: ship.y })
+    : null;
+  return yard ?? SHIPYARDS.find((entry) => entry.home) ?? SHIPYARDS[0] ?? null;
+}
+
+/** The captain's hull, which is the one whose hold the market reads and writes. */
+function marketShip() {
+  const captain = captainShip(fleet);
+  if (!captain) return null;
+  // A hull at sea carries the live cargo the sea saved; a hull in port carries her own.
+  return captain;
+}
+
+/**
+ * Buy one unit at the yard (S118). The hold is written back to the captain's fleet entry
+ * and the purse to the shared game save, which is the only record of gold (S32).
+ */
+function marketBuy(commodityId) {
+  const ship = marketShip();
+  const yard = screenShipyard();
+  const zone = yard ? shipyardZone(yard) : null;
+  if (!ship || !zone) return;
+  const hold = shipHold(ship);
+  const trade = buyCargo(
+    { manifest: hold.manifest, capacityKg: ship.capacityKg, cargoKg: ship.cargoKg, gold: state.gold },
+    commodityId,
+    1,
+    zone.id,
+  );
+  if (!trade) {
+    els.marketStatus.textContent = t("market.refused");
+    return;
+  }
+  applyMarketTrade(ship, trade.hold, trade.gold);
+  els.marketStatus.textContent = t("market.paid", {
+    gold: gold(trade.paid),
+    units: trade.units,
+    name: t(commodityNameKey(commodityId)),
+  });
+}
+
+/** Sell every unit of one commodity the captain is carrying (S118). */
+function marketSell(commodityId) {
+  const ship = marketShip();
+  const yard = screenShipyard();
+  const zone = yard ? shipyardZone(yard) : null;
+  if (!ship || !zone) return;
+  const hold = shipHold(ship);
+  const stock = hold.manifest.find((entry) => entry.commodityId === commodityId);
+  if (!stock) {
+    els.marketStatus.textContent = t("market.nothing");
+    return;
+  }
+  const trade = sellCargo({ manifest: hold.manifest, gold: state.gold }, commodityId, stock.units, zone.id);
+  if (!trade) {
+    els.marketStatus.textContent = t("market.nothing");
+    return;
+  }
+  applyMarketTrade(ship, trade.hold, trade.gold);
+  els.marketStatus.textContent = t("market.earned", {
+    gold: gold(trade.earned),
+    units: trade.units,
+    name: t(commodityNameKey(commodityId)),
+  });
+}
+
+/** Write a trade where it belongs: the hold on the hull, the purse in the save. */
+function applyMarketTrade(ship, hold, nextGold) {
+  fleet = {
+    ...fleet,
+    ships: fleet.ships.map((entry) => (entry.id === ship.id ? withHold(entry, hold) : entry)),
+  };
+  saveFleet();
+  state.gold = normaliseGold(nextGold);
+  // The purse is the sea save's field, so the market patches the same record the fort
+  // does instead of inventing a second place to keep gold.
+  writeFortSave({ gold: state.gold });
+  els.goldValue.textContent = gold(state.gold);
+  renderMarket();
+  renderFleet();
+}
+
+const commodityNameKey = (commodityId) =>
+  COMMODITIES.find((entry) => entry.id === commodityId)?.nameKey ?? commodityId;
+
+/** The market board of the yard the screen is in (S118). */
+function renderMarket() {
+  if (!els.marketBoard) return;
+  const yard = screenShipyard();
+  const zone = yard ? shipyardZone(yard) : null;
+  const ship = marketShip();
+  els.marketYard.textContent = yard ? t(yard.nameKey) : t("market.noYard");
+  // The zone line reads as a sentence, so it is built once, with the two live factors.
+  els.marketZone.textContent = zone
+    ? t("market.zone", {
+        zone: t(`zone.${zone.id}.name`),
+        buy: `${Math.round(marketOf(zone.id).buy * 100)} %`,
+        sell: `${Math.round(marketOf(zone.id).sell * 100)} %`,
+      })
+    : t("market.noYard");
+
+  const hold = ship ? shipHold(ship) : { manifest: [], cargoKg: 0 };
+  els.marketHold.textContent = ship
+    ? t("market.hold", { used: gold(hold.cargoKg), capacity: gold(ship.capacityKg ?? 0) })
+    : t("market.noYard");
+
+  const board = zone ? marketBoard(zone.id) : [];
+  els.marketBoard.innerHTML = board
+    .map((row) => {
+      const stock = hold.manifest.find((entry) => entry.commodityId === row.id)?.units ?? 0;
+      const room = ship && zone
+        ? affordableUnits({ capacityKg: ship.capacityKg, cargoKg: ship.cargoKg, gold: state.gold }, row.id, zone.id)
+        : 0;
+      return `
+        <li class="market-row" data-commodity="${row.id}">
+          <span class="market-name">${t(row.nameKey)}</span>
+          <span class="market-kg">${gold(row.kgPerUnit)} kg</span>
+          <span class="market-price">${t("market.buy")} ${gold(row.buy)}</span>
+          <span class="market-price">${t("market.sell")} ${gold(row.sell)}</span>
+          <span class="market-stock">${gold(stock)}</span>
+          <span class="market-actions">
+            <button class="btn market-buy" type="button" data-buy="${row.id}" ${room > 0 ? "" : "disabled"}>${t("market.buyOne")}</button>
+            <button class="btn market-sell" type="button" data-sell="${row.id}" ${stock > 0 ? "" : "disabled"}>${t("market.sellAll")}</button>
+          </span>
+        </li>`;
+    })
+    .join("");
+  if (board.length === 0) els.marketBoard.innerHTML = `<li class="market-empty">${t("market.noYard")}</li>`;
 }
 
 /** Where the ship+rig column currently lives, for the boot decision and the tests. */
@@ -1192,6 +1356,14 @@ for (const tab of document.querySelectorAll(".screen-tab")) {
 }
 
 els.launchBtn.addEventListener("click", launch);
+
+// The market board is redrawn on every trade, so its actions are delegated (S118).
+els.marketBoard?.addEventListener("click", (event) => {
+  const buy = event.target.closest("[data-buy]");
+  if (buy) return marketBuy(buy.dataset.buy);
+  const sell = event.target.closest("[data-sell]");
+  if (sell) return marketSell(sell.dataset.sell);
+});
 
 // The automatic-fire switch moved to the settings screen (S88), where every other
 // design number lives. Nothing on this screen owns it any more.
@@ -1336,8 +1508,9 @@ function renderFleet() {
       const isCaptain = ship.id === captain?.id;
       // The captain always sails; every other hull sails if its check is on (S35).
       const sails = isCaptain || ship.sails !== false;
+      const wreck = isWreck(ship);
       return `
-        <li class="fleet-item${isCaptain ? " is-captain" : ""}${sails ? " is-sailing" : ""}${ship.id === refitId ? " is-refitting" : ""}" data-ship-id="${ship.id}">
+        <li class="fleet-item${isCaptain ? " is-captain" : ""}${sails ? " is-sailing" : ""}${ship.id === refitId ? " is-refitting" : ""}${wreck ? " is-wreck" : ""}" data-ship-id="${ship.id}">
           <input class="fleet-check" type="checkbox" data-sail="${ship.id}"
             ${sails ? "checked" : ""} ${isCaptain ? "disabled" : ""}
             aria-label="${t("fleet.sails", { name: ship.name })}"
@@ -1346,6 +1519,7 @@ function renderFleet() {
             <span class="fleet-mark">${isCaptain ? "⚓" : "·"}</span>
             <span class="fleet-name">${ship.name}</span>
             <span class="fleet-hull">${ship.hullName}</span>
+            ${wreck ? `<span class="fleet-tag fleet-tag-wreck" title="${t("fleet.wreckHint")}">${t("fleet.wreck")}</span>` : ""}
           </button>
           ${isCaptain ? `<span class="fleet-tag" title="${t("fleet.isCaptain")}">${t("fleet.captain")}</span>` : `<button class="fleet-captain-button" type="button" data-captain="${ship.id}" title="${t("fleet.promote")}">${t("shipyard.refit.captain")}</button>`}
         </li>`;
@@ -1391,6 +1565,18 @@ function renderFleetDetail() {
     pct.textContent = `${value}%`;
     row.append(label, track, pct);
     els.fleetBars.append(row);
+  }
+
+  // A wreck has one action (S117): float her again. She cannot be repaired at the
+  // bottom, and a hull nobody can sail is not a hull a buyer wants.
+  if (isWreck(ship)) {
+    const refloat = refloatCost(ship);
+    els.fleetRepairBtn.disabled = state.gold < refloat;
+    els.fleetRepairBtn.textContent = t("fleet.refloat", { gold: gold(priceWithPurse(refloat, state.gold)) });
+    els.fleetRepairBtn.title = t("fleet.wreckHint");
+    els.fleetSellBtn.disabled = true;
+    els.fleetSellBtn.textContent = t("shipyard.sell", { gold: gold(0) });
+    return;
   }
 
   // Repair and sell, priced and gated exactly as they were on the row.
@@ -1454,6 +1640,28 @@ els.fleetList.addEventListener("click", (event) => {
 els.fleetRepairBtn.addEventListener("click", () => {
   const target = fleet.ships.find((entry) => entry.id === refitId);
   if (!target) return;
+  // A wreck is floated, not repaired (S117): the yard charges a full repair for her and
+  // hands back the same ship, whole again, with no cargo — that went down with her.
+  if (isWreck(target)) {
+    const price = refloatCost(target);
+    if (state.gold < price) {
+      els.purchaseNotice.textContent = t("fleet.refloatShort", {
+        name: target.name,
+        gold: gold(price - state.gold),
+      });
+      return;
+    }
+    const floated = floatsAgain(target);
+    fleet = { ...fleet, ships: fleet.ships.map((entry) => (entry.id === target.id ? floated : entry)) };
+    state.gold -= price;
+    saveFleet();
+    writeFortSave({ gold: state.gold });
+    els.goldValue.textContent = gold(state.gold);
+    els.purchaseNotice.textContent = t("fleet.refloated", { name: floated.name, gold: gold(price) });
+    renderFleet();
+    render();
+    return;
+  }
   const captain = captainShip(fleet);
   const result = repairFleetShip(fleet, target.id, state.gold, { allowCaptain: true });
   if (!result.repaired) return;

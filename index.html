@@ -36,6 +36,9 @@
       <button class="screen-tab is-active" type="button" role="tab" data-screen="flota" data-i18n="shipyard.tab.flota" aria-selected="true">Flota</button>
       <button class="screen-tab" type="button" role="tab" data-screen="comprar" data-i18n="shipyard.tab.comprar" aria-selected="false">Comprar buque</button>
       <button class="screen-tab" type="button" role="tab" data-screen="astillero" data-i18n="shipyard.tab.astillero" aria-selected="false">Astillero</button>
+      <!-- Mercado (S118): the same yard, seen from her own water. What she sells and what
+           she pays changes with the zone she lies in, so the tab is part of every yard. -->
+      <button class="screen-tab" type="button" role="tab" data-screen="mercado" data-i18n="shipyard.tab.mercado" aria-selected="false">Mercado</button>
       <button class="screen-tab" type="button" role="tab" data-screen="configuracion" data-i18n="shipyard.tab.configuracion" aria-selected="false">Configuración</button>
     </nav>
 
@@ -200,6 +203,23 @@
           </div>
         </div>
         <div id="astillero-builder-slot" class="builder-slot" hidden></div>
+      </section>
+      <!-- Mercado (S118): the trade of the yard the captain is moored at. The board is
+           priced for her zone, so the same barrel reads cheap here and dear elsewhere. -->
+      <section class="screen-panel" data-screen-panel="mercado">
+        <div class="builder-slot market-column">
+          <section class="panel panel-market" aria-labelledby="market-title">
+            <div class="market-head">
+              <span class="market-label" id="market-title" data-i18n="market.title">Mercado</span>
+              <span class="market-yard" id="market-yard">—</span>
+            </div>
+            <p class="market-zone" id="market-zone">—</p>
+            <div class="market-hold" id="market-hold"></div>
+            <ul class="market-board" id="market-board"></ul>
+            <p class="market-status" id="market-status" aria-live="polite"></p>
+          </section>
+        </div>
+        <div id="mercado-builder-slot" class="builder-slot" hidden></div>
       </section>
       <!-- Configuración (S101): the settings screen moves in; config.html redirects. -->
       <section class="screen-panel screen-panel-wide" data-screen-panel="configuracion">

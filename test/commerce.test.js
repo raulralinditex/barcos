@@ -165,3 +165,20 @@ test("loading a hold keeps the generic cargo, which weighs but does not sell", (
   assert.equal(emptied.cargoKg, 1000);
   assert.deepEqual(emptied.manifest, []);
 });
+
+test("S113: a market price is a setting like any other, and the spread stays a spread", async () => {
+  const { applySettings, currentSettings, normaliseSettings, resetSettings } = await import("../src/model/settings.js");
+  resetSettings();
+  try {
+    const shipped = currentSettings();
+    assert.equal(shipped["commerce.sell-abismo"], 3.2);
+    // A price outside its range is clamped, not rejected.
+    applySettings({ "commerce.sell-abismo": 99 });
+    assert.equal(currentSettings()["commerce.sell-abismo"], 8);
+    // The whole board follows the live value: no stale copy anywhere.
+    assert.equal(sellPrice(COMMODITIES[0].id, "abismo"), Math.round(COMMODITIES[0].baseGold * 8));
+  } finally {
+    resetSettings();
+  }
+  assert.equal(normaliseSettings({})["commerce.sunkCargoShare"], 0.35);
+});

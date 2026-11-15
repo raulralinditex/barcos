@@ -86,6 +86,15 @@ function showStatus(message, kind = "ok") {
   els.status.className = `settings-status is-${kind}`;
 }
 
+/**
+ * Whether a field is a switch rather than a number (S117). It is declared on the field
+ * (`control: "switch"`) instead of guessed from its range: `combat.autofire` has exactly
+ * the same 0..1 shape and is deliberately still a number, so a heuristic would quietly
+ * change a control the player already knows. The stored value stays the number the model
+ * reads; only the control changes.
+ */
+const isSwitch = (field) => field.control === "switch";
+
 /** One row: label, input in display units, unit and the allowed range. */
 function renderField(field, settings) {
   const id = fieldId(field);
@@ -102,17 +111,23 @@ function renderField(field, settings) {
   control.className = "settings-control";
 
   const input = document.createElement("input");
-  input.type = "number";
   input.id = `field-${id}`;
   input.dataset.fieldId = id;
-  input.min = String(toDisplay(field, field.min));
-  input.max = String(toDisplay(field, field.max));
-  input.step = String(inputStep(field));
-  input.value = String(toDisplay(field, settings[id]));
+  // A switch is a checkbox whose checked state is 1 (S117); everything else is a number.
+  if (isSwitch(field)) {
+    input.type = "checkbox";
+    input.checked = Number(settings[id]) > 0;
+  } else {
+    input.type = "number";
+    input.min = String(toDisplay(field, field.min));
+    input.max = String(toDisplay(field, field.max));
+    input.step = String(inputStep(field));
+    input.value = String(toDisplay(field, settings[id]));
+  }
 
   const unit = document.createElement("span");
   unit.className = "settings-unit";
-  unit.textContent = unitLabel(field);
+  unit.textContent = isSwitch(field) ? "" : unitLabel(field);
 
   control.append(input, unit);
 
@@ -158,7 +173,7 @@ function readScreen() {
     const id = input.dataset.fieldId;
     const field = SETTINGS_FIELDS.find((entry) => fieldId(entry) === id);
     if (!field) continue;
-    raw[id] = fromDisplay(field, input.value);
+    raw[id] = input.type === "checkbox" ? (input.checked ? 1 : 0) : fromDisplay(field, input.value);
   }
   return normaliseSettings(raw);
 }
@@ -169,7 +184,8 @@ function syncScreen(settings) {
     const id = input.dataset.fieldId;
     const field = SETTINGS_FIELDS.find((entry) => fieldId(entry) === id);
     if (!field || settings[id] === undefined) continue;
-    input.value = String(toDisplay(field, settings[id]));
+    if (input.type === "checkbox") input.checked = Number(settings[id]) > 0;
+    else input.value = String(toDisplay(field, settings[id]));
   }
 }
 

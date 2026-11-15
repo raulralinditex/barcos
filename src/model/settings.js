@@ -15,6 +15,7 @@ import { GUNNERY } from "./gunnery.js";
 import { REPAIR } from "./repair.js";
 import { SALES } from "./sale.js";
 import { SINKING } from "./sinking.js";
+import { COMMERCE, MARKETS } from "./commerce.js";
 import { GAME_TIME } from "./game-time.js";
 import { FORT, FORT_UPGRADE } from "./fort.js";
 import { WIND } from "./wind.js";
@@ -123,8 +124,21 @@ export const SETTINGS_FIELDS = [
   { group: "sales", key: "share", label: "settings.sales.share", scale: "percent", min: 0, max: 1, step: 0.05, target: "sales", targetKey: "share" },
 
   // S117: what a sunk hull becomes. Off is the game as it always played (she is gone);
-  // on leaves her waiting in a yard as a wreck that can be floated again.
-  { group: "sinking", key: "keepWreck", label: "settings.sinking.keepWreck", scale: "factor", min: 0, max: 1, step: 1, target: "sinking", targetKey: "keepWreck" },
+  // on leaves her waiting in a yard as a wreck that can be floated again. `control:
+  // "switch"` is what the screen reads to draw a checkbox: the player asked for one.
+  { group: "sinking", key: "keepWreck", label: "settings.sinking.keepWreck", scale: "factor", min: 0, max: 1, step: 1, control: "switch", target: "sinking", targetKey: "keepWreck" },
+
+  // S113/S115: the trade. What a sunk hold still pays, how much an enemy carries, and
+  // the two prices of each zone. The spread between a zone's buy and sell is the whole
+  // economy, so it is the first thing a player who finds the run too rich will move.
+  { group: "commerce", key: "sunkCargoShare", label: "settings.commerce.sunkShare", scale: "percent", min: 0, max: 1, step: 0.05, target: "commerce", targetKey: "sunkCargoShare" },
+  { group: "commerce", key: "enemyHoldKg", label: "settings.commerce.enemyHold", scale: "factor", min: 0, max: 60000, step: 500, target: "commerce", targetKey: "enemyHoldKg" },
+  { group: "commerce", key: "buy-costera", label: "settings.commerce.buyCostera", scale: "percent", min: 0.1, max: 4, step: 0.05, target: "markets", targetKey: "costera", targetField: "buy" },
+  { group: "commerce", key: "sell-costera", label: "settings.commerce.sellCostera", scale: "percent", min: 0.1, max: 8, step: 0.05, target: "markets", targetKey: "costera", targetField: "sell" },
+  { group: "commerce", key: "buy-abierto", label: "settings.commerce.buyAbierto", scale: "percent", min: 0.1, max: 4, step: 0.05, target: "markets", targetKey: "abierto", targetField: "buy" },
+  { group: "commerce", key: "sell-abierto", label: "settings.commerce.sellAbierto", scale: "percent", min: 0.1, max: 8, step: 0.05, target: "markets", targetKey: "abierto", targetField: "sell" },
+  { group: "commerce", key: "buy-abismo", label: "settings.commerce.buyAbismo", scale: "percent", min: 0.1, max: 4, step: 0.05, target: "markets", targetKey: "abismo", targetField: "buy" },
+  { group: "commerce", key: "sell-abismo", label: "settings.commerce.sellAbismo", scale: "percent", min: 0.1, max: 8, step: 0.05, target: "markets", targetKey: "abismo", targetField: "sell" },
 
   // Minimum 2500: the cheapest playable hull of the dearest country (Portugal) costs 2036,
   // so a poorer start would leave a whole nation's captain unable to buy a single ship.
@@ -145,7 +159,7 @@ export const SETTINGS_FIELDS = [
 /** The automatic-fire switch as a live block, so it is a setting like any other (S88). */
 export const AUTOFIRE = { enabled: AUTOFIRE_DEFAULT ? 1 : 0 };
 
-export const SETTINGS_BLOCKS = { wind: WIND, world: WORLD, combat: COMBAT, repair: REPAIR, prices: PRICES, gunnery: GUNNERY, gunners: GUNNERY.gunnersPerGun, zones: ZONE_DAMAGE, loot: LOOT, sales: SALES, time: GAME_TIME, fort: FORT, fortUpgrade: FORT_UPGRADE, start: START, turning: TURNING, escort: ESCORT, trail: TRAIL, bars: BAR_SCALE, autofire: AUTOFIRE, sinking: SINKING };
+export const SETTINGS_BLOCKS = { wind: WIND, world: WORLD, combat: COMBAT, repair: REPAIR, prices: PRICES, gunnery: GUNNERY, gunners: GUNNERY.gunnersPerGun, zones: ZONE_DAMAGE, loot: LOOT, sales: SALES, time: GAME_TIME, fort: FORT, fortUpgrade: FORT_UPGRADE, start: START, turning: TURNING, escort: ESCORT, trail: TRAIL, bars: BAR_SCALE, autofire: AUTOFIRE, sinking: SINKING, commerce: COMMERCE, markets: MARKETS };
 
 /**
  * The design constant blocks S79 promises to expose, by name.
@@ -172,7 +186,29 @@ export const DESIGN_BLOCKS = {
   bars: BAR_SCALE,
 };
 const targetOf = (field) => SETTINGS_BLOCKS[field.target ?? field.group];
-const keyOf = (field) => field.targetKey ?? field.key;
+/**
+ * The object one field actually writes to. Almost every field is a key of its block;
+ * a market price is a key of a key (MARKETS.abierto.buy), because a zone's market is
+ * one record with two sides and splitting it into eight blocks would be worse (S113).
+ */
+const slotOf = (field) => {
+  if (!field.targetField) return targetOf(field);
+  const key = field.targetKey ?? field.key;
+  return targetOf(field)[key] ?? null;
+};
+const keyOf = (field) => field.targetField ?? field.targetKey ?? field.key;
+
+/** Read a field's live value, failing to the shipped default instead of throwing. */
+const readOf = (field) => {
+  const slot = slotOf(field);
+  return slot ? slot[keyOf(field)] : undefined;
+};
+
+/** Write a field's live value, ignoring a block that is not there. */
+const writeOf = (field, value) => {
+  const slot = slotOf(field);
+  if (slot) slot[keyOf(field)] = value;
+};
 
 /** Field ids, stable across releases: what the stored settings are keyed by. */
 export const fieldId = (field) => `${field.group}.${field.key}`;
@@ -184,7 +220,7 @@ const clamp = (value, min, max) => Math.min(max, Math.max(min, value));
  * "reset" restores what the source says, not whatever the player typed before.
  */
 export const SETTINGS_DEFAULTS = Object.fromEntries(
-  SETTINGS_FIELDS.map((field) => [fieldId(field), targetOf(field)[keyOf(field)]]),
+  SETTINGS_FIELDS.map((field) => [fieldId(field), readOf(field)]),
 );
 
 /**
@@ -225,7 +261,7 @@ export function normaliseSettings(raw) {
 export function currentSettings() {
   const result = {};
   for (const field of SETTINGS_FIELDS) {
-    result[fieldId(field)] = targetOf(field)[keyOf(field)];
+    result[fieldId(field)] = readOf(field);
   }
   return result;
 }
@@ -238,7 +274,7 @@ export function currentSettings() {
 export function applySettings(raw) {
   const settings = normaliseSettings(raw);
   for (const field of SETTINGS_FIELDS) {
-    targetOf(field)[keyOf(field)] = settings[fieldId(field)];
+    writeOf(field, settings[fieldId(field)]);
   }
   return settings;
 }

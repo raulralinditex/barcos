@@ -714,6 +714,9 @@ h3 {
 .screen-panel.is-active > .builder-slot > .panel-hulls { grid-area: left; }
 .screen-panel.is-active > .builder-slot > .panel-fleet { grid-area: left; }
 .screen-panel.is-active > .builder-slot > .yard-column { grid-area: left; }
+/* The market room keeps the yard's left column (S118): same place, another counter.
+   The room's slot holds the board in the left column, exactly like the fleet room. */
+.screen-panel.is-active > .builder-slot > .panel-market { grid-area: left; }
 .screen-panel.is-active > .builder-slot > .panel-ship { grid-area: ship; }
 .screen-panel.is-active > .builder-slot > .panel-build { grid-area: rig; }
 
@@ -2246,4 +2249,95 @@ input[type="number"] {
 .fleet-repair:disabled {
   opacity: 0.45;
   cursor: default;
+}
+
+/* The market of the yard the captain is moored at (S118). Each commodity fits inside
+   the yard's narrow column, with its prices and actions grouped together. */
+.panel-market {
+  min-width: 0;
+  display: grid;
+  gap: 8px;
+  padding: 10px 12px;
+  border: 1px solid rgba(23, 54, 93, 0.18);
+  border-radius: 6px;
+  background: rgba(23, 54, 93, 0.03);
+  align-self: start;
+}
+
+.market-head {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+.market-label {
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--navy);
+}
+
+.market-yard {
+  font-size: 11px;
+  color: var(--ink-soft);
+}
+
+.market-zone,
+.market-hold {
+  margin: 0;
+  font-size: 11px;
+  color: var(--ink-soft);
+}
+
+.market-board {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  gap: 4px;
+}
+
+.market-row {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  align-items: center;
+  gap: 6px;
+  padding: 4px 6px;
+  border-radius: 4px;
+  background: rgba(255, 255, 255, 0.6);
+  font-size: 11px;
+}
+
+.market-name {
+  font-weight: 600;
+  color: var(--navy);
+}
+
+.market-kg,
+.market-stock {
+  color: var(--ink-soft);
+  text-align: right;
+}
+
+.market-actions {
+  grid-column: 1 / -1;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+}
+
+.market-actions .btn {
+  padding: 2px 6px;
+  font-size: 10.5px;
+}
+
+.market-empty,
+.market-status {
+  font-size: 11px;
+  color: var(--ink-soft);
+}
+
+.market-status {
+  margin: 0;
+  min-height: 1.2em;
 }

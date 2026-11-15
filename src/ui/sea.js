@@ -5,7 +5,7 @@
  * keyboard and autosaves. Spanish labels (S10), English identifiers (S10).
  */
 
-import { ammoById, hullById, pieceById } from "../data/naval-data.js";
+import { SHIPYARDS, ammoById, hullById, pieceById } from "../data/naval-data.js";
 import { createAppTranslator } from "../i18n/index.js";
 import { localisedAmmo, localisedHull, localisedZone } from "../i18n/terms.js";
 import { compassPoint, windAt, windForecast } from "../model/wind.js";
@@ -56,6 +56,8 @@ import {
 } from "../model/repair.js";
 import { ARRIVAL_NOTICE_KEY } from "../model/arrival-notice.js";
 import { normaliseGold } from "../model/economy.js";
+import { awardHold, defeatedHold, enemyHoldFor } from "../model/commerce.js";
+import { isWreck, wreckHull } from "../model/sinking.js";
 import { bootSettings } from "../model/settings-storage.js";
 import { bootCatalogue } from "../model/catalogue-storage.js";
 import { AUTOFIRE } from "../model/settings.js";
@@ -100,6 +102,7 @@ import {
   serializeWorld,
   updateWorld,
   zoneAtRadius,
+  currentShipyard,
 } from "../model/world.js";
 
 const SHIP_KEY = "barcos:current-ship:v1";
@@ -315,6 +318,16 @@ function saveGame() {
       { id: runtimeShip?.id, combat: playerCombat },
       ...escorts.map((escort) => ({ id: escort.id, combat: escort.combat })),
     ]);
+    // Her hold rides with her (S114): the cargo bought in a yard or taken off a prize is
+    // what the market sells later, so the sea save writes it on the hull it belongs to.
+    fleet = {
+      ...fleet,
+      ships: fleet.ships.map((ship) =>
+        ship.id === runtimeShip?.id
+          ? { ...ship, manifest: runtimeShip.manifest ?? [], cargoKg: runtimeShip.cargoKg ?? 0 }
+          : ship,
+      ),
+    };
     localStorage.setItem(FLEET_KEY, serializeFleet(fleet));
   } catch {
     /* storage disabled: the voyage continues in memory */
@@ -325,11 +338,18 @@ function saveGame() {
 
 const THROTTLE_STEP = 0.25;
 
-/** The home port: the island at the origin, same radius the sea draws (S22). */
-const PORT_RADIUS_M = 110;
-
+/**
+ * Whether the captain is moored at a shipyard (S22, S112). The yards are data now, so
+ * this asks the table instead of measuring against a radius written here: a new yard is
+ * a row, and the repair and the arrival open at her without touching this file.
+ */
 function inHomePort() {
-  return world ? Math.hypot(world.ship.x, world.ship.y) <= PORT_RADIUS_M : false;
+  return world ? Boolean(currentShipyard({ x: world.ship.x, y: world.ship.y })) : false;
+}
+
+/** The yard the captain is moored at right now, or null at sea (S112). */
+function mooredShipyard() {
+  return world ? currentShipyard({ x: world.ship.x, y: world.ship.y }) : null;
 }
 
 /** Quote and repair the actual combatants, not their last saved fleet copies. */
@@ -694,19 +714,22 @@ function drawSea(ctx) {
     ctx.fill();
   }
 
-  // home port at the origin
-  ctx.beginPath();
-  ctx.arc(0, 0, 110, 0, Math.PI * 2);
-  ctx.fillStyle = "#8a7a55";
-  ctx.fill();
-  ctx.beginPath();
-  ctx.arc(0, 0, 70, 0, Math.PI * 2);
-  ctx.fillStyle = "#a9955f";
-  ctx.fill();
-  ctx.fillStyle = "rgba(255,255,255,0.85)";
-  ctx.font = "600 90px ui-sans-serif, system-ui, sans-serif";
-  ctx.textAlign = "center";
-  ctx.fillText("⚓", 0, 32);
+  // Every shipyard, from the table (S112): a new yard appears here without touching
+  // this function, which is the whole point of the list being data.
+  for (const yard of SHIPYARDS) {
+    ctx.beginPath();
+    ctx.arc(yard.x, yard.y, yard.mooringM, 0, Math.PI * 2);
+    ctx.fillStyle = "#8a7a55";
+    ctx.fill();
+    ctx.beginPath();
+    ctx.arc(yard.x, yard.y, yard.mooringM * 0.64, 0, Math.PI * 2);
+    ctx.fillStyle = "#a9955f";
+    ctx.fill();
+    ctx.fillStyle = "rgba(255,255,255,0.85)";
+    ctx.font = "600 90px ui-sans-serif, system-ui, sans-serif";
+    ctx.textAlign = "center";
+    ctx.fillText("⚓", yard.x, yard.y + 32);
+  }
 
   // A yard the enemy holds flies her colours over the anchor (S93): the player has to be
   // able to see, from the water, that the harbour she is sailing into is not hers.
@@ -1317,10 +1340,14 @@ function drawMinimap() {
     ctx.stroke();
   }
 
-  ctx.beginPath();
-  ctx.arc(0, 0, 120, 0, Math.PI * 2);
-  ctx.fillStyle = "#a9955f";
-  ctx.fill();
+  // Every shipyard on the chart (S118): the market is a place, so the player has to be
+  // able to see where the next one lies before deciding to cross for a price.
+  for (const yard of SHIPYARDS) {
+    ctx.beginPath();
+    ctx.arc(yard.x, yard.y, 120, 0, Math.PI * 2);
+    ctx.fillStyle = "#a9955f";
+    ctx.fill();
+  }
 
   for (const encounter of world.encounters) {
     ctx.beginPath();
@@ -1747,7 +1774,9 @@ function handOverCommand() {
   const next = nextCommandShip(allies());
   if (!next) return false;
   const previousName = runtimeShip.name;
-  fleet = setCaptain(removeShip(fleet, runtimeShip.id), next.id);
+  // The captain that was lost follows the same rule as an escort (S117): she is gone, or
+  // she waits in a yard as a wreck. Either way the next hull in line takes over.
+  fleet = setCaptain(loseHull(fleet, runtimeShip.id, playerCombat?.status), next.id);
   runtimeShip = captainShip(fleet);
   playerCombat = next.combat;
   escorts = escorts.filter((escort) => escort.id !== next.id);
@@ -1776,10 +1805,35 @@ function pruneLostEscorts() {
   if (lost.length === 0) return;
   for (const gone of lost) {
     showBanner(t("sea.banner.escortLost", { name: gone.name }), "danger", 4000);
-    fleet = removeShip(fleet, gone.id);
+    fleet = loseHull(fleet, gone.id, gone.combat?.status);
   }
   escorts = survivors;
   saveFleetState();
+}
+
+/**
+ * Take a lost hull out of the fleet, or leave her as a wreck (S117).
+ *
+ * The switch is read right here, when she goes down, so changing it mid-voyage counts.
+ * A wreck keeps her entry — floating her again restores that same ship — but she loses
+ * everything that was afloat in her: her cargo is at the bottom (S116), her crew went
+ * with her, and she does not sail.
+ */
+function loseHull(currentFleet, shipId, status) {
+  const entry = (currentFleet?.ships ?? []).find((ship) => ship.id === shipId);
+  // A hull that struck her colours was not lost to the sea: she can still be taken, and
+  // the wreck switch is about sinking, so it does not apply to her.
+  const wreck = entry && status === "sunk" ? wreckHull(entry) : null;
+  if (!wreck) return removeShip(currentFleet, shipId);
+  return {
+    ...currentFleet,
+    ships: currentFleet.ships.map((ship) => (ship.id === shipId ? wreck : ship)),
+    // A wreck cannot captain: the fleet hands over to a hull that still floats.
+    captainId:
+      currentFleet.captainId === shipId
+        ? (currentFleet.ships.find((ship) => ship.id !== shipId && !isWreck(ship))?.id ?? null)
+        : currentFleet.captainId,
+  };
 }
 
 /**
@@ -1798,6 +1852,11 @@ function resolveDefeatedEnemies() {
 
     // Beating a hostile is a victory, and victories grow the yard's battery (S74).
     victories += 1;
+
+    // Her hold is the real prize (S115): a hull that strikes hands over all of it, a hull
+    // that goes down leaves only the share that can still be fished out of the water.
+    collectCargoFrom(encounter, status);
+
     const prize = status === "surrendered" ? captureableShip(encounter) : null;
     if (prize) {
       fleet = withPrize(fleet, prize);
@@ -1821,6 +1880,42 @@ function resolveDefeatedEnemies() {
       zoneId: zone.id,
     };
   }).filter(Boolean);
+}
+
+/**
+ * Take what a defeated enemy was carrying (S115).
+ *
+ * The hold goes into the captain's hold, which is the same hold that weighs her down and
+ * is sold in a yard (S114): the loot is cargo, not gold, so the player has to carry it
+ * home and find a market for it. Whatever does not fit stays in the water and the crew is
+ * told, because silently dropping it would read as the game eating the prize.
+ */
+function collectCargoFrom(encounter, status) {
+  const carried = enemyHoldFor(encounter);
+  const spoils = defeatedHold(carried, status);
+  if (!spoils || spoils.cargoKg <= 0) return;
+
+  const awarded = awardHold(runtimeShip, spoils);
+  runtimeShip = awarded.ship;
+  // The hull the player sails is a fleet entry too, so her hold is written where the
+  // market will read it (S118).
+  fleet = {
+    ...fleet,
+    ships: fleet.ships.map((ship) =>
+      ship.id === runtimeShip.id ? { ...ship, manifest: runtimeShip.manifest, cargoKg: runtimeShip.cargoKg } : ship,
+    ),
+  };
+  saveFleetState();
+  showBanner(
+    t(status === "sunk" ? "sea.banner.cargoSalvaged" : "sea.banner.cargoTaken", {
+      kg: fmtInt.format(spoils.cargoKg - awarded.leftKg),
+    }),
+    "gold",
+    3500,
+  );
+  if (awarded.leftKg > 0) {
+    showBanner(t("sea.banner.cargoLeft", { kg: fmtInt.format(awarded.leftKg) }), "info", 3500);
+  }
 }
 
 /**

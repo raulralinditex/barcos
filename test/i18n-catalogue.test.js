@@ -1,7 +1,7 @@
 import test from "node:test";
 import assert from "node:assert/strict";
 
-import { AMMO, CREW_ROLES, HULLS, PIECES, ZONES } from "../src/data/naval-data.js";
+import { AMMO, COMMODITIES, CREW_ROLES, HULLS, PIECES, SHIPYARDS, ZONES } from "../src/data/naval-data.js";
 import { COLLECTION, en, es } from "../src/i18n/index.js";
 import { LANGUAGES, interpolate } from "../src/i18n/core.js";
 
@@ -118,6 +118,10 @@ test("S11: no catalogue key is orphaned (every key is used by the app or the dat
     ...ZONES.flatMap((z) => [`zone.${z.id}.name`, `zone.${z.id}.description`]),
     ...CREW_ROLES.flatMap((c) => [`crew.${c.id}.name`, `crew.${c.id}.description`]),
     ...HULLS.map((h) => `shipName.${h.id}`),
+    // S113: every commodity names itself in the market board.
+    ...COMMODITIES.map((c) => c.nameKey),
+    // S112: every shipyard names herself.
+    ...SHIPYARDS.map((y) => y.nameKey),
   ]);
   // Keys the UI resolves at runtime are prefixed with these families.
   const uiPrefixes = [
@@ -136,6 +140,10 @@ test("S11: no catalogue key is orphaned (every key is used by the app or the dat
     // S80-S82: the catalogue editor on that same screen has its own family, because a
     // hull or a piece is not a tuning field and must not read as one.
     "catalogue.",
+    // S118: the market tab names its own goods and its own verbs.
+    "market.",
+    "commodity.",
+    "shipyard.",
   ];
   for (const key of keysOf(es)) {
     const isData = dataKeys.has(key);
