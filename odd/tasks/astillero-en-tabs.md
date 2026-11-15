@@ -75,8 +75,8 @@ S104. **Verificación.**
 - T118 — smokes: actualizar los que pintan la pantalla vieja (autorización en S104), smoke nuevo de recorrido de tabs, `npm test` y la serie de smokes en verde. `S104` — inline — hecho, commit `dfe7236`
 - T120 — `index.html` + `src/ui/styles.css` + `src/ui/app.js`: S105, cada room con la grilla original de tres columnas y su panel izquierdo propio; configuración en varias columnas; slots de aparcamiento destapados al mudar los paneles. `S105` — inline — hecho, commit `d895d04`
 - T121 — smokes: entrar al room que posee cada control (flota/comprar/astillero) antes de operarlo; aserciones de smoke-tabs al comportamiento nuevo. `S105` — inline — hecho, commit `d895d04`
-- T122 — `src/ui/styles.css`: S106, plantilla propia de los rooms de flota/astillero, slots transparentes, panel de flota a alto completo. `S106` — inline — hecho, commit `pending`
-- T123 — `src/ui/sea.js` + `scripts/smoke-escort-range.mjs`: S107, arcos de tiro para toda la línea; smoke con RED observado (arcos desde un solo casco) y GREEN. `S107` — inline — hecho, commit `pending`
+- T122 — `src/ui/styles.css`: S106, plantilla propia de los rooms de flota/astillero, slots transparentes, panel de flota a alto completo. `S106` — inline — hecho, commit `70162f1`
+- T123 — `src/ui/sea.js` + `scripts/smoke-escort-range.mjs`: S107, arcos de tiro para toda la línea; smoke con RED observado (arcos desde un solo casco) y GREEN. `S107` — inline — hecho, commit `70162f1`
 - T119 — cierre: `pendientes.md` al día, espejo Engram del documento, log de la ficha con evidencia. `S104` — inline — hecho, commit `2bad095`
 
 ## Log
