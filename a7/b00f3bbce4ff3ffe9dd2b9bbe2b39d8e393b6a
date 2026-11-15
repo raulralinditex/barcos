@@ -1,33 +1,31 @@
-src/ui/sea.js
-  s_e799e77daffe3c::t_cd4473985c35d3 86,1758,2370,2423
+src/model/turning.js
+  s_e799e77daffe3c::t_971c2d9c208d7e 41-46
+  s_e799e77daffe3c::t_a1add0e902650d 23-31,34-40,47-50,67-74
+  s_e799e77daffe3c::t_d25599b4b96cf1 75
+test/light-load.test.js
+  s_e799e77daffe3c::t_51f1d6e2ebf6c8 1-81
+src/model/ship-model.js
+  s_e799e77daffe3c::t_04ea89a2f1b002 206-217
+  s_e799e77daffe3c::t_691d2b40a1528e 20
 src/i18n/en.js
-  s_e799e77daffe3c::t_efea7814aba0e3 283
   s_e799e77daffe3c::t_114dffe16c00b4 397-399
+  s_e799e77daffe3c::t_efea7814aba0e3 283
 src/model/repair.js
   s_e799e77daffe3c::t_bb969cd2c4c265 31-36,80,86-87,93-96,110-113
   s_e799e77daffe3c::t_a2d635ff38b4be 81-85,88-92
   s_e799e77daffe3c::t_a407731c611c06 97-109,116
-src/model/turning.js
-  s_e799e77daffe3c::t_971c2d9c208d7e 41-46
-  s_e799e77daffe3c::t_a1add0e902650d 23-31,34-40,47-50,67-74
-  s_e799e77daffe3c::t_6a0c84d0260c34 75
-test/light-load.test.js
-  s_e799e77daffe3c::t_51f1d6e2ebf6c8 1-81
+test/load-value.test.js
+  s_e799e77daffe3c::t_0c1927e2dbd9b9 15,18-19,23,25-26,30-34,37,45,51,57,61-66
+  s_e799e77daffe3c::t_8ce854a6472835 1-14,16-17,20-22,24,27-29,35-36,38-44,46-50,52-56,58-60,67
 src/model/settings.js
   s_e799e77daffe3c::t_fa1b9dce36995b 89-90,102-104
-src/model/refit.js
-  s_e799e77daffe3c::t_2e7a6680d7d65d 3,69-71
 src/i18n/es.js
   s_e799e77daffe3c::t_114dffe16c00b4 394-396
   s_e799e77daffe3c::t_efea7814aba0e3 280
-src/model/ship-model.js
-  s_e799e77daffe3c::t_691d2b40a1528e 20
-  s_e799e77daffe3c::t_04ea89a2f1b002 206-217
-test/load-value.test.js
-  s_e799e77daffe3c::t_8ce854a6472835 1-14,16-17,20-22,24,27-29,35-36,38-44,46-50,52-56,58-60,67
-  s_e799e77daffe3c::t_0c1927e2dbd9b9 15,18-19,23,25-26,30-34,37,45,51,57,61-66
-odd/tasks/astillero-en-tabs.md
-  s_e799e77daffe3c::t_ee357767cfefa7 7-18,105-106
+src/ui/sea.js
+  s_e799e77daffe3c::t_cd4473985c35d3 86,1758,2370,2423
+src/model/refit.js
+  s_e799e77daffe3c::t_2e7a6680d7d65d 3,69-71
 ---
 {
   "schema_version": "authorship/3.0.0",
