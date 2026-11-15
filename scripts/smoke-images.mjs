@@ -82,7 +82,9 @@ const geometry = () =>
       height: Math.round(rect.height),
       fit: style.objectFit,
       position: style.position,
-      canvasTop: Math.round(document.querySelector("#ship-canvas").getBoundingClientRect().top),
+      // Absolute page position: the tab layout scrolls Playwright's clicks into view,
+      // and the check is about the zoom not pushing content, not about the viewport.
+      canvasTop: Math.round(document.querySelector("#ship-canvas").getBoundingClientRect().top + window.scrollY),
       natural: [img.naturalWidth, img.naturalHeight],
     };
   });

@@ -54,6 +54,9 @@ check(emptyCount === "sin naves", `a fresh shipyard should own no ships, got: ${
 
 /** Add the currently configured ship under `name`. */
 async function launchShip(name) {
+  // Buying lives in the Comprar tab (S99); the yard opens on Flota or Comprar depending
+  // on the save, so the buy room is reached by clicking its tab.
+  await page.click('.screen-tab[data-screen="comprar"]').catch(() => {});
   await page.fill("#ship-name", name);
   await page.waitForTimeout(150);
   const disabled = await page.locator("#launch-btn").isDisabled();

@@ -90,12 +90,22 @@ try {
     localStorage.setItem("barcos:game:v1", JSON.stringify({ gold: 12000 }));
   });
   await poor.reload({ waitUntil: "networkidle" });
+  // Buying lives in the Comprar tab (S99): without a fleet the yard opens there, which
+  // this page already is; the click below is the purchase itself.
   await poor.click("#launch-btn");
   const beforeRetry = await poor.evaluate(() => [localStorage.getItem("barcos:fleet:v1"), localStorage.getItem("barcos:game:v1")]);
-  check(await poor.locator("#launch-btn").isDisabled(), "remaining purse must disable an unaffordable repeat purchase");
+  // After a purchase the player lands on the fleet (S98): the buy button is out of the
+  // room, so the revalidation is observed by going back to buying, where the purse left
+  // must leave the button disabled.
+  // A stray repeat click is refused by the purse check at launch (S99): no debt, no
+  // second hull. The button's own disabled state is the buy room's business, observed
+  // when the player returns to buying.
+  await poor.locator("#launch-btn").evaluate((button) => button.click());
   await poor.locator("#launch-btn").evaluate((button) => button.click());
   const afterRetry = await poor.evaluate(() => [localStorage.getItem("barcos:fleet:v1"), localStorage.getItem("barcos:game:v1")]);
   check(JSON.stringify(beforeRetry) === JSON.stringify(afterRetry), "rejected repeat purchase must not change fleet or purse");
+  await poor.click('.screen-tab[data-screen="comprar"]');
+  check(await poor.locator("#launch-btn").isDisabled(), "remaining purse must disable an unaffordable repeat purchase");
   await poor.close();
 
   // The footer sail button must respect the fleet panel and captain selection.
@@ -106,14 +116,18 @@ try {
     localStorage.setItem("barcos:game:v1", JSON.stringify({ gold: 40000 }));
   });
   await fleetPage.reload({ waitUntil: "networkidle" });
+  // Buying lives in the Comprar tab (S99), and the fleet now lives in the Flota tab (S97).
+  await fleetPage.click('.screen-tab[data-screen="comprar"]');
   await fleetPage.fill("#ship-name", "Golden Hind");
   await fleetPage.click("#launch-btn");
+  await fleetPage.click('.screen-tab[data-screen="comprar"]');
   await fleetPage.fill("#ship-name", "Avispa");
   await fleetPage.click("#launch-btn");
   check((await fleetPage.locator(".fleet-item.is-captain .fleet-name").textContent()) === "Avispa", "second purchase becomes captain");
   await fleetPage.locator(".fleet-item").first().locator(".fleet-check").uncheck();
   const selected = await fleetPage.evaluate(() => JSON.parse(localStorage.getItem("barcos:fleet:v1")));
   check(selected.ships[0].sails === false && selected.captainId === selected.ships[1].id, "fleet checkbox and captain are saved");
+  await fleetPage.click('.screen-tab[data-screen="flota"]');
   await Promise.all([fleetPage.waitForURL("**/sea.html"), fleetPage.click("#set-sail-btn")]);
   check((await fleetPage.locator("#hud-ship-name").textContent()).startsWith("Avispa"), "sailing uses the selected captain");
   const world = await fleetPage.evaluate(() => {

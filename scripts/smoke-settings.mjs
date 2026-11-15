@@ -76,7 +76,8 @@ const shown = {
   segment: await screen.locator("#field-wind\\.segmentS").inputValue(),
 };
 check(shown.rows >= 20, `the screen shows only ${shown.rows} values`);
-check(shown.groups.length === 14, `expected fourteen blocks, got ${shown.groups.join(", ")}`);
+// Fort reinforcement (S100/S102) adds its own block to the settings screen.
+check(shown.groups.length === 15, `expected fifteen blocks, got ${shown.groups.join(", ")}`);
 check(shown.bonus === "60", `the wind bonus must open at 60 %, got "${shown.bonus}"`);
 check(shown.segment === "12", `the wind segment must open at 12 s, got "${shown.segment}"`);
 

@@ -49,17 +49,11 @@ import {
   serializeFleet,
   setCaptain,
 } from "../model/fleet.js";
-import {
-  damagedShips,
-  priceWithPurse,
-  repairCost,
-  repairFleetShip,
-  repairReport,
-} from "../model/repair.js";
+import { damagedShips, priceWithPurse, repairCost, repairFleetShip, repairReport } from "../model/repair.js";
 import { buildShip, toRuntimeShip } from "../model/shipyard.js";
 import { applyRefit, configFromShip, quoteRefit } from "../model/refit.js";
 import { canSellShip, salePrice, sellShip } from "../model/sale.js";
-import { FORT } from "../model/fort.js";
+import { FORT, buyFortGun, fortBoughtGuns, fortGunCost, fortGunHeadroom, fortGunsPerSide, fortRepair, fortRepairQuote } from "../model/fort.js";
 import { ARRIVAL_NOTICE_KEY, parseArrivalNotice } from "../model/arrival-notice.js";
 
 const STORAGE_KEY = "barcos:config:v1";
@@ -179,7 +173,7 @@ const els = {
   verdictIssues: $("#verdict-issues"),
   priceTotal: $("#price-total"),
   priceLabel: $("#price-label"),
-  priceBlock: $(".price"),
+  priceStrip: $("#price-strip"),
   refitBanner: $("#refit-banner"),
   refitMode: $("#refit-mode"),
   newShipBtn: $("#new-ship-btn"),
@@ -189,6 +183,9 @@ const els = {
   fortHull: $("#fort-hull"),
   fortCrew: $("#fort-crew"),
   fortDetail: $("#fort-detail"),
+  fortRepairBtn: $("#fort-repair-btn"),
+  fortGunBtn: $("#fort-gun-btn"),
+  fortUpgradeNote: $("#fort-upgrade-note"),
   purchaseNotice: $("#purchase-notice"),
   fleetList: $("#fleet-list"),
   fleetCount: $("#fleet-count"),
@@ -684,7 +681,7 @@ function renderPrice(ship, quote = null) {
     ? t(cost < 0 ? "shipyard.refit.refund" : "shipyard.refit.cost")
     : t("shipyard.total");
   els.priceTotal.textContent = gold(quote ? Math.abs(cost) : cost);
-  els.priceBlock.classList.toggle("over", cost > state.gold);
+  els.priceStrip.classList.toggle("over", cost > state.gold);
 
   const diff = state.gold - cost;
   if (diff >= 0) {
@@ -1007,6 +1004,10 @@ function launch() {
   const ship = lastShip;
   if (!ship || !ship.feasible) return;
 
+  // The afford check is against the purse in hand, not the one the builder quoted
+  // with: a second click after a purchase must not go into debt.
+  if (!refitId && ship.price.total > state.gold) return;
+
   const target = fleet.ships.find((entry) => entry.id === refitId);
   if (target) {
     const name = state.shipName.trim() || target.name;
@@ -1022,7 +1023,9 @@ function launch() {
     lastNoticeKey = "shipyard.refit.saved";
     els.purchaseNotice.textContent = t(lastNoticeKey, { name });
     renderFleet();
-    render();
+    // The refitted hull is fleet business (S98): her strip and her sail checks are what
+    // the player wants to see next; the builder stays where the mode put it.
+    showScreen("flota");
     return;
   }
 
@@ -1044,8 +1047,11 @@ function launch() {
     /* the ship still exists in memory for this session */
   }
 
+  // The purchase is fleet business (S98): the fleet strip is what the player wants to
+  // see next, and the builder waits in the Comprar slot for the next sale.
   renderFleet();
-  render();
+  moveBuilder("comprar");
+  showScreen("flota");
   arrivalNotice = null;
   lastAddedName = name;
   lastNoticeKey = "shipyard.added";
@@ -1092,6 +1098,68 @@ document.querySelectorAll(".tab").forEach((tab) => {
     });
   });
 });
+
+/* ---------------------------------------------------------------- screen tabs (S97) */
+
+/** The screen's four rooms. The builder is one DOM (S99): it is re-parented, never cloned. */
+const SCREENS = ["flota", "comprar", "astillero", "configuracion"];
+let activeScreen = "flota";
+let builderScreen = "flota"; // where the builder DOM currently lives (it boots in Flota)
+
+const builderEl = document.getElementById("builder");
+
+function showScreen(next) {
+  if (!SCREENS.includes(next)) return;
+  activeScreen = next;
+  for (const tab of document.querySelectorAll(".screen-tab")) {
+    const on = tab.dataset.screen === next;
+    tab.classList.toggle("is-active", on);
+    tab.setAttribute("aria-selected", String(on));
+  }
+  for (const panel of document.querySelectorAll(".screen-panel")) {
+    panel.classList.toggle("is-active", panel.dataset.screenPanel === next);
+  }
+  // The footer shows only what the room needs (S98/S99): buying shows the price and the
+  // add button; refitting shows the price and the save button; the fleet shows setting
+  // sail; the yard and the settings own none of them.
+  const buying = next === "comprar";
+  const refitting = next === "flota" && Boolean(refitId);
+  els.priceStrip.style.display = buying || refitting ? "" : "none";
+  els.launchBtn.style.display = buying || refitting ? "" : "none";
+  els.setSailBtn.style.display = next === "flota" ? "" : "none";
+  els.eraseBtn.style.display = next === "flota" ? "" : "none";
+  els.verdictIssues.style.display = buying || refitting ? "" : "none";
+  if (buying || refitting) render();
+  // The yard's room repaints on entry: her state may have changed at sea since the
+  // last look (S100).
+  if (next === "astillero") renderFort();
+}
+
+/**
+ * Move the builder DOM to the slot the mode needs (S99). One builder, one build state:
+ * switching rooms re-parents it, and the mode is decided by the room, not by a flag
+ * the code could forget.
+ */
+function moveBuilder(toScreen) {
+  if (!builderEl || builderScreen === toScreen) return;
+  const slot = document.getElementById(`${toScreen}-builder-slot`);
+  if (!slot) return;
+  slot.appendChild(builderEl);
+  builderScreen = toScreen;
+}
+
+for (const tab of document.querySelectorAll(".screen-tab")) {
+  tab.addEventListener("click", () => {
+    const next = tab.dataset.screen;
+    // Buying always rebuilds from nothing (S99): entering Comprar exits the refit mode.
+    if (next === "comprar" && refitId) {
+      refitId = null;
+      renderFleet();
+    }
+    if (next === "comprar" || next === "flota") moveBuilder(next);
+    showScreen(next);
+  });
+}
 
 els.launchBtn.addEventListener("click", launch);
 
@@ -1144,29 +1212,66 @@ let fleet = loadFleetState();
  * guns her victories have earned. The shipyard does not run the fight; it only reports it,
  * so there is one source of truth and it is the sea's.
  */
+function readFortSave() {
+  try {
+    return JSON.parse(localStorage.getItem(GAME_KEY) ?? "null") ?? null;
+  } catch {
+    return null;
+  }
+}
+
+/**
+ * Patch the fort save in `barcos:game:v1` (S100). The sea save is the fort's only record,
+ * so a repair or a purchase must land there, or the next voyage would wash it away.
+ */
+function writeFortSave(patch) {
+  const record = readFortSave() ?? {};
+  const fort = record.fort && typeof record.fort === "object" ? record.fort : {};
+  try {
+    localStorage.setItem(GAME_KEY, JSON.stringify({ ...record, fort: { ...fort, ...patch } }));
+  } catch {
+    /* storage disabled: the change still lives in memory for this session */
+  }
+}
+
 function renderFort() {
   if (!els.fortState) return;
-  let game = null;
-  try {
-    game = JSON.parse(localStorage.getItem(GAME_KEY) ?? "null");
-  } catch {
-    game = null;
-  }
+  const game = readFortSave();
   const fort = game?.fort;
   const victories = Math.max(0, Math.floor(Number(game?.victories) || 0));
   const condition = fort?.condition ?? { hull: 100, crew: 100 };
   const status = fort?.status ?? "fighting";
   const taken = status === "surrendered" || status === "sunk";
+  const bought = fortBoughtGuns(fort ?? {});
 
   els.fortState.textContent = taken ? t("shipyard.fort.taken") : t("shipyard.fort.ours");
   els.fortState.className = `fort-state${taken ? " is-taken" : ""}`;
   els.fortHull.style.width = `${Math.max(0, Math.min(100, Math.round(Number(condition.hull) || 0)))}%`;
   els.fortCrew.style.width = `${Math.max(0, Math.min(100, Math.round(Number(condition.crew) || 0)))}%`;
+  const perSide = fortGunsPerSide({ victories, boughtGuns: bought });
   els.fortDetail.textContent = t("shipyard.fort.detail", {
-    guns: FORT.gunsPerSide * 2 + 2 * Math.floor(victories / FORT.gunsPerVictories),
+    guns: perSide * 2,
     victories,
     needed: FORT.gunsPerVictories - (victories % FORT.gunsPerVictories),
   });
+
+  // The yard's own room (S100): a taken yard sells nothing; a whole one offers nothing
+  // to fix, and a capped battery offers nothing to buy.
+  const quote = fortRepairQuote({ condition: { hull: condition.hull, crew: condition.crew }, status });
+  const headroom = fortGunHeadroom(fort ?? {}, { victories });
+  els.fortRepairBtn.disabled = taken || !quote.repairable || state.gold < quote.cost;
+  els.fortGunBtn.disabled = taken || headroom <= 0 || state.gold < fortGunCost();
+  els.fortGunBtn.textContent = headroom <= 0
+    ? t("shipyard.fort.gunsCapped")
+    : t("shipyard.fort.buyGun", { gold: gold(fortGunCost()) });
+  els.fortRepairBtn.textContent = quote.repairable
+    ? t("shipyard.fort.repair", { gold: gold(priceWithPurse(quote.cost, state.gold)) })
+    : t("shipyard.fort.repairPlain");
+  els.fortUpgradeNote.textContent = taken
+    ? t("shipyard.fort.takenNote")
+    : bought > 0
+      ? t(bought === 1 ? "shipyard.fort.bought.one" : "shipyard.fort.bought.many", { count: bought })
+      : "";
 }
 
 function saveFleet() {
@@ -1235,6 +1340,10 @@ function selectRefitShip(ship) {
   }
   state.shipName = config.name ?? "";
   els.shipName.value = state.shipName;
+  // The refit editor is the Flota tab's business (S98): the builder moves there and the
+  // room switch hides the strip that does not belong to the mode.
+  moveBuilder("flota");
+  showScreen("flota");
 }
 
 els.fleetList.addEventListener("click", (event) => {
@@ -1301,6 +1410,43 @@ els.newShipBtn.addEventListener("click", () => {
   refitId = null;
   renderFleet();
   render();
+});
+
+/* ---------------------------------------------------------------- the yard's room (S100) */
+
+// Repairing the fort charges her quote against the purse and writes both back to the
+// sea save, her only record.
+els.fortRepairBtn.addEventListener("click", () => {
+  const record = readFortSave();
+  const fort = record?.fort && typeof record.fort === "object" ? { ...record.fort } : null;
+  if (!fort) return;
+  const result = fortRepair(fort, state.gold);
+  if (!result.applied) return;
+  state.gold = result.gold;
+  savePurse();
+  writeFortSave({ condition: { ...result.fort.condition } });
+  els.goldValue.textContent = gold(state.gold);
+  lastNoticeKey = "shipyard.fort.repaired";
+  lastAddedName = null;
+  els.purchaseNotice.textContent = t(lastNoticeKey, { gold: gold(result.cost) });
+  renderFort();
+});
+
+// One purchase arms both sides (S100): the count rides with the fort save, and the sea
+// rebuilds her battery from it on the next boot.
+els.fortGunBtn.addEventListener("click", () => {
+  const record = readFortSave();
+  const fort = record?.fort && typeof record.fort === "object" ? { ...record.fort } : {};
+  const result = buyFortGun(fort, state.gold);
+  if (!result.applied) return;
+  state.gold = result.gold;
+  savePurse();
+  writeFortSave({ boughtGuns: result.fort.boughtGuns });
+  els.goldValue.textContent = gold(state.gold);
+  lastNoticeKey = "shipyard.fort.gunBought";
+  lastAddedName = null;
+  els.purchaseNotice.textContent = t(lastNoticeKey, { gold: gold(result.cost) });
+  renderFort();
 });
 
 /**
@@ -1381,6 +1527,14 @@ function savePurse(patchedShip = null, isCaptain = false, { refit = false } = {}
     /* the purse still lives in memory for this session */
   }
 }
+
+/** A refit picked from the fleet opens the builder inside the Flota tab (S98). */
+document.addEventListener("click", (event) => {
+  const select = event.target.closest("[data-refit]");
+  if (!select || !event.target.closest("#fleet-list")) return;
+  moveBuilder("flota");
+  showScreen("flota");
+});
 
 let dockSignature = null;
 
@@ -1591,6 +1745,10 @@ renderHulls();
 renderPieceSelect();
 if (state.shipName) els.shipName.value = state.shipName;
 render();
+// The yard opens on the fleet (S97); the builder waits in the Comprar slot until a refit
+// or the buy tab asks for it.
+if (!captain) moveBuilder("comprar");
+showScreen(captain ? "flota" : "comprar");
 try {
   arrivalNotice = parseArrivalNotice(localStorage.getItem(ARRIVAL_NOTICE_KEY));
   localStorage.removeItem(ARRIVAL_NOTICE_KEY);

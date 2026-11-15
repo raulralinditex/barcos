@@ -7,6 +7,9 @@
     <link rel="stylesheet" href="./src/ui/styles.css" />
   </head>
   <body>
+    <!-- The yard screen is organised by tabs (S97): Flota, Comprar buque, Astillero and
+         Configuración. Each tab owns its own content; the header keeps only the brand,
+         the purse and the language. -->
     <header class="topbar">
       <div class="brand">
         <span class="brand-mark">⚓</span>
@@ -20,26 +23,6 @@
         <strong id="gold-value">0</strong>
         <span id="gold-delta" class="purse-delta"></span>
       </div>
-      <div class="fleet-bar">
-        <div class="fleet-head">
-          <span class="fleet-label" data-i18n="fleet.title">Tu flota</span>
-          <span class="fleet-count" id="fleet-count"></span>
-        </div>
-        <ul class="fleet-list" id="fleet-list"></ul>
-      </div>
-      <!-- The shipyard as a fortification (S74): her hull, her garrison and her guns. -->
-      <div id="fort-panel" class="fort-panel">
-        <div class="fort-head">
-          <span class="fort-label" data-i18n="shipyard.fort.title">Astillero</span>
-          <span id="fort-state" class="fort-state">—</span>
-        </div>
-        <div class="fort-bars">
-          <div class="fort-bar"><span data-i18n="sea.hull">Casco</span><div class="fort-track"><div class="fort-fill fort-hull" id="fort-hull"></div></div></div>
-          <div class="fort-bar"><span data-i18n="sea.crew">Tripulación</span><div class="fort-track"><div class="fort-fill fort-crew" id="fort-crew"></div></div></div>
-        </div>
-        <p class="fort-detail" id="fort-detail">—</p>
-      </div>
-      <a class="btn btn-settings" href="./config.html" data-i18n="settings.open">⚙ Configuración</a>
       <label class="lang-picker">
         <span class="lang-label" data-i18n="app.language">Idioma</span>
         <select id="lang-select">
@@ -49,102 +32,174 @@
       </label>
     </header>
 
+    <nav class="screen-tabs" role="tablist" aria-label="Astillero">
+      <button class="screen-tab is-active" type="button" role="tab" data-screen="flota" data-i18n="shipyard.tab.flota" aria-selected="true">Flota</button>
+      <button class="screen-tab" type="button" role="tab" data-screen="comprar" data-i18n="shipyard.tab.comprar" aria-selected="false">Comprar buque</button>
+      <button class="screen-tab" type="button" role="tab" data-screen="astillero" data-i18n="shipyard.tab.astillero" aria-selected="false">Astillero</button>
+      <button class="screen-tab" type="button" role="tab" data-screen="configuracion" data-i18n="shipyard.tab.configuracion" aria-selected="false">Configuración</button>
+    </nav>
+
     <main class="layout">
-      <section class="panel panel-hulls" aria-labelledby="hulls-title">
-        <h2 id="hulls-title" data-i18n="shipyard.hulls">Casco</h2>
-        <div class="country-picker">
-          <label class="country-label" for="country-select" data-i18n="shipyard.country.label">País</label>
-          <select id="country-select" aria-describedby="country-note"></select>
-          <p class="hint country-note" id="country-note"></p>
+      <!-- Flota (S98): the fleet strip lives here, the refit builder moves in when a hull
+           is picked, and setting sail is this tab's action. -->
+      <section class="screen-panel is-active" data-screen-panel="flota">
+        <div class="fleet-bar">
+          <div class="fleet-head">
+            <span class="fleet-label" data-i18n="fleet.title">Tu flota</span>
+            <span class="fleet-count" id="fleet-count"></span>
+          </div>
+          <ul class="fleet-list" id="fleet-list"></ul>
         </div>
-        <p class="hint" data-i18n="shipyard.hullsHint">Arqueo histórico del modelo; el desplazamiento se deriva de él.</p>
-        <div id="hull-list" class="hull-list" role="listbox" aria-label="Cascos disponibles"></div>
+        <p class="hint fleet-hint" id="fleet-hint" data-i18n="fleet.refitHint">Elegí una nave de la flota para reformarla.</p>
+        <div id="flota-builder-slot" class="builder-slot">
+          <div id="builder" class="builder">
+          <!-- The builder is ONE DOM (S99): these three panels are the constructor. In the
+               Flota tab they edit the refit target; app.js moves the whole #builder into
+               the Comprar tab's slot when the player is buying, so there are never two
+               build states. -->
+          <section class="panel panel-hulls" aria-labelledby="hulls-title">
+            <h2 id="hulls-title" data-i18n="shipyard.hulls">Casco</h2>
+            <div class="country-picker">
+              <label class="country-label" for="country-select" data-i18n="shipyard.country.label">País</label>
+              <select id="country-select" aria-describedby="country-note"></select>
+              <p class="hint country-note" id="country-note"></p>
+            </div>
+            <p class="hint" data-i18n="shipyard.hullsHint">Arqueo histórico del modelo; el desplazamiento se deriva de él.</p>
+            <div id="hull-list" class="hull-list" role="listbox" aria-label="Cascos disponibles"></div>
+          </section>
+
+          <section class="panel panel-ship" aria-labelledby="ship-title">
+            <div class="ship-head">
+              <h2 id="ship-title" data-i18n="shipyard.ship">El buque</h2>
+              <label class="name-field">
+                <span data-i18n="shipyard.name">Nombre</span>
+                <input id="ship-name" type="text" maxlength="28" data-i18n-placeholder="shipyard.namePlaceholder" placeholder="Sin nombre" />
+              </label>
+            </div>
+
+            <div class="refit-banner is-hidden" id="refit-banner">
+              <span id="refit-mode"></span>
+              <button type="button" id="new-ship-btn" data-i18n="shipyard.refit.new">Nuevo barco</button>
+            </div>
+
+            <figure class="ship-figure" id="ship-figure">
+              <img id="ship-photo" class="ship-photo" alt="" />
+              <figcaption class="ship-photo-caption" id="ship-photo-caption"></figcaption>
+            </figure>
+
+            <canvas id="ship-canvas" width="900" height="300" aria-label="Silueta del buque con sus puertos de cañón"></canvas>
+
+            <div class="gun-summary">
+              <div class="gun-side babor">
+                <span class="gun-side-label" data-i18n="shipyard.babor">Babor</span>
+                <strong id="guns-babor">0</strong>
+                <span class="gun-side-max" id="guns-babor-max"></span>
+              </div>
+              <div class="gun-total">
+                <strong id="guns-total">0</strong>
+                <span data-i18n="shipyard.pieces">piezas</span>
+                <span class="gun-swivel" id="guns-swivel"></span>
+              </div>
+              <div class="gun-side estribor">
+                <span class="gun-side-label" data-i18n="shipyard.estribor">Estribor</span>
+                <strong id="guns-estribor">0</strong>
+                <span class="gun-side-max" id="guns-estribor-max"></span>
+              </div>
+            </div>
+
+            <div class="mass-block">
+              <div class="mass-head">
+                <h3 data-i18n="shipyard.massBalance">Balance de masa</h3>
+                <span id="mass-readout" class="mass-readout"></span>
+              </div>
+              <div class="mass-bar" id="mass-bar"></div>
+              <div class="mass-legend" id="mass-legend"></div>
+            </div>
+
+            <dl class="stats">
+              <div><dt data-i18n="shipyard.draft">Calado</dt><dd id="stat-draft">—</dd></div>
+              <div><dt data-i18n="shipyard.speed">Velocidad</dt><dd id="stat-speed">—</dd></div>
+              <div><dt data-i18n="shipyard.loadFraction">Fracción de carga</dt><dd id="stat-load">—</dd></div>
+              <div><dt data-i18n="shipyard.cargoRoom">Hueco para carga</dt><dd id="stat-cargo-room">—</dd></div>
+              <div><dt data-i18n="shipyard.people">Dotación</dt><dd id="stat-people">—</dd></div>
+              <div><dt data-i18n="shipyard.upkeep">Mantenimiento</dt><dd id="stat-upkeep">—</dd></div>
+            </dl>
+          </section>
+
+          <section class="panel panel-build" aria-labelledby="build-title">
+            <h2 id="build-title" data-i18n="shipyard.rig">Aparejo</h2>
+
+            <div class="tabs" role="tablist">
+              <button class="tab is-active" data-tab="guns" role="tab" data-i18n="shipyard.ordnance">Artillería</button>
+              <button class="tab" data-tab="crew" role="tab" data-i18n="shipyard.crew">Dotación</button>
+              <button class="tab" data-tab="supply" role="tab" data-i18n="shipyard.cargo">Carga</button>
+            </div>
+
+            <div class="tab-panel is-active" data-panel="guns">
+              <div class="battery-add">
+                <label>
+                  <span data-i18n="shipyard.piece">Pieza</span>
+                  <select id="piece-select"></select>
+                </label>
+                <button id="add-battery" class="btn btn-add" type="button" data-i18n="shipyard.addBattery">Añadir batería</button>
+              </div>
+              <div id="battery-list" class="battery-list"></div>
+            </div>
+
+            <div class="tab-panel" data-panel="crew">
+              <div id="crew-list" class="crew-list"></div>
+            </div>
+
+            <div class="tab-panel" data-panel="supply">
+              <div id="supply-list" class="supply-list"></div>
+            </div>
+          </section>
+          </div>
+        </div>
       </section>
 
-      <section class="panel panel-ship" aria-labelledby="ship-title">
-        <div class="ship-head">
-          <h2 id="ship-title" data-i18n="shipyard.ship">El buque</h2>
-          <label class="name-field">
-            <span data-i18n="shipyard.name">Nombre</span>
-            <input id="ship-name" type="text" maxlength="28" data-i18n-placeholder="shipyard.namePlaceholder" placeholder="Sin nombre" />
-          </label>
-        </div>
-
-        <div class="refit-banner is-hidden" id="refit-banner">
-          <span id="refit-mode"></span>
-          <button type="button" id="new-ship-btn" data-i18n="shipyard.refit.new">Nuevo barco</button>
-        </div>
-
-        <figure class="ship-figure" id="ship-figure">
-          <img id="ship-photo" class="ship-photo" alt="" />
-          <figcaption class="ship-photo-caption" id="ship-photo-caption"></figcaption>
-        </figure>
-
-        <canvas id="ship-canvas" width="900" height="300" aria-label="Silueta del buque con sus puertos de cañón"></canvas>
-
-        <div class="gun-summary">
-          <div class="gun-side babor">
-            <span class="gun-side-label" data-i18n="shipyard.babor">Babor</span>
-            <strong id="guns-babor">0</strong>
-            <span class="gun-side-max" id="guns-babor-max"></span>
-          </div>
-          <div class="gun-total">
-            <strong id="guns-total">0</strong>
-            <span data-i18n="shipyard.pieces">piezas</span>
-            <span class="gun-swivel" id="guns-swivel"></span>
-          </div>
-          <div class="gun-side estribor">
-            <span class="gun-side-label" data-i18n="shipyard.estribor">Estribor</span>
-            <strong id="guns-estribor">0</strong>
-            <span class="gun-side-max" id="guns-estribor-max"></span>
-          </div>
-        </div>
-
-        <div class="mass-block">
-          <div class="mass-head">
-            <h3 data-i18n="shipyard.massBalance">Balance de masa</h3>
-            <span id="mass-readout" class="mass-readout"></span>
-          </div>
-          <div class="mass-bar" id="mass-bar"></div>
-          <div class="mass-legend" id="mass-legend"></div>
-        </div>
-
-        <dl class="stats">
-          <div><dt data-i18n="shipyard.draft">Calado</dt><dd id="stat-draft">—</dd></div>
-          <div><dt data-i18n="shipyard.speed">Velocidad</dt><dd id="stat-speed">—</dd></div>
-          <div><dt data-i18n="shipyard.loadFraction">Fracción de carga</dt><dd id="stat-load">—</dd></div>
-          <div><dt data-i18n="shipyard.cargoRoom">Hueco para carga</dt><dd id="stat-cargo-room">—</dd></div>
-          <div><dt data-i18n="shipyard.people">Dotación</dt><dd id="stat-people">—</dd></div>
-          <div><dt data-i18n="shipyard.upkeep">Mantenimiento</dt><dd id="stat-upkeep">—</dd></div>
-        </dl>
+      <!-- Comprar buque (S99): the builder moves here from Flota when buying; its foot
+           action is adding the new hull to the fleet. -->
+      <section class="screen-panel" data-screen-panel="comprar">
+        <div id="comprar-builder-slot" class="builder-slot"></div>
       </section>
 
-      <section class="panel panel-build" aria-labelledby="build-title">
-        <h2 id="build-title" data-i18n="shipyard.rig">Aparejo</h2>
-
-        <div class="tabs" role="tablist">
-          <button class="tab is-active" data-tab="guns" role="tab" data-i18n="shipyard.ordnance">Artillería</button>
-          <button class="tab" data-tab="crew" role="tab" data-i18n="shipyard.crew">Dotación</button>
-          <button class="tab" data-tab="supply" role="tab" data-i18n="shipyard.cargo">Carga</button>
-        </div>
-
-        <div class="tab-panel is-active" data-panel="guns">
-          <div class="battery-add">
-            <label>
-              <span data-i18n="shipyard.piece">Pieza</span>
-              <select id="piece-select"></select>
-            </label>
-            <button id="add-battery" class="btn btn-add" type="button" data-i18n="shipyard.addBattery">Añadir batería</button>
+      <!-- Astillero (S100): her state, her repairs and the guns the player buys. -->
+      <section class="screen-panel" data-screen-panel="astillero">
+        <div id="fort-panel" class="fort-panel">
+          <div class="fort-head">
+            <span class="fort-label" data-i18n="shipyard.fort.title">Astillero</span>
+            <span id="fort-state" class="fort-state">—</span>
           </div>
-          <div id="battery-list" class="battery-list"></div>
+          <div class="fort-bars">
+            <div class="fort-bar"><span data-i18n="sea.hull">Casco</span><div class="fort-track"><div class="fort-fill fort-hull" id="fort-hull"></div></div></div>
+            <div class="fort-bar"><span data-i18n="sea.crew">Tripulación</span><div class="fort-track"><div class="fort-fill fort-crew" id="fort-crew"></div></div></div>
+          </div>
+          <p class="fort-detail" id="fort-detail">—</p>
+          <div class="fort-upgrades">
+            <button id="fort-repair-btn" class="btn" type="button" data-i18n="shipyard.fort.repair">Reparar el fuerte</button>
+            <button id="fort-gun-btn" class="btn" type="button" data-i18n="shipyard.fort.buyGun">Comprar cañón</button>
+          </div>
+          <p class="fort-upgrade-note" id="fort-upgrade-note"></p>
         </div>
+      </section>
 
-        <div class="tab-panel" data-panel="crew">
-          <div id="crew-list" class="crew-list"></div>
-        </div>
-
-        <div class="tab-panel" data-panel="supply">
-          <div id="supply-list" class="supply-list"></div>
+      <!-- Configuración (S101): the settings screen moves in; config.html redirects. -->
+      <section class="screen-panel" data-screen-panel="configuracion">
+        <p class="hint settings-lead" data-i18n="settings.lead">
+          Cada valor tiene un mínimo y un máximo: lo que quede fuera se ajusta al límite. Los
+          cambios entran al cargar el mar o el astillero.
+        </p>
+        <div id="settings-groups" class="settings-groups"></div>
+        <div id="settings-catalogue" class="settings-catalogue"></div>
+        <p class="settings-status" id="settings-status" aria-live="polite"></p>
+        <div class="settings-actions">
+          <button id="settings-reset" class="btn btn-erase" type="button" data-i18n="settings.reset">
+            Restablecer todo
+          </button>
+          <button id="settings-apply" class="btn btn-launch" type="button" data-i18n="settings.apply">
+            Guardar
+          </button>
         </div>
       </section>
     </main>
@@ -154,8 +209,8 @@
         <div class="verdict-issues" id="verdict-issues"></div>
         <p class="purchase-notice" id="purchase-notice" role="status" aria-live="polite"></p>
       </div>
-      <div class="launch">
-        <div class="price">
+      <div class="launch" id="launch-strip">
+        <div class="price" id="price-strip">
           <span id="price-label" data-i18n="shipyard.total">Coste total</span>
           <strong id="price-total">0</strong>
         </div>

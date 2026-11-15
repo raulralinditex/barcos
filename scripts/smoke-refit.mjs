@@ -36,6 +36,8 @@ try {
   });
   await page.reload({ waitUntil: "networkidle" });
   for (const name of ["Escort", "Captain"]) {
+    // Buying lives in the Comprar tab (S99).
+    await page.click('.screen-tab[data-screen="comprar"]');
     await page.fill("#ship-name", name);
     await page.click("#launch-btn");
   }
@@ -59,6 +61,8 @@ try {
   }, { escortId: escort.id, captainId: captain.id });
   await page.reload({ waitUntil: "networkidle" });
   if (await page.locator("#dock-dialog").evaluate(el => el.open)) await page.click("#dock-later");
+  // The fleet strip lives in the Flota tab (S97).
+  await page.click('.screen-tab[data-screen="flota"]');
   await page.locator(`.fleet-item[data-ship-id="${escort.id}"] .fleet-check`).uncheck();
   current = await save();
   const before = current.fleet.ships[0], purse = current.game.gold;
@@ -106,7 +110,12 @@ try {
   assert.deepEqual(current.game.combat.escorts[escort.id].crew, updated.crewAlive);
   assert.deepEqual(current.game.combat.player.pieces, [{ shotsLeft: 1 }]);
   assert.equal(current.game.marker, "keep");
+  // After a saved refit the builder goes back to buying (S99): her action is adding
+  // the next new hull to the fleet.
+  await page.click('.screen-tab[data-screen="comprar"]');
   assert.equal(await page.locator("#launch-btn").textContent(), "Añadir a la flota");
+  // The promote buttons live on the fleet strip, in the Flota tab (S97).
+  await page.click('.screen-tab[data-screen="flota"]');
   await page.locator(`.fleet-item[data-ship-id="${escort.id}"] [data-captain]`).click();
   assert.equal((await save()).fleet.captainId, escort.id);
   await page.locator(`.fleet-item[data-ship-id="${captain.id}"] [data-captain]`).click();
