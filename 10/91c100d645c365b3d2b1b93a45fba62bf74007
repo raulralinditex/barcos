@@ -1,0 +1,33 @@
+src/model/settings.js
+  s_e799e77daffe3c::t_81c5e6fcf90220 18,126-131,138
+test/fort-upgrade.test.js
+  s_e799e77daffe3c::t_9b16dfe22f5aa8 142
+  s_e799e77daffe3c::t_1e18ca6783d75c 76-77,104
+  s_e799e77daffe3c::t_a216aee449b48a 103,109
+  s_e799e77daffe3c::t_7e7508326943db 1-51,53-75,78-102,105-108,110-125,128,130-139,141,143-147,149-150,152-153,155-156
+  s_e799e77daffe3c::t_dce7ffd9fdc996 52
+  s_e799e77daffe3c::t_c3a44c66e6d099 126-127,129,148,154
+  s_e799e77daffe3c::t_390ed01a1895df 140,151
+src/model/fort.js
+  s_e799e77daffe3c::t_b3b769704b8650 13,48-108,110-140,146,148-149
+  s_e799e77daffe3c::t_45cb779a622e40 14,109
+  s_e799e77daffe3c::t_c82c8c75f01c13 15
+src/ui/sea.js
+  s_e799e77daffe3c::t_08eec4b6d0799b 270-272,2367-2368,2373-2375
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.6",
+  "base_commit_sha": "1091c100d645c365b3d2b1b93a45fba62bf74007",
+  "prompts": {},
+  "sessions": {
+    "s_e799e77daffe3c": {
+      "agent_id": {
+        "tool": "pi",
+        "id": "01a1dd53-286b-7706-89b0-1d3f9c78baaa",
+        "model": "glm-5.3-flash"
+      },
+      "human_author": "Raul Ripoll <raulral@ext.inditex.com>"
+    }
+  }
+}
