@@ -1,0 +1,23 @@
+odd/tasks/comercio-y-astilleros.md
+  s_1da4ad31d94a78::t_9259ecd2183a46 3,64
+scripts/smoke-settings.mjs
+  s_1da4ad31d94a78::t_3527b0e975c017 79-98
+scripts/smoke-tabs.mjs
+  s_1da4ad31d94a78::t_ba634df1ffeb8d 76
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.6",
+  "base_commit_sha": "9930279e4185a201353aa12a41add22fead1a8d9",
+  "prompts": {},
+  "sessions": {
+    "s_1da4ad31d94a78": {
+      "agent_id": {
+        "tool": "pi",
+        "id": "01a1e010-7dfe-75d2-9eb3-7665a6e6c130",
+        "model": "deepseek-v4.1-flash_high"
+      },
+      "human_author": "Raul Ripoll <raulral@ext.inditex.com>"
+    }
+  }
+}
