@@ -52,6 +52,36 @@ Cerrado por S56: el enemigo ya no cobra el tope de recarga por disparar un solo 
 
 La sincronización de las escoltas con el mundo vive en `src/ui/sea.js` y sólo la cubren smokes de navegador, no `npm test`.
 
+## Pendiente grande: el comercio (la carga tiene que dar dinero)
+
+Decisión del usuario: se retoma más adelante. **No implementado.**
+
+### El problema medido
+
+La carga es hoy **puro castigo**: pagás doblones por embarcarla
+(`PRICES.cargoGoldPerKg`), perdés velocidad (medido: mismo casco, 6,92 kn vacío
+contra 5,98 kn con 40 t) y ganás calado. No hay ninguna mecánica que la consuma:
+busqué en todo `src/model` y `src/ui` y no existe comercio, flete, ni destino.
+`cargoKg` sólo aparece en el constructor, el reformador y la economía de compra.
+
+Con S110 y S111 el hueco se estrechó pero no se cerró: ir vacío ya no es gratis
+(el timón pierde hasta un 25 % por debajo del 20 % de capacidad) y la carga suma
+al valor de la nave, así que una nave cargada vale más y se vende más caro. Pero
+sigue sin **producir** nada.
+
+### Las tres preguntas que hay que contestar antes de escribir código
+
+1. ¿La mercancía se compra en el astillero y se vende navegando, o al revés?
+2. ¿El precio varía por zona (costera barata, abismo caro) o es fijo por tipo?
+3. ¿Qué pasa con la carga si te hunden, o si vendés la nave con carga a bordo?
+
+### Por dónde empezaría, cuando toque
+
+Una economía por viaje: comprar barato en el astillero, vender caro en una zona
+lejana, con el riesgo del viaje como costo real. Eso convierte el dilema
+"vacío y rápido contra cargado y lento" en una decisión legítima en vez de un
+exploit. El modelo ya tiene la física; falta la economía.
+
 ## Estado del repositorio
 
 - Rama `feat/t7-combate-costados`, sobre `master`. Merge y PR los hace el usuario.
