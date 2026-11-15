@@ -1,6 +1,6 @@
 # Juego de barcos — comercio y astilleros por zona
 
-Estado: cerrada S112-S118, salvo el pendiente de los dos smokes viejos que se reporta en L5. Rama: `feat/comercio-y-astilleros` (se crea desde `feat/t7-combate-costados` antes del primer commit). Cierra el pendiente grande de `pendientes.md`: la carga deja de ser castigo puro y pasa a producir dinero.
+Estado: cerrada S112-S118, sin pendientes. Rama: `feat/comercio-y-astilleros` (se crea desde `feat/t7-combate-costados` antes del primer commit). Cierra el pendiente grande de `pendientes.md`: la carga deja de ser castigo puro y pasa a producir dinero.
 
 ## Specs
 
@@ -61,4 +61,4 @@ L3 (decisión del orquestador, sin consulta): el mercado es una pestaña más de
 
 L4 (cierre): T1-T5 verificados. `npm test` 702/702. Smokes en verde: market, sale, fleet, dock, shipyard-layout, sea, anchor-yard. Un bug real apareció y se arregló: la fila del mercado se desbordaba de su columna de 300 px y el click de "Vender todo" caía sobre `#ship-photo`, así que vender no hacía nada aunque el botón estuviera habilitado. `src/ui/styles.css` lo ajusta y `scripts/smoke-market.mjs` comprueba el blanco del click a tres anchos, sin `force`.
 
-L5 (pendiente que necesita decisión del usuario): `scripts/smoke-settings.mjs` y `scripts/smoke-tabs.mjs` afirman **15** bloques de configuración. S117 y S113 agregan dos legítimos (`sinking` y `commerce`), así que ahora son **17** y los dos smokes fallan. No se tocaron: la regla del proyecto prohíbe editar un test existente sin confirmación explícita. Son un cambio de comportamiento intencional, no una regresión.
+L5: `scripts/smoke-settings.mjs` y `scripts/smoke-tabs.mjs` afirmaban **15** bloques de configuración. S117 y S113 agregan dos legítimos (`sinking` y `commerce`), así que ahora son **17**. El usuario confirmó actualizarlos ("ok"). Se actualizaron a 17 y se les agregó la comprobación de que la casilla de naufragio es un checkbox apagado por defecto y de que los ocho precios del mercado están en pantalla. Ambos en verde.

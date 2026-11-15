@@ -76,8 +76,26 @@ const shown = {
   segment: await screen.locator("#field-wind\\.segmentS").inputValue(),
 };
 check(shown.rows >= 20, `the screen shows only ${shown.rows} values`);
-// Fort reinforcement (S100/S102) adds its own block to the settings screen.
-check(shown.groups.length === 15, `expected fifteen blocks, got ${shown.groups.join(", ")}`);
+// Fort reinforcement (S100/S102) adds its own block to the settings screen, and the trade
+// brings two more (S113, S117): the sinking switch and the market prices.
+check(shown.groups.length === 17, `expected seventeen blocks, got ${shown.groups.join(", ")}`);
+check(
+  shown.groups.some((name) => /Naufragio/i.test(name)) && shown.groups.some((name) => /Comercio/i.test(name)),
+  `the sinking and trade blocks must be on screen, got ${shown.groups.join(", ")}`,
+);
+// No group heading may reach the player as a raw key.
+check(!shown.groups.some((name) => /^settings\./.test(name)), `a raw group key is on screen: ${shown.groups.join(", ")}`);
+
+// S117: the wreck switch is a checkbox, off by default, and it stores a 1 or a 0.
+const wreckSwitch = await screen.locator("#field-sinking\\.keepWreck").getAttribute("type");
+check(wreckSwitch === "checkbox", `the wreck switch must be a checkbox, it is a ${wreckSwitch}`);
+check(
+  (await screen.locator("#field-sinking\\.keepWreck").isChecked()) === false,
+  "the wreck switch ships off, which is the game as it always played",
+);
+// S113: every market price is on the screen, with its label resolved.
+const marketRows = await screen.locator('.settings-row[data-field-id^="commerce."]').count();
+check(marketRows === 8, `expected eight trade fields, got ${marketRows}`);
 check(shown.bonus === "60", `the wind bonus must open at 60 %, got "${shown.bonus}"`);
 check(shown.segment === "12", `the wind segment must open at 12 s, got "${shown.segment}"`);
 
