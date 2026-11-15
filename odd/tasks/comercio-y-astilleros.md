@@ -1,6 +1,6 @@
 # Juego de barcos — comercio y astilleros por zona
 
-Estado: abierta. S112-S118. Rama: `feat/comercio-y-astilleros` (se crea desde `feat/t7-combate-costados` antes del primer commit). Cierra el pendiente grande de `pendientes.md`: la carga deja de ser castigo puro y pasa a producir dinero.
+Estado: cerrada S112-S118, salvo el pendiente de los dos smokes viejos que se reporta en L5. Rama: `feat/comercio-y-astilleros` (se crea desde `feat/t7-combate-costados` antes del primer commit). Cierra el pendiente grande de `pendientes.md`: la carga deja de ser castigo puro y pasa a producir dinero.
 
 ## Specs
 
@@ -45,11 +45,11 @@ S118. **El astillero es el mismo en todas partes; lo que cambia es el mercado.**
 
 ## Tasks
 
-- T1 — S112: registro de astilleros, `shipyardAt`/`currentShipyard` y zona derivada. Ruta: inline. Commit: `feat(shipyards): a shipyard is data, and her zone comes from where she lies`.
-- T2 — S113, S114: mercancías, precios por zona, manifiesto y compraventa con capacidad. Ruta: inline. Commit: `feat(commerce): buy where it is made and sell where it is missed`.
-- T3 — S115, S116: carga en enemigos, botín entero al rendirse, porcentaje al hundirse, y la carga que se va con el casco. Ruta: inline. Commit: `feat(loot): an enemy carries a hold, and a sunk hold is mostly lost`.
-- T4 — S117: ajuste `sinking.keepWreck`, naufragio en la flota y reflotado en el astillero. Ruta: inline. Commit: `feat(fleet): a sunk hull can wait in the yard as a wreck`.
-- T5 — S118 y la UI de S112-S117: pestaña Mercado, astilleros en el HUD y el minimapa, grupo `commerce` y el interruptor en Configuración, i18n es/en y smokes. Ruta: inline. Commit: `feat(yard): a market tab, and every shipyard on the chart`.
+- T1 — S112: registro de astilleros, `shipyardAt`/`currentShipyard` y zona derivada. Ruta: inline. Commit: `a4b7b1e`.
+- T2 — S113, S114: mercancías, precios por zona, manifiesto y compraventa con capacidad. Ruta: inline. Commit: `597bf85`.
+- T3 — S115, S116: carga en enemigos, botín entero al rendirse, porcentaje al hundirse, y la carga que se va con el casco. Ruta: inline. Commit: `936f4f1`.
+- T4 — S117: ajuste `sinking.keepWreck`, naufragio en la flota y reflotado en el astillero. Ruta: inline. Commit: `06cebbe`.
+- T5 — S118 y la UI de S112-S117: pestaña Mercado, astilleros en el HUD y el minimapa, grupo `commerce` y el interruptor en Configuración, i18n es/en y smokes. Ruta: inline + un worker para el bug del click. Commit: `4633a20`.
 
 ## Log
 
@@ -58,3 +58,7 @@ L1 (pedido original, verbatim): "vamos con el comercio, creemos un astillero por
 L2 (verbatim): "implementalo pensando en un posible aumento de astilleros en un futuro" — de ahí S112: los astilleros son datos y su zona se deriva de la posición.
 
 L3 (decisión del orquestador, sin consulta): el mercado es una pestaña más del astillero (S118), porque el astillero ya es la pantalla con tabs de S97 y agregar una pestaña no cambia ninguna regla. Se reporta en el cierre; si el usuario prefiere otro sitio, se mueve.
+
+L4 (cierre): T1-T5 verificados. `npm test` 702/702. Smokes en verde: market, sale, fleet, dock, shipyard-layout, sea, anchor-yard. Un bug real apareció y se arregló: la fila del mercado se desbordaba de su columna de 300 px y el click de "Vender todo" caía sobre `#ship-photo`, así que vender no hacía nada aunque el botón estuviera habilitado. `src/ui/styles.css` lo ajusta y `scripts/smoke-market.mjs` comprueba el blanco del click a tres anchos, sin `force`.
+
+L5 (pendiente que necesita decisión del usuario): `scripts/smoke-settings.mjs` y `scripts/smoke-tabs.mjs` afirman **15** bloques de configuración. S117 y S113 agregan dos legítimos (`sinking` y `commerce`), así que ahora son **17** y los dos smokes fallan. No se tocaron: la regla del proyecto prohíbe editar un test existente sin confirmación explícita. Son un cambio de comportamiento intencional, no una regresión.
