@@ -10,7 +10,9 @@
  */
 
 import { COMBAT, applyDamage } from "./combat.js";
-import { pieceById } from "../data/naval-data.js";
+import { hullById, pieceById } from "../data/naval-data.js";
+import { REPAIR } from "./repair.js";
+import { normaliseGold } from "./economy.js";
 import { crewedPieces } from "./gunnery.js";
 
 export const FORT = {
@@ -44,17 +46,107 @@ export const FORT = {
 };
 
 /**
+ * Fort reinforcement (S100, S102): repairing the yard and buying her extra guns.
+ *
+ * The whole block is a live constant, so the settings screen (S33) can retune it like
+ * every other number in the game. A fort has no purchase price to measure a repair
+ * against, so her repair fee is her own pinch: `repairPinch` doblones for a hull taken
+ * from wreck to full, in proportion to the damage, never below the ship rule's minimum.
+ */
+export const FORT_UPGRADE = {
+  /** Doblones for each extra gun. One purchase arms both sides, like the victories do. */
+  gunCost: 400,
+  /** Extra guns per side beyond the battery she earns by victories. */
+  maxPerSide: 6,
+  /** What putting her from wreck to full costs: her pinch, not a ship price. */
+  repairPinch: 800,
+};
+
+const clampGuns = (value, max) => Math.max(0, Math.min(max, Math.floor(Number(value) || 0)));
+
+/** How many guns the player bought for the yard (S100). A save without them reads zero. */
+export function fortBoughtGuns(fort) {
+  return clampGuns(fort?.boughtGuns, FORT_UPGRADE.maxPerSide * 2);
+}
+
+/** Guns per side the yard fights with: base, victories' bonus and bought ones (S100). */
+export function fortGunsPerSide({ victories = 0, boughtGuns = 0 } = {}) {
+  const wins = Math.max(0, Math.floor(Number(victories) || 0));
+  const earned = Math.floor(wins / Math.max(1, FORT.gunsPerVictories));
+  return Math.max(0, Math.floor(Number(FORT.gunsPerSide) || 0)) + earned + clampGuns(boughtGuns, FORT_UPGRADE.maxPerSide);
+}
+
+/**
+ * Room left under the cap (S100). The cap is on the total per side — base, victories and
+ * purchases together — so settings that raise `gunsPerSide` eat the headroom first.
+ */
+export function fortGunHeadroom(fort, { victories = 0 } = {}) {
+  const bought = fortBoughtGuns(fort);
+  const perSide = fortGunsPerSide({ victories, boughtGuns: bought });
+  const cap = Math.max(0, Math.floor(Number(FORT.gunsPerSide) || 0)) + Math.floor(Math.max(0, Math.floor(Number(victories) || 0)) / Math.max(1, FORT.gunsPerVictories)) + FORT_UPGRADE.maxPerSide;
+  return Math.max(0, cap - perSide);
+}
+
+/** What the next gun costs (S102): the live setting, so the screen prices with it. */
+export function fortGunCost() {
+  const cost = Number(FORT_UPGRADE.gunCost);
+  return Number.isFinite(cost) && cost > 0 ? Math.floor(cost) : 0;
+}
+
+/** What the fort's repair costs right now (S100/S102): a quote, nothing is changed. */
+export function fortRepairQuote(fort) {
+  const segments = ["hull", "crew"];
+  const condition = fort?.condition ?? {};
+  const worst = Math.min(
+    ...segments.map((segment) => {
+      const value = Number(condition[segment]);
+      return Number.isFinite(value) ? Math.min(100, Math.max(0, value)) : 100;
+    }),
+  );
+  const share = Math.max(0, Math.min(1, (100 - worst) / 100));
+  const pinch = Number(FORT_UPGRADE.repairPinch);
+  const base = Number.isFinite(pinch) && pinch > 0 ? pinch : FORT_UPGRADE.repairPinch;
+  const cost = Math.max(REPAIR.minCost, Math.round(base * share));
+  const open = fort && fort.status === "fighting" && share > 0;
+  return { cost: share > 0 ? cost : 0, damageShare: share, repairable: open };
+}
+
+/**
+ * Repair the yard (S100): her hull and her garrison back to full, one purse charge.
+ * The yard does not have rigging or morale of her own; a taken yard is refused, because
+ * the port is closed (S74) and nobody sells anything to an enemy's fortification.
+ */
+export function fortRepair(fort, purse) {
+  if (!fort) return { fort, gold: normaliseGold(purse), applied: false };
+  const quote = fortRepairQuote(fort);
+  const gold = normaliseGold(purse);
+  if (!quote.repairable || gold < quote.cost) return { fort, gold, applied: false };
+  fort.condition = { ...fort.condition, hull: 100, crew: 100 };
+  return { fort, gold: gold - quote.cost, applied: true, cost: quote.cost };
+}
+
+/**
+ * Buy one more gun for the yard (S100). One purchase arms both sides, `gunCost` from the
+ * purse; refused without room under the cap or without the money, untouched in that case.
+ */
+export function buyFortGun(fort, purse) {
+  const gold = normaliseGold(purse);
+  if (!fort || fortGunHeadroom(fort) <= 0 || gold < fortGunCost()) {
+    return { fort, gold, applied: false };
+  }
+  fort.boughtGuns = fortBoughtGuns(fort) + 1;
+  return { fort, gold: gold - fortGunCost(), applied: true, cost: fortGunCost() };
+}
+
+/**
  * Build the yard's combatant (S74). It is a static hull: no speed, no manoeuvre, and the
  * same damage pipeline as a ship, so the rules cannot drift apart.
  *
  * `gunsPerSide` grows with the player's victories: every `gunsPerVictories` wins adds one
- * gun to each broadside. It is never a purchase, so there is nothing to buy and nothing
- * to forget.
+ * gun to each broadside, and now with the guns the player bought (S100).
  */
-export function createFortCombatant({ victories = 0, gunsPerSide = FORT.gunsPerSide, hull = FORT.hull, toughness = FORT.toughness } = {}) {
-  const wins = Math.max(0, Math.floor(Number(victories) || 0));
-  const extra = Math.floor(wins / Math.max(1, FORT.gunsPerVictories));
-  const perSide = Math.max(0, Math.floor(Number(gunsPerSide) || 0)) + extra;
+export function createFortCombatant({ victories = 0, boughtGuns = 0, gunsPerSide = FORT.gunsPerSide, hull = FORT.hull, toughness = FORT.toughness } = {}) {
+  const perSide = fortGunsPerSide({ victories, boughtGuns, gunsPerSide });
   const piece = pieceById(FORT.pieceId);
 
   const pieces = [];

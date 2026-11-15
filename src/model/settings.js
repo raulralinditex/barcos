@@ -15,7 +15,7 @@ import { GUNNERY } from "./gunnery.js";
 import { REPAIR } from "./repair.js";
 import { SALES } from "./sale.js";
 import { GAME_TIME } from "./game-time.js";
-import { FORT } from "./fort.js";
+import { FORT, FORT_UPGRADE } from "./fort.js";
 import { WIND } from "./wind.js";
 import { WORLD } from "./world.js";
 import { TURNING } from "./turning.js";
@@ -123,13 +123,19 @@ export const SETTINGS_FIELDS = [
   { group: "prices", key: "powderGoldPerKg", label: "settings.prices.powder", scale: "goldPrecise", min: 0, max: 20, step: 0.1 },
   { group: "prices", key: "cargoGoldPerKg", label: "settings.prices.cargo", scale: "goldPrecise", min: 0, max: 2, step: 0.01 },
   { group: "prices", key: "ballastGoldPerKg", label: "settings.prices.ballast", scale: "goldPrecise", min: 0, max: 1, step: 0.01 },
+
+  // Fort reinforcement (S100, S102): the price of each bought gun and the cap, and the
+  // pinch a fort repair is measured against, all tunable like every other block.
+  { group: "fortUpgrade", key: "gunCost", label: "settings.fortUpgrade.gunCost", scale: "gold", min: 0, max: 5000, step: 50, target: "fortUpgrade", targetKey: "gunCost" },
+  { group: "fortUpgrade", key: "maxPerSide", label: "settings.fortUpgrade.maxPerSide", scale: "factor", min: 0, max: 30, step: 1, target: "fortUpgrade", targetKey: "maxPerSide" },
+  { group: "fortUpgrade", key: "repairPinch", label: "settings.fortUpgrade.repairPinch", scale: "gold", min: 0, max: 20000, step: 50, target: "fortUpgrade", targetKey: "repairPinch" },
 ];
 
 /** The live constant blocks, so a group id resolves to the object it writes to. */
 /** The automatic-fire switch as a live block, so it is a setting like any other (S88). */
 export const AUTOFIRE = { enabled: AUTOFIRE_DEFAULT ? 1 : 0 };
 
-export const SETTINGS_BLOCKS = { wind: WIND, world: WORLD, combat: COMBAT, repair: REPAIR, prices: PRICES, gunnery: GUNNERY, gunners: GUNNERY.gunnersPerGun, zones: ZONE_DAMAGE, loot: LOOT, sales: SALES, time: GAME_TIME, fort: FORT, start: START, turning: TURNING, escort: ESCORT, trail: TRAIL, bars: BAR_SCALE, autofire: AUTOFIRE };
+export const SETTINGS_BLOCKS = { wind: WIND, world: WORLD, combat: COMBAT, repair: REPAIR, prices: PRICES, gunnery: GUNNERY, gunners: GUNNERY.gunnersPerGun, zones: ZONE_DAMAGE, loot: LOOT, sales: SALES, time: GAME_TIME, fort: FORT, fortUpgrade: FORT_UPGRADE, start: START, turning: TURNING, escort: ESCORT, trail: TRAIL, bars: BAR_SCALE, autofire: AUTOFIRE };
 
 /**
  * The design constant blocks S79 promises to expose, by name.

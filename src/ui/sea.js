@@ -267,6 +267,9 @@ function saveGame() {
             condition: { ...fortCombat.condition },
             crew: { ...fortCombat.crew },
             status: fortCombat.status,
+            // The player's investment rides with the save (S100): bought guns reload
+            // with her, because the combatant is rebuilt from the save on boot.
+            boughtGuns: Math.max(0, Math.floor(Number(fortCombat.boughtGuns) || 0)),
             // The occupiers travel with the save (S93): a half-broken occupation has to
             // come back half-broken, or the player would retake her for free on reload.
             occupation: fortCombat.occupation
@@ -2360,12 +2363,16 @@ function boot() {
   // The yard (S74). Her damage, garrison and the player's victories come from the save,
   // so a captured or battered yard is still that after a reload.
   victories = Math.max(0, Math.floor(Number(savedGame?.victories) || 0));
-  fortCombat = createFortCombatant({ victories });
   const savedFort = savedGame?.fort;
+  // Bought guns travel with the fort state (S100): a reinforced yard stays reinforced.
+  fortCombat = createFortCombatant({ victories, boughtGuns: savedFort?.boughtGuns });
   if (savedFort && typeof savedFort === "object") {
     fortCombat.condition = { ...fortCombat.condition, ...savedFort.condition };
     fortCombat.crew = { ...fortCombat.crew, ...savedFort.crew };
     if (savedFort.status) fortCombat.status = savedFort.status;
+    if (Number.isFinite(Number(savedFort.boughtGuns))) {
+      fortCombat.boughtGuns = Math.max(0, Math.floor(Number(savedFort.boughtGuns)));
+    }
     // A yard the enemy held when the player left is still theirs (S93).
     if (savedFort.occupation && typeof savedFort.occupation === "object") {
       fortCombat.occupation = {
