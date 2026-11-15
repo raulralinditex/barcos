@@ -1,0 +1,24 @@
+scripts/smoke-image-rotation.mjs
+  s_e799e77daffe3c::t_c54ef951ef0ed0 22-24
+  s_e799e77daffe3c::t_c8eff467f77273 28-30
+scripts/smoke-tabs.mjs
+  s_e799e77daffe3c::t_12e891069aa6a3 1-93
+odd/tasks/astillero-en-tabs.md
+  s_e799e77daffe3c::t_16702892b05399 49-50,52-54,66-67
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.6",
+  "base_commit_sha": "dfe72369929ce945a910ad9663eef06f77ca459f",
+  "prompts": {},
+  "sessions": {
+    "s_e799e77daffe3c": {
+      "agent_id": {
+        "tool": "pi",
+        "id": "01a1dd53-286b-7706-89b0-1d3f9c78baaa",
+        "model": "glm-5.3-flash"
+      },
+      "human_author": "Raul Ripoll <raulral@ext.inditex.com>"
+    }
+  }
+}
