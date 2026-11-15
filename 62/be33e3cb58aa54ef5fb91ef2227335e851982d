@@ -1,50 +1,48 @@
 src/i18n/en.js
   s_e799e77daffe3c::t_2ee8611fa6e2b8 26-27
-src/ui/sea.js
-  s_e799e77daffe3c::t_3999a1913f156b 496-499,1869,2501-2503
-scripts/smoke-repair-price.mjs
-  s_e799e77daffe3c::t_03ea19f544090c 87,89-91
-  s_e799e77daffe3c::t_029cc297609211 71-72,103-104
-scripts/smoke-sale.mjs
-  s_e799e77daffe3c::t_9b97ab237d7a3c 82-85,92,103,105,108
-src/ui/app.js
-  s_e799e77daffe3c::t_3d1d11e87d3b73 52
-  s_e799e77daffe3c::t_63d1a8cbff00de 1415,1425-1427,1832-1834
-  s_e799e77daffe3c::t_a032c722a7071d 1354-1411
-  s_e799e77daffe3c::t_df7f2af9dea41f 1438-1440,1449-1495
-  s_e799e77daffe3c::t_a8fc99896575b4 195-201
-  s_e799e77daffe3c::t_c1620c0f6162b3 1496
+src/i18n/es.js
+  s_e799e77daffe3c::t_2ee8611fa6e2b8 24-25
+scripts/smoke-anchor-yard.mjs
+  s_e799e77daffe3c::t_24aa79403e9739 49
+  s_e799e77daffe3c::t_9bbd40f53da589 32,81
 scripts/smoke-dock.mjs
   s_e799e77daffe3c::t_029cc297609211 117-124,172,217
   s_e799e77daffe3c::t_03ea19f544090c 128,131-133
-  s_e799e77daffe3c::t_86bf012c457e0b 295-298,300-301
   s_e799e77daffe3c::t_e936c033ca8705 198,230
-index.html
-  s_e799e77daffe3c::t_7b35098ed707fd 150,183
-  s_e799e77daffe3c::t_c1c804fd518347 161-175
+  s_e799e77daffe3c::t_86bf012c457e0b 295-298,300-301
+src/ui/app.js
+  s_e799e77daffe3c::t_63d1a8cbff00de 1415,1425-1427,1832-1834
+  s_e799e77daffe3c::t_df7f2af9dea41f 1438-1440,1449-1495
+  s_e799e77daffe3c::t_a032c722a7071d 1354-1411
+  s_e799e77daffe3c::t_3d1d11e87d3b73 52
+  s_e799e77daffe3c::t_a8fc99896575b4 195-201
+  s_e799e77daffe3c::t_d992bb9db3c3e0 1496
+scripts/smoke-repair-price.mjs
+  s_e799e77daffe3c::t_03ea19f544090c 87,89-91
+  s_e799e77daffe3c::t_029cc297609211 71-72,103-104
 scripts/smoke-auto-repair-reentry.mjs
   s_e799e77daffe3c::t_9bbd40f53da589 86,123
   s_e799e77daffe3c::t_24aa79403e9739 136
-src/ui/styles.css
-  s_e799e77daffe3c::t_93113f6d43c48e 747-826,828-833
-  s_e799e77daffe3c::t_e268b42cb70e6f 688-690,743
-  s_e799e77daffe3c::t_7f8efaa99054b4 834
 scripts/smoke-manual-repair.mjs
   s_e799e77daffe3c::t_1c79f1df3decca 74,76-78,81,84-100,108-109
   s_e799e77daffe3c::t_619a6960e2d0ef 64-66
   s_e799e77daffe3c::t_2f366c31e602b0 133,141
-src/i18n/es.js
-  s_e799e77daffe3c::t_2ee8611fa6e2b8 24-25
-scripts/smoke-auto-repair.mjs
-  s_e799e77daffe3c::t_9bbd40f53da589 26,67,102
-  s_e799e77daffe3c::t_24aa79403e9739 40,81,115
-scripts/smoke-anchor-yard.mjs
-  s_e799e77daffe3c::t_24aa79403e9739 49
-  s_e799e77daffe3c::t_9bbd40f53da589 32,81
+src/ui/sea.js
+  s_e799e77daffe3c::t_3999a1913f156b 496-499,1869,2501-2503
 scripts/smoke-escort-dock.mjs
   s_e799e77daffe3c::t_029cc297609211 76-78
-odd/tasks/astillero-en-tabs.md
-  s_e799e77daffe3c::t_ea4c216efe198e 7-16,90-92
+scripts/smoke-auto-repair.mjs
+  s_e799e77daffe3c::t_24aa79403e9739 40,81,115
+  s_e799e77daffe3c::t_9bbd40f53da589 26,67,102
+src/ui/styles.css
+  s_e799e77daffe3c::t_e268b42cb70e6f 688-690,743
+  s_e799e77daffe3c::t_93113f6d43c48e 747-826,828-833
+  s_e799e77daffe3c::t_45d039aced5dd6 834
+index.html
+  s_e799e77daffe3c::t_7b35098ed707fd 150,183
+  s_e799e77daffe3c::t_c1c804fd518347 161-175
+scripts/smoke-sale.mjs
+  s_e799e77daffe3c::t_9b97ab237d7a3c 82-85,92,103,105,108
 ---
 {
   "schema_version": "authorship/3.0.0",
