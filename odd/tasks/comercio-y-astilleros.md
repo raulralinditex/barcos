@@ -1,6 +1,6 @@
 # Juego de barcos — comercio y astilleros por zona
 
-Estado: cerrada S112-S118, sin pendientes. Rama: `feat/comercio-y-astilleros` (se crea desde `feat/t7-combate-costados` antes del primer commit). Cierra el pendiente grande de `pendientes.md`: la carga deja de ser castigo puro y pasa a producir dinero.
+Estado: cerrada S112-S119, sin pendientes. Rama: `feat/comercio-y-astilleros` (se crea desde `feat/t7-combate-costados` antes del primer commit). Cierra el pendiente grande de `pendientes.md`: la carga deja de ser castigo puro y pasa a producir dinero.
 
 ## Specs
 
@@ -43,6 +43,17 @@ S118. **El astillero es el mismo en todas partes; lo que cambia es el mercado.**
 - La pestaña nueva **Mercado** muestra lo que ese astillero vende y compra, con sus precios ya calculados para su zona.
 - El HUD y el minimapa muestran los astilleros, para que el viaje se pueda planear.
 
+S119. **A market with memory.** Pedido (verbatim): "venga vamos con el mercado con memoria". Decisión del usuario sobre el stock: **se recupera con el tiempo**, con sus palabras: "Vendés 40 barriles de sal en la cala → el precio cae 35 %. Esperás 3 días de juego → vuelve casi al precio base. Efecto: el jugador rota entre mercancías y puertos, no repite un único viaje perfecto para siempre."
+- **El precio deja de ser una tabla y pasa a ser una consecuencia.** Cada astillero guarda cuánto tiene de cada mercancía; el precio se deriva de ese stock. Una yarda llena es barata de comprar y mala de vender; una vacía es lo contrario.
+- **El reposo está en el medio de la banda, no en el techo.** Es lo que hace posible el efecto pedido: vender empuja el precio por debajo del base de la zona, comprar lo empuja por encima, y la recuperación arrastra ambos de vuelta al base.
+- `MARKET_MEMORY`: `baseStock` 60 (reposo, precio = base de la zona), `maxStock` 120 (atestada, precio al `floorShare` 0,45), `floorShare` 0,45, `ceilShare` 1,6 (yarda vacía), `recoveryDays` 3.
+- `stockFactor` es lineal a trozos alrededor del reposo: 1,6 en 0 → 1 en 60 → 0,45 en 120, y clamp fuera del rango. Nunca NaN, nunca precio negativo.
+- **La yarda no vende lo que no tiene.** Una compra mayor que el stock disponible se rechaza entera: no cobra, no carga y no mueve el stock. `affordableUnits` está limitada por las unidades enteras en stock, y el botón de comprar lo refleja.
+- **La recuperación la mueve el reloj del juego** (`world.timeS`), no el reloj de pared: `recoverMarkets` recibe segundos jugados y usa la conversión de S67 (100 s = 1 día). Vuelve desde cualquier lado, sin pasarse del reposo.
+- **La memoria vive en `barcos:game:v1`**, el mismo registro que el oro, bajo `markets`. Un guardado anterior a S119 no tiene el campo y carga con todos los puertos en reposo.
+- **El efecto medido**: dos viajes idénticos de 20 unidades de sal. Viaje 1: compra 11→13 (237 pagados), venta 58→47 (1160 cobrados). Viaje 2: compra 13→15 (279 pagados), venta 47→36 (940 cobrados). El segundo cuesta más y paga menos: eso es el mercado con memoria.
+- Vender 40 de sal en el abismo en reposo mueve el precio de 58 a 36, una caída del **37,93 %**. La frase del usuario decía "unos 35 %": es una ilustración del efecto, no un contrato de precisión, y la curva no se deforma para clavar el número.
+
 ## Tasks
 
 - T1 — S112: registro de astilleros, `shipyardAt`/`currentShipyard` y zona derivada. Ruta: inline. Commit: `a4b7b1e`.
@@ -50,6 +61,7 @@ S118. **El astillero es el mismo en todas partes; lo que cambia es el mercado.**
 - T3 — S115, S116: carga en enemigos, botín entero al rendirse, porcentaje al hundirse, y la carga que se va con el casco. Ruta: inline. Commit: `936f4f1`.
 - T4 — S117: ajuste `sinking.keepWreck`, naufragio en la flota y reflotado en el astillero. Ruta: inline. Commit: `06cebbe`.
 - T5 — S118 y la UI de S112-S117: pestaña Mercado, astilleros en el HUD y el minimapa, grupo `commerce` y el interruptor en Configuración, i18n es/en y smokes. Ruta: inline + un worker para el bug del click. Commit: `4633a20`.
+- T6 — S119: mercado con memoria. Stock por astillero, precio derivado del stock, recuperación por reloj de juego, persistencia en el guardado del mar y pantalla con el stock a la vista. Ruta: worker con contrato cerrado por el orquestador. Commit: `feat(market): a port remembers what she sold you`.
 
 ## Log
 
@@ -62,3 +74,9 @@ L3 (decisión del orquestador, sin consulta): el mercado es una pestaña más de
 L4 (cierre): T1-T5 verificados. `npm test` 702/702. Smokes en verde: market, sale, fleet, dock, shipyard-layout, sea, anchor-yard. Un bug real apareció y se arregló: la fila del mercado se desbordaba de su columna de 300 px y el click de "Vender todo" caía sobre `#ship-photo`, así que vender no hacía nada aunque el botón estuviera habilitado. `src/ui/styles.css` lo ajusta y `scripts/smoke-market.mjs` comprueba el blanco del click a tres anchos, sin `force`.
 
 L5: `scripts/smoke-settings.mjs` y `scripts/smoke-tabs.mjs` afirmaban **15** bloques de configuración. S117 y S113 agregan dos legítimos (`sinking` y `commerce`), así que ahora son **17**. El usuario confirmó actualizarlos ("ok"). Se actualizaron a 17 y se les agregó la comprobación de que la casilla de naufragio es un checkbox apagado por defecto y de que los ocho precios del mercado están en pantalla. Ambos en verde.
+
+L6: El usuario eligió la opción A: el reposo (60) es el centro de la banda; la escasez sube el precio hasta 1.6 y el exceso lo baja hasta 0.45, con stock máximo 120 y recuperación hacia 60. La especificación anterior se contradecía: un puerto lleno al precio base, con ambos valores como techo, no podía subir al comprar ni bajar al vender.
+
+L7: El usuario eligió la opción B: no se compra más de lo que tiene el puerto; el pedido entero se rechaza sin mover oro, bodega ni stock. Dos viajes idénticos de 20 unidades caben en el stock inicial. La venta separada de 40 de sal en el abismo ilustra «unos 35 %»: con la curva acordada el precio redondeado cae de 58 a 36, un 37,93 %, sin alterar `floorShare` para forzar el ejemplo.
+
+L8 (cierre de S119): `npm test` **717/717**. Smokes verificados uno por uno con su exit code: market, sale, fleet, dock, settings, tabs, sea, anchor-yard, shipyard-layout, todos en 0. Los dos smokes que el worker había saltado por miedo a escribir capturas fuera de su superficie no escriben en el repo: van a `/tmp/fleet.png` y `/tmp/sea.png`, que no están versionados.

@@ -2319,6 +2319,11 @@ input[type="number"] {
   text-align: right;
 }
 
+.market-yard-stock {
+  grid-column: 1 / -1;
+  color: var(--ink-soft);
+}
+
 .market-actions {
   grid-column: 1 / -1;
   display: flex;

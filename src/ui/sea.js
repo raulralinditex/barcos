@@ -56,12 +56,12 @@ import {
 } from "../model/repair.js";
 import { ARRIVAL_NOTICE_KEY } from "../model/arrival-notice.js";
 import { normaliseGold } from "../model/economy.js";
-import { awardHold, defeatedHold, enemyHoldFor } from "../model/commerce.js";
+import { awardHold, bindGameTime, defeatedHold, enemyHoldFor, normaliseMarkets, recoverMarkets } from "../model/commerce.js";
 import { isWreck, wreckHull } from "../model/sinking.js";
 import { bootSettings } from "../model/settings-storage.js";
 import { bootCatalogue } from "../model/catalogue-storage.js";
 import { AUTOFIRE } from "../model/settings.js";
-import { burnSupply, supplySeconds } from "../model/game-time.js";
+import { GAME_TIME, burnSupply, supplySeconds } from "../model/game-time.js";
 import {
   closestTarget,
   escortFire,
@@ -221,6 +221,7 @@ const ui = {
 let world = null;
 let gold = 0;
 let goldEarned = 0;
+let markets = {};
 let playerCombat = null;
 /**
  * The crew's reserve, in seconds of game time (S67). It is the shipyard's `days` of
@@ -263,6 +264,7 @@ function saveGame() {
     world = { ...world, gold: goldEarned };
     const payload = {
       gold,
+      markets,
       supplyLeftS,
       victories,
       fort: fortCombat
@@ -2371,7 +2373,9 @@ function frame(now) {
   const before = goldEarned;
   for (let step = 0; step < ui.timeScale; step += 1) {
     // The captain's combat state rides along, so her shredded rig slows her (S89).
+    const previousTime = world.timeS;
     world = updateWorld(world, gameOver ? {} : { ...readInput(), rigging: playerCombat }, dt);
+    markets = recoverMarkets(markets, world.timeS - previousTime);
     // The voyage eats the crew's reserve (S67). It runs on the world clock, so a
     // fast-forward burns it faster, exactly like everything else the sea does.
     if (!gameOver) burnVoyageSupply(dt);
@@ -2438,6 +2442,7 @@ function boot() {
   // world, the wind and the combat model all read them live from here on. The catalogue
   // comes with them, so a saved fleet can resolve a hull the player created (S83).
   bootSettings();
+  bindGameTime(GAME_TIME);
   bootCatalogue();
 
   // The shipyard's automatic-fire check (S47): on unless the player turned it off.
@@ -2452,6 +2457,7 @@ function boot() {
   ui.autoFire = legacyAutoFire === null ? Boolean(AUTOFIRE.enabled) : normaliseAutoFire(legacyAutoFire);
 
   const savedGame = loadSavedGame();
+  markets = normaliseMarkets(savedGame?.markets);
   const savedWorld = savedGame?.world ? deserializeWorld(savedGame.world) : null;
 
   const worldSeed = (Date.now() ^ Math.floor(Math.random() * 0xffffffff)) >>> 0;

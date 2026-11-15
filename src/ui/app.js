@@ -58,14 +58,18 @@ import { FORT, buyFortGun, fortBoughtGuns, fortGunCost, fortGunHeadroom, fortGun
 import { ARRIVAL_NOTICE_KEY, parseArrivalNotice } from "../model/arrival-notice.js";
 import {
   affordableUnits,
+  bindGameTime,
   buyCargo,
-  marketBoard,
+  marketBoardNow,
   marketOf,
+  normaliseMarkets,
   sellCargo,
   shipHold,
   withHold,
+  withStock,
 } from "../model/commerce.js";
-import { currentShipyard, shipyardZone } from "../model/world.js";
+import { GAME_TIME } from "../model/game-time.js";
+import { currentShipyard, deserializeWorld, shipyardZone } from "../model/world.js";
 import { COMMODITIES, SHIPYARDS } from "../data/naval-data.js";
 import { floatsAgain, isWreck, refloatCost } from "../model/sinking.js";
 
@@ -1067,7 +1071,7 @@ function launch() {
 
   try {
     localStorage.setItem(FLEET_KEY, serializeFleet(fleet));
-    localStorage.setItem(GAME_KEY, JSON.stringify({ gold: state.gold }));
+    localStorage.setItem(GAME_KEY, JSON.stringify({ gold: state.gold, markets }));
     // the fleet is the source of truth now; drop the single-ship key
     localStorage.removeItem(SHIP_KEY);
   } catch {
@@ -1204,9 +1208,13 @@ function showScreen(next) {
  * home port, which is where she would walk to. Anything unreadable resolves to the home
  * port as well, so a broken save opens the market instead of an empty screen.
  */
+let markets = {};
+let marketQuotes = new Map();
+let quotedYardId = null;
+
 function screenShipyard() {
   const game = readFortSave();
-  const ship = game?.ship;
+  const ship = (game?.world ? deserializeWorld(game.world)?.ship : null) ?? game?.ship;
   const yard = ship && Number.isFinite(ship.x) && Number.isFinite(ship.y)
     ? currentShipyard({ x: ship.x, y: ship.y })
     : null;
@@ -1229,19 +1237,21 @@ function marketBuy(commodityId) {
   const ship = marketShip();
   const yard = screenShipyard();
   const zone = yard ? shipyardZone(yard) : null;
-  if (!ship || !zone) return;
+  const quote = yard?.id === quotedYardId ? marketQuotes.get(commodityId) : null;
+  if (!ship || !zone || !quote) return;
   const hold = shipHold(ship);
   const trade = buyCargo(
     { manifest: hold.manifest, capacityKg: ship.capacityKg, cargoKg: ship.cargoKg, gold: state.gold },
     commodityId,
     1,
     zone.id,
+    { unitPrice: quote.buy, availableStock: quote.stock },
   );
   if (!trade) {
     els.marketStatus.textContent = t("market.refused");
     return;
   }
-  applyMarketTrade(ship, trade.hold, trade.gold);
+  applyMarketTrade(ship, trade.hold, trade.gold, yard.id, commodityId, -trade.units);
   els.marketStatus.textContent = t("market.paid", {
     gold: gold(trade.paid),
     units: trade.units,
@@ -1255,18 +1265,21 @@ function marketSell(commodityId) {
   const yard = screenShipyard();
   const zone = yard ? shipyardZone(yard) : null;
   if (!ship || !zone) return;
+  const quote = yard?.id === quotedYardId ? marketQuotes.get(commodityId) : null;
+  if (!quote) return;
   const hold = shipHold(ship);
-  const stock = hold.manifest.find((entry) => entry.commodityId === commodityId);
-  if (!stock) {
+  const units = hold.manifest.filter((entry) => entry.commodityId === commodityId)
+    .reduce((sum, entry) => sum + entry.units, 0);
+  if (!units) {
     els.marketStatus.textContent = t("market.nothing");
     return;
   }
-  const trade = sellCargo({ manifest: hold.manifest, gold: state.gold }, commodityId, stock.units, zone.id);
+  const trade = sellCargo({ manifest: hold.manifest, gold: state.gold }, commodityId, units, zone.id, { unitPrice: quote.sell });
   if (!trade) {
     els.marketStatus.textContent = t("market.nothing");
     return;
   }
-  applyMarketTrade(ship, trade.hold, trade.gold);
+  applyMarketTrade(ship, trade.hold, trade.gold, yard.id, commodityId, trade.units);
   els.marketStatus.textContent = t("market.earned", {
     gold: gold(trade.earned),
     units: trade.units,
@@ -1275,16 +1288,16 @@ function marketSell(commodityId) {
 }
 
 /** Write a trade where it belongs: the hold on the hull, the purse in the save. */
-function applyMarketTrade(ship, hold, nextGold) {
+function applyMarketTrade(ship, hold, nextGold, yardId, commodityId, delta) {
   fleet = {
     ...fleet,
     ships: fleet.ships.map((entry) => (entry.id === ship.id ? withHold(entry, hold) : entry)),
   };
   saveFleet();
   state.gold = normaliseGold(nextGold);
-  // The purse is the sea save's field, so the market patches the same record the fort
-  // does instead of inventing a second place to keep gold.
-  writeFortSave({ gold: state.gold });
+  markets = { ...markets, [yardId]: withStock(markets[yardId], commodityId, delta) };
+  // Gold and markets belong to the same sea save, not to the fort's nested state.
+  writeFortSave({}, { gold: state.gold, markets });
   els.goldValue.textContent = gold(state.gold);
   renderMarket();
   renderFleet();
@@ -1314,12 +1327,14 @@ function renderMarket() {
     ? t("market.hold", { used: gold(hold.cargoKg), capacity: gold(ship.capacityKg ?? 0) })
     : t("market.noYard");
 
-  const board = zone ? marketBoard(zone.id) : [];
+  const board = zone ? marketBoardNow(zone.id, markets[yard.id]) : [];
+  quotedYardId = yard?.id ?? null;
+  marketQuotes = new Map(board.map((row) => [row.id, row]));
   els.marketBoard.innerHTML = board
     .map((row) => {
-      const stock = hold.manifest.find((entry) => entry.commodityId === row.id)?.units ?? 0;
+      const stock = hold.manifest.filter((entry) => entry.commodityId === row.id).reduce((sum, entry) => sum + entry.units, 0);
       const room = ship && zone
-        ? affordableUnits({ capacityKg: ship.capacityKg, cargoKg: ship.cargoKg, gold: state.gold }, row.id, zone.id)
+        ? affordableUnits({ capacityKg: ship.capacityKg, cargoKg: ship.cargoKg, gold: state.gold }, row.id, zone.id, { unitPrice: row.buy, availableStock: row.stock })
         : 0;
       return `
         <li class="market-row" data-commodity="${row.id}">
@@ -1328,6 +1343,7 @@ function renderMarket() {
           <span class="market-price">${t("market.buy")} ${gold(row.buy)}</span>
           <span class="market-price">${t("market.sell")} ${gold(row.sell)}</span>
           <span class="market-stock">${gold(stock)}</span>
+          <span class="market-yard-stock">${t("market.yardStock", { units: gold(Math.floor(row.stock)) })}</span>
           <span class="market-actions">
             <button class="btn market-buy" type="button" data-buy="${row.id}" ${room > 0 ? "" : "disabled"}>${t("market.buyOne")}</button>
             <button class="btn market-sell" type="button" data-sell="${row.id}" ${stock > 0 ? "" : "disabled"}>${t("market.sellAll")}</button>
@@ -1426,11 +1442,11 @@ function readFortSave() {
  * Patch the fort save in `barcos:game:v1` (S100). The sea save is the fort's only record,
  * so a repair or a purchase must land there, or the next voyage would wash it away.
  */
-function writeFortSave(patch) {
+function writeFortSave(patch, recordPatch = {}) {
   const record = readFortSave() ?? {};
   const fort = record.fort && typeof record.fort === "object" ? record.fort : {};
   try {
-    localStorage.setItem(GAME_KEY, JSON.stringify({ ...record, fort: { ...fort, ...patch } }));
+    localStorage.setItem(GAME_KEY, JSON.stringify({ ...record, ...recordPatch, fort: { ...fort, ...patch } }));
   } catch {
     /* storage disabled: the change still lives in memory for this session */
   }
@@ -2025,6 +2041,8 @@ if (els.langSelect) {
 // The tuning settings are applied before the shipyard prices anything (S33), and the
 // stored catalogue before the shipyard lists a single hull (S83).
 bootSettings();
+bindGameTime(GAME_TIME);
+markets = normaliseMarkets(readFortSave()?.markets);
 bootCatalogue();
 // A new game opens with the configured purse (S77). The state above was built before the
 // settings were applied, so it is set again here; `loadGold` then replaces it with the

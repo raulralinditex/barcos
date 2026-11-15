@@ -10,7 +10,7 @@
  * (S110, S111): the manifest is what the hold is made of, and `cargoKg` is its total.
  */
 
-import { COMMODITIES, commodityById, hullById } from "../data/naval-data.js";
+import { COMMODITIES, commodityById, hullById, shipyardById } from "../data/naval-data.js";
 
 /**
  * The market of each zone (S113): how a commodity's base price is scaled when the yard
@@ -113,21 +113,26 @@ export function salvageHold(manifest, share) {
  * the new purse, or null when the trade is not allowed — and a refused trade pays
  * nothing and loads nothing, so the caller can never half-apply it.
  *
- * The hold must fit: the capacity the hull already declares is the only limit, because
- * the trade is the same cargo that weighs her down.
+ * The hold must fit and the yard must have the whole order. Missing or broken stock
+ * falls back to a yard at rest; stock is supplied from the board's quote (S119).
  */
-export function buyCargo({ manifest, capacityKg, cargoKg, gold }, commodityId, units, zoneId) {
+export function buyCargo({ manifest, capacityKg, cargoKg, gold }, commodityId, units, zoneId, { unitPrice, availableStock } = {}) {
   const commodity = commodityById(commodityId);
   const wanted = Math.floor(Number(units) || 0);
-  if (!commodity || wanted <= 0) return null;
+  if (!commodity || wanted <= 0 || wanted > availableUnits(commodity.id, availableStock)) return null;
   const purse = Number.isFinite(gold) ? gold : 0;
-  const cost = buyPrice(commodity.id, zoneId) * wanted;
+  const quoted = Number.isFinite(unitPrice) && unitPrice >= 0 ? unitPrice : buyPrice(commodity.id, zoneId);
+  const cost = quoted * wanted;
   if (cost > purse) return null;
   const hold = holdOf(manifest);
   const addedKg = wanted * commodity.kgPerUnit;
   const freeKg = Number.isFinite(capacityKg) ? capacityKg - (Number(cargoKg) || hold.cargoKg) : Infinity;
   if (addedKg > freeKg) return null;
-  const next = holdOf([...hold.manifest, { commodityId: commodity.id, units: wanted }]);
+  const existing = hold.manifest.filter((entry) => entry.commodityId === commodity.id);
+  const next = holdOf([
+    ...hold.manifest.filter((entry) => entry.commodityId !== commodity.id),
+    { commodityId: commodity.id, units: wanted + existing.reduce((sum, entry) => sum + entry.units, 0) },
+  ]);
   return { hold: next, paid: cost, gold: purse - cost, commodity, units: wanted };
 }
 
@@ -135,17 +140,23 @@ export function buyCargo({ manifest, capacityKg, cargoKg, gold }, commodityId, u
  * Sell `units` of a commodity at a yard (S114). Only what is actually in the hold can be
  * sold: a hold with 3 barrels sells 3, never 4.
  */
-export function sellCargo({ manifest, gold }, commodityId, units, zoneId) {
+export function sellCargo({ manifest, gold }, commodityId, units, zoneId, { unitPrice } = {}) {
   const commodity = commodityById(commodityId);
   const wanted = Math.floor(Number(units) || 0);
   if (!commodity || wanted <= 0) return null;
   const hold = holdOf(manifest);
-  const stock = hold.manifest.find((entry) => entry.commodityId === commodity.id);
-  if (!stock || stock.units < wanted) return null;
-  const earned = sellPrice(commodity.id, zoneId) * wanted;
-  const left = hold.manifest
-    .map((entry) => (entry.commodityId === commodity.id ? { ...entry, units: entry.units - wanted } : entry))
-    .filter((entry) => entry.units > 0);
+  const available = hold.manifest.filter((entry) => entry.commodityId === commodity.id)
+    .reduce((sum, entry) => sum + entry.units, 0);
+  if (available < wanted) return null;
+  const quoted = Number.isFinite(unitPrice) && unitPrice >= 0 ? unitPrice : sellPrice(commodity.id, zoneId);
+  const earned = quoted * wanted;
+  let remaining = wanted;
+  const left = hold.manifest.map((entry) => {
+    if (entry.commodityId !== commodity.id) return entry;
+    const removed = Math.min(remaining, entry.units);
+    remaining -= removed;
+    return { ...entry, units: entry.units - removed };
+  }).filter((entry) => entry.units > 0);
   const purse = Number.isFinite(gold) ? gold : 0;
   return { hold: holdOf(left), earned, gold: purse + earned, commodity, units: wanted };
 }
@@ -167,14 +178,18 @@ export function withHold(ship, hold) {
  * The most units of a commodity a hull can still take (S114). The market screen shows
  * this, and it is what stops a player from buying a hold she cannot carry.
  */
-export function affordableUnits({ capacityKg, cargoKg, gold }, commodityId, zoneId) {
+function availableUnits(commodityId, availableStock) {
+  return Math.floor(stockOf({ stock: { [commodityId]: availableStock } }, commodityId));
+}
+
+export function affordableUnits({ capacityKg, cargoKg, gold }, commodityId, zoneId, { unitPrice: quote, availableStock } = {}) {
   const commodity = commodityById(commodityId);
   if (!commodity) return 0;
-  const unitPrice = buyPrice(commodity.id, zoneId);
+  const unitPrice = Number.isFinite(quote) && quote >= 0 ? quote : buyPrice(commodity.id, zoneId);
   const freeKg = Math.max(0, (Number(capacityKg) || 0) - (Number(cargoKg) || 0));
   const bySpace = Math.floor(freeKg / commodity.kgPerUnit);
   const byPurse = unitPrice > 0 ? Math.floor((Number(gold) || 0) / unitPrice) : bySpace;
-  return Math.max(0, Math.min(bySpace, byPurse));
+  return Math.max(0, Math.min(bySpace, byPurse, availableUnits(commodity.id, availableStock)));
 }
 
 /* ------------------------------------------------- what a defeated hull carried (S115) */
@@ -273,4 +288,161 @@ export function awardHold(ship, prize) {
     }
   }
   return { ship: withHold(ship, holdOf(manifest)), left: holdOf(left), leftKg };
+}
+
+/* --------------------------------------------------------------- a market with memory */
+
+/**
+ * The state of one yard's market (S119). It is not a price list: it is how much of each
+ * thing the yard has, and the price is derived from it. That way a market can never lie
+ * about what it holds, and a save can be repaired by clamping the stock instead of
+ * trusting a number someone typed.
+ *
+ * `stock` is in units, one entry per commodity id. A yard with no entry has her full
+ * stock, because a market that never traded is a market at rest.
+ */
+export const MARKET_MEMORY = {
+  /** Units of each commodity a yard holds at rest, where her price is the zone base (S119). */
+  baseStock: 60,
+  /** The most a yard can hold: a glutted market, at her floor price (S119). */
+  maxStock: 120,
+  /** How much of the base price one unit of stock moves, kept for tuning (S119). */
+  elasticity: 0.9,
+  /** Days of game time for a yard to come back to her resting stock (S119). */
+  recoveryDays: 3,
+  /** The price share at a glutted yard (maxStock). Never lower than this (S119). */
+  floorShare: 0.45,
+  /** The price share at an empty yard (0 stock). Never higher than this (S119). */
+  ceilShare: 1.6,
+};
+
+/**
+ * The stock a yard holds of one commodity right now, read from her memory (S119).
+ * A missing, broken or negative entry is the base stock: a market at rest.
+ */
+export function stockOf(memory, commodityId) {
+  const base = MARKET_MEMORY.baseStock;
+  const entry = memory?.stock?.[commodityId];
+  if (typeof entry !== "number" || !Number.isFinite(entry) || entry < 0 || !commodityById(commodityId)) return base;
+  return Math.min(MARKET_MEMORY.maxStock, entry);
+}
+
+/** Price pressure falls from the empty-yard ceiling through rest to the glut floor. */
+export function stockFactor(stock, { base = MARKET_MEMORY.baseStock, max = MARKET_MEMORY.maxStock, floor = MARKET_MEMORY.floorShare, ceil = MARKET_MEMORY.ceilShare } = {}) {
+  const held = typeof stock === "number" && !Number.isNaN(stock) ? stock : base;
+  if (held <= 0) return ceil;
+  if (held >= max) return floor;
+  if (held === base) return 1;
+  if (held < base) return ceil - (ceil - 1) * held / base;
+  return 1 - (1 - floor) * (held - base) / (max - base);
+}
+
+/**
+ * What the yard charges for one unit right now (S119): her zone's price, moved by how
+ * much of it she holds. Scarcity is dearer, and it is the same rule the player faces
+ * when she sells into a market that already has too much.
+ */
+export function buyPriceNow(commodityId, zoneId, memory) {
+  const commodity = commodityById(commodityId);
+  if (!commodity) return 0;
+  return price(commodity.baseGold * marketOf(zoneId).buy * stockFactor(stockOf(memory, commodity.id)));
+}
+
+/** What the yard pays for one unit right now (S119), moved by her own stock. */
+export function sellPriceNow(commodityId, zoneId, memory) {
+  const commodity = commodityById(commodityId);
+  if (!commodity) return 0;
+  return price(commodity.baseGold * marketOf(zoneId).sell * stockFactor(stockOf(memory, commodity.id)));
+}
+
+/**
+ * One yard's whole board at her current stock (S119), which is what the market screen
+ * paints. `before` is the base price for the zone, so the screen can show the drift.
+ */
+export function marketBoardNow(zoneId, memory) {
+  return COMMODITIES.map((commodity) => ({
+    id: commodity.id,
+    nameKey: commodity.nameKey,
+    kgPerUnit: commodity.kgPerUnit,
+    buy: buyPriceNow(commodity.id, zoneId, memory),
+    sell: sellPriceNow(commodity.id, zoneId, memory),
+    baseBuy: buyPrice(commodity.id, zoneId),
+    baseSell: sellPrice(commodity.id, zoneId),
+    stock: stockOf(memory, commodity.id),
+  }));
+}
+
+/**
+ * A yard's memory, with one commodity's stock moved by `delta` units (S119). It is
+ * clamped between zero and maxStock; a glut can exceed the resting stock.
+ */
+export function withStock(memory, commodityId, delta) {
+  const current = stockOf(memory, commodityId);
+  const change = typeof delta === "number" && Number.isFinite(delta) ? delta : 0;
+  const next = Math.max(0, Math.min(MARKET_MEMORY.maxStock, current + change));
+  return {
+    ...memory,
+    stock: { ...(memory?.stock ?? {}), [commodityId]: next },
+  };
+}
+
+/** Drop unknown yards and repair malformed saved stock without advancing the clock. */
+export function normaliseMarkets(memories) {
+  const result = {};
+  if (!memories || typeof memories !== "object" || Array.isArray(memories)) return result;
+  for (const [yardId, memory] of Object.entries(memories)) {
+    if (!shipyardById(yardId)) continue;
+    const stock = {};
+    for (const commodity of COMMODITIES) stock[commodity.id] = stockOf(memory, commodity.id);
+    result[yardId] = { stock };
+  }
+  return result;
+}
+
+/**
+ * Let every yard's market come back towards her base stock (S119), for the game time
+ * that has passed. The player chose a market that recovers instead of one that dries up
+ * for good, so the only question here is how fast: `recoveryDays` of game time.
+ *
+ * The same linear rate refills a drained yard and drains a glutted one, stopping at rest.
+ */
+export function recoverMarkets(memories, seconds) {
+  const elapsed = Number(seconds);
+  const perDay = MARKET_MEMORY.baseStock / Math.max(1, MARKET_MEMORY.recoveryDays);
+  if (!Number.isFinite(elapsed) || elapsed <= 0) return memories ?? {};
+  const days = elapsed / secondsPerGameDay();
+  if (days <= 0) return memories ?? {};
+  const gain = perDay * days;
+  const result = {};
+  for (const [yardId, memory] of Object.entries(memories && typeof memories === "object" ? memories : {})) {
+    if (!shipyardById(yardId)) continue;
+    const stock = {};
+    for (const commodity of COMMODITIES) {
+      const current = stockOf(memory, commodity.id);
+      stock[commodity.id] = current < MARKET_MEMORY.baseStock
+        ? Math.min(MARKET_MEMORY.baseStock, current + gain)
+        : Math.max(MARKET_MEMORY.baseStock, current - gain);
+    }
+    result[yardId] = { stock };
+  }
+  return result;
+}
+
+/** Seconds of play that stand for one game day, read from the live setting (S67). */
+function secondsPerGameDay() {
+  // Imported lazily to keep this module free of a cycle: game-time reads no commerce.
+  const value = Number(GLOBAL_GAME_TIME?.gameSecondsPerDay);
+  return Number.isFinite(value) && value > 0 ? value : 100;
+}
+
+/**
+ * The live length of a game day, injected by the settings boot (S67). Commerce never
+ * imports game-time directly: both modules are read by the settings screen, and a cycle
+ * there would be a load-order bug waiting to happen.
+ */
+export let GLOBAL_GAME_TIME = { gameSecondsPerDay: 100 };
+
+/** Point the market's clock at the live game-time block (S67). */
+export function bindGameTime(block) {
+  if (block && Number.isFinite(Number(block.gameSecondsPerDay))) GLOBAL_GAME_TIME = block;
 }
