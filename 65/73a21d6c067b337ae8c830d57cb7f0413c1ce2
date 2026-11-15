@@ -1,0 +1,25 @@
+src/model/fort.js
+  s_8ca75549fb5486::t_4445cdc73fdb24 167-335
+test/autofire.test.js
+  s_8ca75549fb5486::t_999534b361d6ee 101-143
+src/model/autofire.js
+  s_8ca75549fb5486::t_31d0664f1a58e1 36-40,42,48-57,60-63
+test/fort-recovery.test.js
+  s_8ca75549fb5486::t_aa7571d69b349f 1-155
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.6",
+  "base_commit_sha": "6573a21d6c067b337ae8c830d57cb7f0413c1ce2",
+  "prompts": {},
+  "sessions": {
+    "s_8ca75549fb5486": {
+      "agent_id": {
+        "tool": "pi",
+        "id": "01a1dc00-69e3-7628-b102-1d36f2ff622f",
+        "model": "claude-sonnet-5.5"
+      },
+      "human_author": "Raul Ripoll <raulral@ext.inditex.com>"
+    }
+  }
+}
