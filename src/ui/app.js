@@ -2225,7 +2225,13 @@ loadGold();
 const captain = captainShip(fleet);
 // The boot fills the editor with the captain but leaves the room to the entry rule
 // below (S109): landing on the fleet was the boot's side effect, not a decision.
+//
+// It also does not enter refit mode (S129). Doing so left `refitId` pointing at the
+// captain while the entry screen is Comprar, and that screen disables every hull card
+// and turns the button into "Save refit": the player could not choose a hull at all and
+// the click silently refitted the captain, which reads as "it always buys the same ship".
 if (captain) selectRefitShip(captain, { openRoom: false });
+refitId = null;
 renderFleet();
 renderCountry();
 renderHulls();
