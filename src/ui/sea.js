@@ -42,7 +42,8 @@ import {
   fleetUpkeep,
   removeShip,
   withLiveCondition,
-  sailingShips,
+  shipsSailingAtSea,
+  shipsAvailableAtYard,
   serializeFleet,
   setCaptain,
   withShipCondition,
@@ -397,7 +398,8 @@ function liveRepairShip(ship) {
 }
 
 function liveRepairFleet() {
-  return { ...fleet, ships: (fleet?.ships ?? []).map(liveRepairShip) };
+  const yardId = mooredShipyard()?.id;
+  return { ...fleet, ships: shipsAvailableAtYard(fleet, yardId, yardId).map(liveRepairShip) };
 }
 
 function repairFleetShipFromLive(shipId) {
@@ -499,7 +501,7 @@ function repairFleetShipAtPort(shipId) {
     showBanner(t("sea.banner.portClosed"), "danger", 3000);
     return;
   }
-  const ship = (fleet?.ships ?? []).find((entry) => entry.id === shipId);
+  const ship = liveRepairFleet().ships.find((entry) => entry.id === shipId);
   if (!ship) return;
 
   const result = repairFleetShipFromLive(shipId);
@@ -1941,7 +1943,7 @@ function resolveDefeatedEnemies() {
 
     const prize = status === "surrendered" ? captureableShip(encounter) : null;
     if (prize) {
-      fleet = withPrize(fleet, prize);
+      fleet = withPrize(fleet, { ...prize, yardId: null });
       saveFleetState();
       showBanner(t("sea.banner.captured", { name: prize.name }), "gold", 4000);
       return null;
@@ -2553,14 +2555,14 @@ function boot() {
   const savedWorld = savedGame?.world ? deserializeWorld(savedGame.world) : null;
 
   const worldSeed = (Date.now() ^ Math.floor(Math.random() * 0xffffffff)) >>> 0;
-  world =
-    savedWorld && Math.abs(savedWorld.ship.speedKn - runtimeShip.speedKn) < 1
-      ? savedWorld
-      : createWorld(worldSeed, { speedKn: runtimeShip.speedKn }, 0);
+  world = savedWorld ?? createWorld(worldSeed, runtimeShip, 0, fleet);
+  // Old game records can have a position but no serialized world.
+  if (!savedWorld && Number.isFinite(savedGame?.ship?.x) && Number.isFinite(savedGame?.ship?.y)) {
+    world = { ...world, ship: { ...world.ship, ...savedGame.ship } };
+  }
 
-  // The captain turns at her own hull's rate (S48), whatever the saved sea says: she may
-  // not be the hull that last sailed it.
-  world = { ...world, ship: { ...world.ship, turnFactor: shipTurnFactor(runtimeShip.hullId, runtimeShip.loadFraction) } };
+  // A new captain keeps the sea's location, but sails at her own speed and turn rate.
+  world = { ...world, ship: { ...world.ship, speedKn: runtimeShip.speedKn, turnFactor: shipTurnFactor(runtimeShip.hullId, runtimeShip.loadFraction) } };
 
   gold = normaliseGold(savedGame?.gold);
   // The reserve starts as the captain's bought days of provisions (S67), and the sea
@@ -2598,7 +2600,7 @@ function boot() {
   goldEarned = normaliseGold(world.gold);
 
   // The hulls that put to sea with the captain (S35, S36): everything marked to sail.
-  escorts = sailingShips(fleet)
+  escorts = shipsSailingAtSea(fleet)
     .filter((ship) => ship.id !== runtimeShip?.id)
     .map((ship, index) => {
     const combatant = createPlayerCombatant(ship);

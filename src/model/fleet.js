@@ -10,8 +10,56 @@
  * ship stays in port, keeping the hull, crew and loadout it was bought with.
  */
 
+import { SHIPYARDS, shipyardById } from "../data/naval-data.js";
 import { holdOf } from "./commerce.js";
 import { isWreck } from "./sinking.js";
+
+const homeYardId = () => (SHIPYARDS.find((yard) => yard.home) ?? SHIPYARDS[0])?.id ?? null;
+
+/** A missing or invalid location belongs to the home yard; explicit null is at sea. */
+function yardOf(ship) {
+  if (ship?.yardId === null) return null;
+  return shipyardById(ship?.yardId)?.id ?? homeYardId();
+}
+
+/** Set a non-captain's yard, or clear it for sea. Unknown hulls and yards are refused. */
+export function withShipYard(fleet, shipId, yardId) {
+  const ships = fleet?.ships ?? [];
+  if (!ships.some((ship) => ship.id === shipId) || (yardId !== null && !shipyardById(yardId))) return { ...fleet, ships };
+  if (shipId === fleet?.captainId && yardId !== null) return { ...fleet, ships };
+  return { ...fleet, ships: ships.map((ship) => ship.id === shipId ? { ...ship, yardId } : ship) };
+}
+
+/** Hulls actually moored at this yard, independent of their sailing checks. */
+export function shipsAtYard(fleet, yardId) {
+  if (!shipyardById(yardId)) return [];
+  return (fleet?.ships ?? []).filter((ship) => yardOf(ship) === yardId);
+}
+
+/** Locals plus the captain's sailing squadron when she visits this yard. */
+export function shipsAvailableAtYard(fleet, yardId, captainYardId) {
+  if (!shipyardById(yardId)) return [];
+  return (fleet?.ships ?? []).filter((ship) => yardOf(ship) === yardId ||
+    (yardId === captainYardId && yardOf(ship) === null && !isWreck(ship) &&
+      (ship.id === fleet?.captainId || ship.sails !== false)));
+}
+
+/** Sail local marked hulls and leave unmarked visitors at this yard. */
+export function departYard(fleet, yardId) {
+  const ships = fleet?.ships ?? [];
+  if (!shipyardById(yardId)) return { ...fleet, ships };
+  return { ...fleet, ships: ships.map((ship) => {
+    const location = yardOf(ship);
+    if (location !== yardId && location !== null) return ship;
+    if (isWreck(ship)) return ship;
+    return { ...ship, yardId: ship.id === fleet?.captainId || ship.sails !== false ? null : yardId };
+  }) };
+}
+
+/** Only hulls that actually departed can join the captain at sea. */
+export function shipsSailingAtSea(fleet) {
+  return sailingShips(fleet).filter((ship) => yardOf(ship) === null && !isWreck(ship));
+}
 
 /**
  * Add a freshly launched ship to the fleet and make it the captain: buying a new
@@ -161,7 +209,7 @@ function normaliseShip(ship) {
   // The hold is a manifest of whole units, and her kg is derived from it (S114): a save
   // that predates the trade has no manifest and keeps her hand-typed cargo untouched.
   const hold = holdOf(ship.manifest ?? []);
-  const stored = { ...ship, condition, crewAlive, sails };
+  const stored = { ...ship, condition, crewAlive, sails, yardId: yardOf(ship) };
   if (hold.cargoKg > 0) {
     stored.manifest = hold.manifest;
   } else {

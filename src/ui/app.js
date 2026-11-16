@@ -39,14 +39,16 @@ import {
 import { minimumShipPrice, normaliseGold, priceShip } from "../model/economy.js";
 import { bootSettings } from "../model/settings-storage.js";
 import { bootCatalogue } from "../model/catalogue-storage.js";
-import { withShipSailing } from "../model/fleet.js";
+import { withShipSailing, withShipYard } from "../model/fleet.js";
 import { nextImageIndex, shipImagePaths } from "../model/ship-image.js";
 import {
   addShip,
   captainShip,
   deserializeFleet,
+  departYard,
   isEmptyFleet,
   serializeFleet,
+  shipsAvailableAtYard,
   setCaptain,
   tradingShip,
 } from "../model/fleet.js";
@@ -1045,7 +1047,7 @@ function render() {
  * change is a refit of the same hull.
  */
 function saveRefit({ leave }) {
-  const target = fleet.ships.find((entry) => entry.id === refitId);
+  const target = localFleet().ships.find((entry) => entry.id === refitId);
   if (!target) return false;
   const name = state.shipName.trim() || target.name;
   const result = applyRefit(target, { ...currentConfig(), name }, state.gold);
@@ -1087,7 +1089,7 @@ function stableJson(value) {
  */
 function autoSaveRefit() {
   if (!(REFIT.autoSave > 0) || !refitId) return false;
-  const target = fleet.ships.find((entry) => entry.id === refitId);
+  const target = localFleet().ships.find((entry) => entry.id === refitId);
   if (!target || isWreck(target)) return false;
   const quote = quoteRefit(target, currentConfig(), state.gold);
   const before = buildShip(configFromShip(target))?.config;
@@ -1120,18 +1122,20 @@ function launch() {
   }
 
   const name = state.shipName.trim() || defaultShipName(ship.hull);
-  const runtime = toRuntimeShip(ship, { name });
+  const runtime = { ...toRuntimeShip(ship, { name }), yardId: screenShipyard()?.id ?? null };
 
-  // The launching is the purchase: charge the purse and add the hull to the fleet,
-  // where it becomes the captain. A new hull sails a new sea.
+  // The new captain is built here; preserve the voyage location and the old captain's
+  // combat record rather than replacing the sea save with a home-port start.
   state.gold -= ship.price.total;
-
+  const previousCaptainId = fleet.captainId;
   fleet = addShip(fleet, runtime);
-
+  const previous = fleet.ships.find((entry) => entry.id === previousCaptainId);
+  if (previous?.sails === false && previous.yardId === null) {
+    fleet = withShipYard(fleet, previous.id, runtime.yardId);
+  }
+  saveFleet();
+  savePurse(null, false, { promoteFrom: previousCaptainId, promoteTo: runtime.id });
   try {
-    localStorage.setItem(FLEET_KEY, serializeFleet(fleet));
-    localStorage.setItem(GAME_KEY, JSON.stringify({ gold: state.gold, markets }));
-    // the fleet is the source of truth now; drop the single-ship key
     localStorage.removeItem(SHIP_KEY);
   } catch {
     /* the ship still exists in memory for this session */
@@ -1291,8 +1295,13 @@ function screenShipyard() {
  * selection is the fleet's own (`refitId`), so the market, the fleet list and the rig
  * panel always talk about the same hull; with no usable selection it is the captain.
  */
+function localFleet() {
+  const yard = screenShipyard();
+  return { ...fleet, ships: shipsAvailableAtYard(fleet, yard?.id, yard?.id) };
+}
+
 function marketShip() {
-  return tradingShip(fleet, refitId);
+  return tradingShip(localFleet(), refitId);
 }
 
 /** Make the selection a hull that can trade, so the rig panel stands for her too. */
@@ -1397,7 +1406,7 @@ const commodityNameKey = (commodityId) =>
 function renderMarketShipPicker(ship) {
   if (!els.marketShip) return;
   els.marketShip.textContent = "";
-  for (const entry of fleet.ships.filter((candidate) => !isWreck(candidate))) {
+  for (const entry of localFleet().ships.filter((candidate) => !isWreck(candidate))) {
     const option = document.createElement("option");
     option.value = entry.id;
     option.textContent = entry.name ?? entry.hullName ?? entry.id;
@@ -1408,7 +1417,7 @@ function renderMarketShipPicker(ship) {
 }
 
 els.marketShip?.addEventListener("change", () => {
-  const ship = tradingShip(fleet, els.marketShip.value);
+  const ship = tradingShip(localFleet(), els.marketShip.value);
   if (!ship) return;
   selectRefitShip(ship, { openRoom: false });
   renderFleet();
@@ -1516,6 +1525,8 @@ els.setSailBtn.addEventListener("click", () => {
     els.purchaseNotice.classList.remove("is-error");
     els.purchaseNotice.textContent = "";
   }
+  fleet = departYard(fleet, screenShipyard()?.id);
+  saveFleet();
   saveConfig();
   window.location.href = "./sea.html";
 });
@@ -1651,23 +1662,24 @@ function saveFleet() {
 /** Redraw the fleet strip: every owned hull, with the captain marked. */
 function renderFleet() {
   const captain = captainShip(fleet);
-  els.setSailBtn.disabled = isEmptyFleet(fleet);
+  const local = localFleet();
+  els.setSailBtn.disabled = !local.ships.some((ship) => ship.id === captain?.id && !isWreck(ship));
   renderFort();
-  // Buying the first ship locks the country (S26), so the selector follows the fleet.
+  // Country remains locked by the whole fleet, not just this yard.
   renderCountry();
-  els.fleetCount.textContent = isEmptyFleet(fleet)
+  els.fleetCount.textContent = isEmptyFleet(local)
     ? t("fleet.count.none")
-    : t(fleet.ships.length === 1 ? "fleet.count.one" : "fleet.count.many", {
-        count: fleet.ships.length,
+    : t(local.ships.length === 1 ? "fleet.count.one" : "fleet.count.many", {
+        count: local.ships.length,
       });
 
-  if (isEmptyFleet(fleet)) {
-    els.fleetList.innerHTML =
-      `<li class="fleet-empty">${t("fleet.empty")}</li>`;
+  if (isEmptyFleet(local)) {
+    els.fleetList.innerHTML = `<li class="fleet-empty">${t("fleet.empty")}</li>`;
+    renderFleetDetail();
     return;
   }
 
-  els.fleetList.innerHTML = fleet.ships
+  els.fleetList.innerHTML = local.ships
     .map((ship) => {
       const isCaptain = ship.id === captain?.id;
       // The captain always sails; every other hull sails if its check is on (S35).
@@ -1699,9 +1711,10 @@ function renderFleet() {
  * the actions belong to whoever is selected — which is also who the refit editor holds.
  */
 function renderFleetDetail() {
-  const ship = fleet.ships.find((entry) => entry.id === refitId) ?? null;
+  const local = localFleet();
+  const ship = local.ships.find((entry) => entry.id === refitId) ?? null;
   if (!els.fleetDetail) return;
-  const hasFleet = !isEmptyFleet(fleet);
+  const hasFleet = !isEmptyFleet(local);
   els.fleetDetail.hidden = !ship;
   els.fleetEmptyHint.hidden = !hasFleet || Boolean(ship);
   if (!ship) return;
@@ -1771,7 +1784,8 @@ function renderFleetDetail() {
       : "";
   }
 
-  const canSell = canSellShip(fleet, ship.id);
+  const canSell = canSellShip(fleet, ship.id) &&
+    (ship.id !== fleet.captainId || local.ships.some((entry) => entry.id !== ship.id && !isWreck(entry)));
   els.fleetSellBtn.disabled = !canSell;
   els.fleetSellBtn.textContent = t("shipyard.sell", { gold: gold(salePrice(ship)) });
   els.fleetSellBtn.title = canSell
@@ -1844,6 +1858,7 @@ function renderFleetHold(ship) {
 
 /** Select an owned ship and copy her bought configuration into the refit editor. */
 function selectRefitShip(ship, { openRoom = true } = {}) {
+  if (!localFleet().ships.some((entry) => entry.id === ship?.id)) return;
   const config = configFromShip(ship);
   refitId = ship.id;
   for (const key of ["hullId", "batteries", "crew", "days", "cargoKg", "ballastKg", "equipmentKg", "reserveKg"]) {
@@ -1861,8 +1876,13 @@ function selectRefitShip(ship, { openRoom = true } = {}) {
 els.fleetList.addEventListener("click", (event) => {
   const promote = event.target.closest("[data-captain]");
   if (promote) {
+    if (!localFleet().ships.some((entry) => entry.id === promote.dataset.captain && !isWreck(entry))) return;
     const previousCaptainId = fleet.captainId;
     fleet = setCaptain(fleet, promote.dataset.captain);
+    const previous = fleet.ships.find((entry) => entry.id === previousCaptainId);
+    if (previous?.sails === false && previous.yardId === null) {
+      fleet = withShipYard(fleet, previous.id, screenShipyard()?.id);
+    }
     saveFleet();
     savePurse(null, false, { promoteFrom: previousCaptainId, promoteTo: fleet.captainId });
     renderFleet();
@@ -1872,7 +1892,7 @@ els.fleetList.addEventListener("click", (event) => {
   // panel below the list, so picking her is what fills it. The row's own button is the
   // refit editor's door as it always was.
   const select = event.target.closest("[data-refit]");
-  const ship = fleet.ships.find((entry) => entry.id === select?.dataset.refit);
+  const ship = localFleet().ships.find((entry) => entry.id === select?.dataset.refit);
   if (!ship) return;
   selectRefitShip(ship);
   renderFleet();
@@ -1885,7 +1905,7 @@ els.fleetList.addEventListener("click", (event) => {
 // on arrival, so this button is where a damaged hull is put right. It acts on the hull
 // the fleet list has selected.
 els.fleetRearmBtn?.addEventListener("click", () => {
-  const target = fleet.ships.find((entry) => entry.id === refitId);
+  const target = localFleet().ships.find((entry) => entry.id === refitId);
   if (!target || isWreck(target)) return;
   const live = readLiveCombat(target.id);
   const result = rearmShip(target, live, state.gold);
@@ -1910,7 +1930,7 @@ els.fleetRearmBtn?.addEventListener("click", () => {
 });
 
 els.fleetRepairBtn.addEventListener("click", () => {
-  const target = fleet.ships.find((entry) => entry.id === refitId);
+  const target = localFleet().ships.find((entry) => entry.id === refitId);
   if (!target) return;
   // A wreck is floated, not repaired (S117): the yard charges a full repair for her and
   // hands back the same ship, whole again, with no cargo — that went down with her.
@@ -1957,11 +1977,14 @@ els.fleetRepairBtn.addEventListener("click", () => {
 // Selling pays a share of the hull's value and takes her out of the fleet (S62). The last
 // hull is refused by the model, and the button is already disabled in that case.
 els.fleetSellBtn.addEventListener("click", () => {
-  const target = fleet.ships.find((entry) => entry.id === refitId);
+  const local = localFleet();
+  const target = local.ships.find((entry) => entry.id === refitId);
   if (!target) return;
+  const successor = local.ships.find((entry) => entry.id !== target.id && !isWreck(entry));
+  if (target.id === fleet.captainId && !successor) return;
   const result = sellShip(fleet, target.id, state.gold);
   if (!result) return;
-  fleet = result.fleet;
+  fleet = target.id === fleet.captainId ? setCaptain(result.fleet, successor.id) : result.fleet;
   state.gold = result.gold;
   // A hull being refitted cannot be sold under the player's feet.
   if (refitId && !fleet.ships.some((entry) => entry.id === refitId)) refitId = null;
@@ -2026,6 +2049,7 @@ els.fleetList.addEventListener("change", (event) => {
   const check = event.target.closest("[data-sail]");
   if (!check) return;
   const shipId = check.dataset.sail;
+  if (!localFleet().ships.some((entry) => entry.id === shipId && !isWreck(entry))) return;
   const captain = captainShip(fleet);
   if (shipId === captain?.id) {
     // The captain cannot stay ashore: she is the ship the player sails.
@@ -2033,6 +2057,7 @@ els.fleetList.addEventListener("change", (event) => {
     return;
   }
   fleet = withShipSailing(fleet, shipId, check.checked);
+  if (!check.checked) fleet = withShipYard(fleet, shipId, screenShipyard()?.id);
   saveFleet();
   renderFleet();
 });
@@ -2117,7 +2142,7 @@ let dockSignature = null;
 function renderDockList() {
   const container = els.dockList;
   if (!container) return;
-  const ships = damagedShips(fleet);
+  const ships = damagedShips(localFleet());
   const signature = ships
     .map((ship) => {
       const report = repairReport(ship);
@@ -2181,7 +2206,7 @@ function renderDockList() {
 
 /** The missing gold for the cheapest damaged hull, or zero when the purse covers all. */
 function dockShortfall() {
-  const costs = damagedShips(fleet).map((ship) => repairCost(ship));
+  const costs = damagedShips(localFleet()).map((ship) => repairCost(ship));
   if (costs.length === 0) return 0;
   return Math.max(0, Math.min(...costs) - state.gold);
 }
@@ -2202,7 +2227,7 @@ function closeDockDialog() {
 /** Ask on opening the screen when the fleet has something to repair (S25). */
 function openDockDialog() {
   if (!els.dockDialog) return;
-  if (damagedShips(fleet).length === 0) return;
+  if (damagedShips(localFleet()).length === 0) return;
   dockSignature = null;
   renderDockList();
   updateDockNote();
@@ -2220,6 +2245,7 @@ function openDockDialog() {
  * the sea does not undo the repair on boot.
  */
 function repairFromDock(shipId) {
+  if (!localFleet().ships.some((ship) => ship.id === shipId)) return;
   const captain = captainShip(fleet);
   const result = repairFleetShip(fleet, shipId, state.gold, { allowCaptain: true });
   if (!result.repaired) {
@@ -2238,7 +2264,7 @@ function repairFromDock(shipId) {
   renderFleet();
   renderDockList();
   updateDockNote();
-  if (damagedShips(fleet).length === 0) closeDockDialog();
+  if (damagedShips(localFleet()).length === 0) closeDockDialog();
 }
 
 if (els.dockLater) els.dockLater.addEventListener("click", closeDockDialog);

@@ -73,6 +73,12 @@ S122. **Las recámaras de una escolta viajan con ella.** Consecuencia de S121: r
 - **Se lee**: al zarpar, cada cañón de la escolta se restaura índice a índice, con las mismas dos guardas que la capitana: la pieza tiene que ser la misma (un reformador puede poner otro cañón en ese hueco) y el proyectil guardado tiene que ser uno que esa pieza pueda disparar (S65).
 - **Un guardado anterior a S122 no rompe nada**: sin `pieces` el casco se arma desde la ficha de la flota, que es lo que hacía siempre.
 
+S130. **Los cascos pertenecen al astillero donde quedan amarrados.** Pedido (verbatim): "los astilleros son entidades independientes, si una nave esta en un astillero, no aparece en el otro". Decisión (verbatim): "Al zarpar, las naves marcadas con el check te acompanan (escoltas), como hoy: las que no van con vos se quedan en el astillero y no aparecen en otro. La capitana y sus escoltas navegan, no estan en ningun puerto."
+- Cada entrada de flota guarda `yardId`: un id de astillero o `null` mientras navega. Un guardado anterior o un id desconocido se resuelve al puerto de casa.
+- Comprar deja el casco en el astillero actual y lo hace capitana. Al zarpar, la capitana y las escoltas marcadas de ese astillero salen; las no marcadas quedan, y un naufragio no navega.
+- El mar forma y guarda las escoltas que zarparon. Un guardado anterior sin escoltas abre con la capitana sola.
+- Flota, reparación y selector de mercado muestran los cascos amarrados allí y la escuadra visitante, nunca cascos de otro astillero. El contador y las acciones siguen el mismo alcance.
+
 ## Tasks
 
 - T1 — S112: registro de astilleros, `shipyardAt`/`currentShipyard` y zona derivada. Ruta: inline. Commit: `a4b7b1e`.
@@ -91,6 +97,7 @@ S122. **Las recámaras de una escolta viajan con ella.** Consecuencia de S121: r
 - T14 — S127: la orden de munición es de toda la escuadra. Ruta: inline. Commit: `feat(gunnery): the captain-s ammunition order loads the squadron`.
 - T15 — S128: cualquier casco de la escuadra recoge un pecio. Ruta: inline. Commit: `feat(squadron): any hull of the squadron picks up a prize`.
 - T16 — S129: el arranque en Comprar no entra en modo reforma. Ruta: inline. Commit: `fix(shipyard): the buy screen opens able to sell any hull`.
+- T17 — S130: ubicación persistida por casco y compatibilidad; compra y zarpar por astillero; formación y guardado de escoltas; flota y mercado locales; tests nuevos y smoke de dos astilleros. Ruta: worker.
 
 ## Log
 
@@ -167,3 +174,7 @@ S127. **La munición que elige la capitana la carga toda la escuadra.** Pedido d
 S128. **Cualquier casco de la escuadra recoge un pecio.** Pedido del usuario (verbatim): "tambien quiero que todos los barcos de la flota actuen igual que la capitana si pasan por un naufragio".
 - En `updateWorld` la recogida de tesoros y pecios miraba sólo la posición de la capitana, así que un premio por el que pasaba una escolta se quedaba en el agua. Ahora `pickers = [ship, ...escorts]`: cualquier casco dentro de `pickupRadiusM` (60 m) lo recoge y el oro va a la bolsa compartida.
 - La regla es la misma para todos los cascos: no hay excepción ni prioridad por ser la capitana.
+
+L17 (pedido, verbatim): "los astilleros son entidades independientes, si una nave esta en un astillero, no aparece en el otro".
+
+L18 (decisión, verbatim): "Al zarpar, las naves marcadas con el check te acompanan (escoltas), como hoy: las que no van con vos se quedan en el astillero y no aparecen en otro. La capitana y sus escoltas navegan, no estan en ningun puerto."

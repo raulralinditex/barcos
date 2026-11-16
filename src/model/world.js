@@ -10,7 +10,8 @@
  */
 
 import { ZONES, HULLS, SHIPYARDS, shipyardAt } from "../data/naval-data.js";
-import { escortStation, stepEscort } from "./formation.js";
+import { createEscort, escortStation, stepEscort } from "./formation.js";
+import { shipsSailingAtSea } from "./fleet.js";
 import { referenceSpeedKn } from "./ship-model.js";
 import { windAt, windEffect } from "./wind.js";
 
@@ -323,7 +324,7 @@ function spawnOne(rnd, ship, type, zone, id) {
  * Create the sea for a ship starting a voyage. `ship` needs at least `speedKn`;
  * its position is the origin (the home port).
  */
-export function createWorld(seed, ship, gold = 0) {
+export function createWorld(seed, ship, gold = 0, fleet = null) {
   const world = {
     seed: seed >>> 0,
     rngState: seed >>> 0,
@@ -343,6 +344,9 @@ export function createWorld(seed, ship, gold = 0) {
     escorts: [],
     encounters: [],
   };
+  world.escorts = shipsSailingAtSea(fleet)
+    .filter((entry) => entry.id !== (fleet?.captainId ?? ship.id))
+    .map((entry, index) => createEscort(entry, world.ship, index));
   return updateWorld(world, {}, 0);
 }
 
