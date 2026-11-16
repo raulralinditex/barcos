@@ -84,6 +84,9 @@ S122. **Las recámaras de una escolta viajan con ella.** Consecuencia de S121: r
 - T7 — S120: identidad de dos cascos iguales. El rol `combat.player` se movía sin la nave que lo ocupaba. Ruta: worker + verificación del orquestador en rojo y verde. Commit: `fix(fleet): two identical hulls no longer swap their combat record`.
 - T8 — S121: el astillero rearma, y el tope de munición por cañón es un valor declarado. Modelo (`src/model/rearm.js`), botón en el panel del casco, banner en el mar, i18n y smoke. Ruta: inline. Commit: `fix(gunnery): a dry hull buys her rounds back at the yard`.
 - T9 — S122: las recámaras de las escoltas en el guardado del mar (escritura y lectura). Ruta: inline. Commit: `fix(fleet): an escort's racks travel with her`.
+- T10 — S123: el astillero en el minimapa con su barra de guarnición. Ruta: inline. Commit: `feat(minimap): a taken yard shows the garrison left`.
+- T11 — S124: la bodega del casco seleccionado en el panel de la flota. Ruta: inline. Commit: `feat(fleet): the panel shows what the hull is carrying`.
+- T12 — S125: la venta grande paga el precio de cada unidad. Ruta: inline. Commit: `fix(market): a big sale pays the curve, not one quote`.
 
 ## Log
 
@@ -114,3 +117,22 @@ L12 (decisión del orquestador, sin consulta): el tope de rondas por cañón pas
 L13 (cierre de S121): `npm test` **726/726**. `scripts/smoke-rearm.mjs` nuevo, verde, con RED observado en dos tandas: sin el handler del botón falla con "the yard charges exactly what it quoted" (el oro no se movía); sin `warnIfDry()` falla con "the sea names the dry hull instead of going silent". El smoke no usa números mágicos: la cotización esperada sale de `rearmQuote`, la misma llamada que hace la pantalla. Cotización medida en el caso del smoke: 60 rondas por 92 doblones. Se corrigió de paso `writeFortSave` en el camino del reflotado, que escribía `gold` dentro de `fort` en vez de en la raíz del guardado del mar.
 
 L14 (S122, autorizado con "si" sobre la limitación reportada en el cierre de S121): el guardado del mar no llevaba las recámaras de las escoltas. Se agregaron al autoguardado y al arranque de la travesía, con las mismas guardas de pieza y proyectil que la capitana. `scripts/smoke-escort-racks.mjs` nuevo: RED observado sin el arreglo con "the escort's racks are in the sea save at all (S122)"; con el arreglo verde, y prueba además que la escolta zarpó con las 25 rondas que le vendió el astillero y no con la asignación del constructor. `npm test` 726/726. Smokes en 0: escort-racks, escort-dock, escort-range, formation, visible-escorts, command-handover, combat, fleet, rearm, two-hulls, sea, anchor-yard.
+
+S123. **El astillero se ve en el minimapa con su guarnición.** Único punto abierto de S74 (`escala-y-configuracion.md`, L33 punto a), elegido por el usuario entre los pendientes reales.
+- El fuerte pelea de verdad desde S74/S93, pero en el minimapa sólo se veía el aro del puerto: no se podía saber si estaba en pie, tomado o cuánto le quedaba a la guarnición sin volver a puerto a mirar.
+- **En pie**: la marca del astillero es el color del puerto (`#a9955f`) y no hay barra.
+- **Tomado**: la marca pasa a hostil (`#d0503c`) y aparece una barra de guarnición encima, del ancho que le queda a los ocupantes (`fortOccupierCondition`).
+- **Tamaño en pantalla, no en el mundo**: la marca y la barra se dibujan después de deshacer la escala del mapa (`1 / scale`), o se encogerían con la carta hasta ser ilegibles. Medidas: barra de 46 × 6 px sobre un minimapa de 170 px, levantada 9 px.
+- Sólo el astillero de casa puede estar tomado (el único que el enemigo asedia, S93); los demás siguen siendo puntos de mercado.
+
+S124. **La carga de un casco se ve en la flota.** Reporte del usuario (verbatim): "cuando en el mercado cargamos una nave con carga, la carga de la nave no cambia y no podemos saber que carga lleva la nave".
+- **El mercado sí guardaba la carga**: comprar escribe `manifest` y `cargoKg` en la entrada de la flota del capitán y la pantalla del mercado lo muestra. Lo que faltaba era **todo el resto de los lugares donde se mira un casco**: el panel de la flota mostraba sus barras de condición y nada de lo que llevaba, así que la carga era invisible salvo estando en un astillero.
+- **El panel del casco seleccionado muestra la bodega**: total contra capacidad, una línea por mercancía con unidades y kg, y la carga suelta del constructor aparte (no es mercancía y no se puede vender, pero pesa).
+- **La suma es la del modelo**: la línea de total usa `shipHold`, no una segunda contabilidad, así la pantalla no puede discrepar de la regla.
+- Una bodega vacía lo dice ("Bodega vacía") y no inventa filas; venderlo todo vacía el panel sin recargar.
+
+S125. **Una venta grande paga el precio de cada unidad, no uno solo para todo el lote.** Reporte del usuario (verbatim): "he comprado como 2000 doblones y los he vendido en el abismo y he conseguido casi 290000 doblones, un poco exagerado no?".
+- **Causa medida**: la pantalla cotiza un precio por mercancía y `sellCargo` lo aplicaba a **todas** las unidades del lote; el stock subía **después** de cobrar. Vender 500 de plata en el abismo pagaba 576 × 500 = **288.000** con un mercado de 60 unidades: la curva de S119 nunca llegaba a morder.
+- **La regla**: con la memoria del puerto, el astillero paga el precio que corresponde a **cada unidad** que toma, subiendo el stock paso a paso. Ese mismo lote de 500 de plata paga **139.174** (una caída del 51,7 %). Una venta chica no se castiga: 5 unidades pagan el precio de reposo.
+- **Sin memoria, la cotización plana sigue**: los llamadores que no tienen estado de mercado (y los tests que fijan un precio único) siguen funcionando. Un puerto sin memoria es un puerto en reposo (`{}`), no un puerto sin precios.
+- **La curva de S119 no se toca**: el usuario eligió explícitamente "sólo cobrar por unidad, sin tocar la curva", después de ver que bajar `floorShare` a 0,20 y subir `maxStock` a 200 degradaba el ejemplo de los 40 barriles (de 38 % a 24 % de caída) que él mismo había pedido.
