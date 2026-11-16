@@ -1,0 +1,34 @@
+src/i18n/en.js
+  s_48f93862b4f568::t_bbba3f55626664 170
+src/i18n/es.js
+  s_48f93862b4f568::t_bbba3f55626664 167
+src/ui/styles.css
+  s_48f93862b4f568::t_bbba3f55626664 59-64
+src/ui/app.js
+  s_48f93862b4f568::t_bbba3f55626664 1002
+  s_48f93862b4f568::t_4d20e8a104a629 1355
+scripts/smoke-shipyard-layout.mjs
+  s_48f93862b4f568::t_8610a7dcdf36a1 42-43,45
+index.html
+  s_48f93862b4f568::t_bbba3f55626664 26-35
+scripts/smoke-shipyard-buttons.mjs
+  s_48f93862b4f568::t_8610a7dcdf36a1 39-42
+src/model/settings.js
+  s_48f93862b4f568::t_fd81d6eec04b57 19
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.6",
+  "base_commit_sha": "8a1ff705135c1660b8dfc6a5a6a4d698a47bf3d3",
+  "prompts": {},
+  "sessions": {
+    "s_48f93862b4f568": {
+      "agent_id": {
+        "tool": "pi",
+        "id": "01a1e58e-9669-713e-b888-48e76698935d",
+        "model": "claude-sonnet-5.5"
+      },
+      "human_author": "Raul Ripoll <raulral@ext.inditex.com>"
+    }
+  }
+}
