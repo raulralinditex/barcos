@@ -1612,9 +1612,11 @@ function dropDisengagedTargets() {
 }
 
 /**
- * The shipyard's own fight (S74). She is a static hull: she never moves, she fires her
- * battery at any hostile that came for her, and the abyss squadrons that reach her fire
- * back. Her damage and her garrison live in the save, like a hull's.
+ * The shipyard's own fight (S74, S126). She is a static hull and a coastal defence as well
+ * as a siege objective: she fires at fighting hostiles in range, regardless of birth zone,
+ * while abyss squadrons fire back. Enemies carry the zone where they were born, and those
+ * born near the port are coastal; gating her fire by assault zone left her silent against
+ * them forever. Her damage and her garrison live in the save, like a hull's.
  */
 function updateFortCombat(dt) {
   if (!fortCombat) return;
@@ -1634,7 +1636,6 @@ function updateFortCombat(dt) {
 
   for (const encounter of world.encounters) {
     if (encounter.type !== "enemy") continue;
-    if (!canAssaultFort(encounter.zoneId ?? currentZone().id)) continue;
     const distance = Math.hypot(encounter.x, encounter.y);
     if (distance > COMBAT.engageRadiusM) continue;
     const combat = encounter.combat;

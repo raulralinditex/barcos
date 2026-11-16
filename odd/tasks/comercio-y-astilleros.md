@@ -87,6 +87,7 @@ S122. **Las recámaras de una escolta viajan con ella.** Consecuencia de S121: r
 - T10 — S123: el astillero en el minimapa con su barra de guarnición. Ruta: inline. Commit: `feat(minimap): a taken yard shows the garrison left`.
 - T11 — S124: la bodega del casco seleccionado en el panel de la flota. Ruta: inline. Commit: `feat(fleet): the panel shows what the hull is carrying`.
 - T12 — S125: la venta grande paga el precio de cada unidad. Ruta: inline. Commit: `fix(market): a big sale pays the curve, not one quote`.
+- T13 — S126: la yarda dispara a cualquier enemigo en alcance. Ruta: worker + verificación del orquestador en rojo y verde. Commit: `fix(fort): the yard fires at any enemy in range`.
 
 ## Log
 
@@ -136,3 +137,14 @@ S125. **Una venta grande paga el precio de cada unidad, no uno solo para todo el
 - **La regla**: con la memoria del puerto, el astillero paga el precio que corresponde a **cada unidad** que toma, subiendo el stock paso a paso. Ese mismo lote de 500 de plata paga **139.174** (una caída del 51,7 %). Una venta chica no se castiga: 5 unidades pagan el precio de reposo.
 - **Sin memoria, la cotización plana sigue**: los llamadores que no tienen estado de mercado (y los tests que fijan un precio único) siguen funcionando. Un puerto sin memoria es un puerto en reposo (`{}`), no un puerto sin precios.
 - **La curva de S119 no se toca**: el usuario eligió explícitamente "sólo cobrar por unidad, sin tocar la curva", después de ver que bajar `floorShare` a 0,20 y subir `maxStock` a 200 degradaba el ejemplo de los 40 barriles (de 38 % a 24 % de caída) que él mismo había pedido.
+
+S126. **El astillero dispara a cualquier enemigo en su alcance, venga de donde venga.** Reporte del usuario (verbatim): "el astillero no ataca las naves enemigas". Decisión del usuario sobre el arreglo, elegida entre cuatro: "Que dispare a todo enemigo en rango, de cualquier zona".
+- **Causa medida**: dentro de `updateFortCombat` la yarda sólo disparaba si `canAssaultFort(encounter.zoneId ?? currentZone().id)`, y esa función sólo acepta la zona `"abismo"`. Pero el mundo genera los enemigos con la zona donde nacieron, y los que nacen junto al puerto son de la costera (medido con semilla 99: 2 enemigos, `zoneId: "costera"`, a 1319 m y 2253 m). **Ningún enemigo generado cerca del puerto era elegible nunca.** El único motivo por el que el smoke viejo pasaba es que sembraba a mano un escuadrón con `zoneId: "abismo"`.
+- **La regla**: la yarda dispara a cualquier combatiente hostil que esté en alcance, sin preguntar por su zona. El alcance real lo sigue poniendo cada cañón (`media-culebrina-9`, 430 m) dentro de `fortFire`; la puerta de `engageRadiusM` (620 m) se mantiene como filtro barato.
+- **La zona segura no se toca (S66)**: un enemigo sigue siendo empujado fuera de los 300 m del puerto y sigue sin disparar desde dentro. `insideSafeZone`, `clampToSafeZone` y `occupiedFortFire` quedan como estaban.
+- **`canAssaultFort` no se toca**: sigue gobernando quién viene a asediar la yarda y a quién apunta un escuadrón del abismo (S74, S93). Lo que cambia es sólo la puerta de fuego de la propia yarda.
+- **Medido**: `scripts/smoke-fort-defence.mjs` — un enemigo costero a 200 m baja el casco de 100 a 45,7; uno a 931 m no recibe nada; la capitana dentro de la zona segura no recibe nada. Sin el arreglo falla con "the yard should damage the coastal enemy (hull 100 -> 100, crew 100 -> 100)".
+
+L15 (S126): el worker quitó la puerta de zona del fuego de la yarda y escribió `scripts/smoke-fort-defence.mjs`. Su smoke salía flaky en mi máquina: el empuje de la zona segura deja al enemigo a 299,99999999999994 m contra un radio de 300, así que el assert `>= 300` fallaba por coma flotante. Lo arreglé con un metro de tolerancia (test nuevo, no existente). RED verificado por mí restaurando la línea vieja: "the yard should damage the coastal enemy (hull 100 -> 100, crew 100 -> 100)"; con el arreglo, tres corridas seguidas en verde. `npm test` 727/727. Smokes en 0: fort-defence, fort-combat, fort, safe-zone, fort-recovery.
+
+L16 (límite conocido que el worker reportó, no arreglado): `ensureEnemyCombat` se construye por proximidad a la **capitana**, no a la yarda. Un enemigo que está cerca del puerto pero lejos del jugador puede no tener combatiente y entonces la yarda lo salta. No cambia el reporte del usuario (que veía enemigos encima suyo, con combatiente ya creado), pero es la parte que falta para que "cualquier enemigo en rango" sea literal. Queda abierto como pendiente menor.
