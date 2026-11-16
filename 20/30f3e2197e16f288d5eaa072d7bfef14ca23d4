@@ -1,0 +1,29 @@
+index.html
+  s_48f93862b4f568::t_7980604120bd40 26-35
+scripts/smoke-shipyard-buttons.mjs
+  s_48f93862b4f568::t_7df4d7f2d10a0d 39-42
+scripts/smoke-shipyard-layout.mjs
+  s_48f93862b4f568::t_122e85801f1e1a 42-43,45
+src/i18n/en.js
+  s_48f93862b4f568::t_a1ace0d1529f41 170
+src/i18n/es.js
+  s_48f93862b4f568::t_d89fd691340a4e 167
+src/ui/styles.css
+  s_48f93862b4f568::t_5c4f27e9d7e7ce 59-64
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.6",
+  "base_commit_sha": "2030f3e2197e16f288d5eaa072d7bfef14ca23d4",
+  "prompts": {},
+  "sessions": {
+    "s_48f93862b4f568": {
+      "agent_id": {
+        "tool": "pi",
+        "id": "01a1e58e-9669-713e-b888-48e76698935d",
+        "model": "claude-sonnet-5.5"
+      },
+      "human_author": "Raul Ripoll <raulral@ext.inditex.com>"
+    }
+  }
+}
