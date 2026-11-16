@@ -1,0 +1,19 @@
+src/ui/app.js
+  s_8e1c453d9c7d4d::t_5cf2e8c3465feb 2228-2232,2234
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.6",
+  "base_commit_sha": "9c7d66eb03aed3211750ec8663a80a00ae9d85d2",
+  "prompts": {},
+  "sessions": {
+    "s_8e1c453d9c7d4d": {
+      "agent_id": {
+        "tool": "pi",
+        "id": "01a1e495-607a-72a4-8b05-a77ff14397f8",
+        "model": "deepseek-v4.1-flash_high"
+      },
+      "human_author": "Raul Ripoll <raulral@ext.inditex.com>"
+    }
+  }
+}
