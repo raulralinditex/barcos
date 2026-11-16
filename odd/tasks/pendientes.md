@@ -52,50 +52,30 @@ Cerrado por S56: el enemigo ya no cobra el tope de recarga por disparar un solo 
 
 La sincronización de las escoltas con el mundo vive en `src/ui/sea.js` y sólo la cubren smokes de navegador, no `npm test`.
 
-## Pendiente grande: el comercio (la carga tiene que dar dinero)
+## Cerrado: el comercio (S112-S122, `comercio-y-astilleros.md`)
 
-Decisión del usuario: se retoma más adelante. **No implementado.**
+El pendiente grande quedó cerrado. El resumen de lo que cambió, para que no haya que releer la ficha entera:
 
-### El problema medido
+- **Astilleros por zona como datos** (S112): `SHIPYARDS` en `src/data/naval-data.js`; la zona se deriva de la posición, no se escribe a mano.
+- **Comprar barato donde hay, vender caro donde falta** (S113, S114): mercancías declaradas, precio por zona y por lado, manifiesto en la bodega y capacidad real.
+- **Los enemigos llevan carga** (S115, S116): botín entero al rendirse, un porcentaje al hundirse, y la carga de un casco propio se va con él.
+- **Naufragio o pérdida total** (S117): interruptor en Configuración; el pecio espera en el astillero y se reflota pagando.
+- **El mercado tiene memoria** (S119): stock por puerto, precio derivado del stock y recuperación por reloj de juego.
+- **Dos cascos iguales no comparten identidad** (S120) y **un casco seco compra sus rondas en el astillero** (S121), con las recámaras de las escoltas viajando en el guardado del mar (S122).
 
-La carga es hoy **puro castigo**: pagás doblones por embarcarla
-(`PRICES.cargoGoldPerKg`), perdés velocidad (medido: mismo casco, 6,92 kn vacío
-contra 5,98 kn con 40 t) y ganás calado. No hay ninguna mecánica que la consuma:
-busqué en todo `src/model` y `src/ui` y no existe comercio, flete, ni destino.
-`cargoKg` sólo aparece en el constructor, el reformador y la economía de compra.
-
-Con S110 y S111 el hueco se estrechó pero no se cerró: ir vacío ya no es gratis
-(el timón pierde hasta un 25 % por debajo del 20 % de capacidad) y la carga suma
-al valor de la nave, así que una nave cargada vale más y se vende más caro. Pero
-sigue sin **producir** nada.
-
-### Las tres preguntas que hay que contestar antes de escribir código
-
-1. ¿La mercancía se compra en el astillero y se vende navegando, o al revés?
-2. ¿El precio varía por zona (costera barata, abismo caro) o es fijo por tipo?
-3. ¿Qué pasa con la carga si te hunden, o si vendés la nave con carga a bordo?
-
-### Por dónde empezaría, cuando toque
-
-Una economía por viaje: comprar barato en el astillero, vender caro en una zona
-lejana, con el riesgo del viaje como costo real. Eso convierte el dilema
-"vacío y rápido contra cargado y lento" en una decisión legítima en vez de un
-exploit. El modelo ya tiene la física; falta la economía.
+Las tres preguntas que bloqueaban el comercio se contestaron en esa ficha (L1-L14), no acá: este documento deja de ser el lugar donde vive el comercio.
 
 ## Estado del repositorio
 
-- Rama `feat/t7-combate-costados`, sobre `master`. Merge y PR los hace el usuario.
-- S97-S104 (`astillero-en-tabs.md`): astillero en cuatro tabs (Flota / Comprar buque /
-  Astillero / Configuración), reparación del fuerte y cañones comprables (400 dl, tope
-  +6 por costado, configurable). `config.html` redirige a `index.html#configuracion`.
-- Verificación: `npm test` son **650 tests**; los smokes son **46**, entre ellos el
-  nuevo `smoke-tabs.mjs` (recorrido de las cuatro rooms).
+- Rama `feat/comercio-y-astilleros`, sobre `feat/t7-combate-costados`. Merge y PR los hace el usuario.
+- Cerradas hasta S122. `npm test` son **726 tests** y los smokes son **52** `scripts/smoke-*.mjs`.
 - Para jugar: `python3 -m http.server 8765` en la raíz y abrir `http://localhost:8765/index.html`.
 - Los smokes necesitan ese servidor y `npx playwright install chromium` la primera vez.
 - `git` pasa por un wrapper que falla con 401: usar `/usr/bin/git`.
 - Regla global vigente: no editar tests existentes sin confirmación explícita del usuario.
-- Verificación completa: `npm test` (**614 tests**) y los **45** smokes `scripts/smoke-*.mjs`, uno por vez (tardan de 2 s a 36 s cada uno). En macOS no existe el comando `timeout`: no usarlo como prefijo.
-- El árbol de trabajo está limpio: todo lo cerrado hasta S90 está commiteado. Los smokes de reparación y astillero corren verdes en serie.
+- Verificación completa: `npm test` y los smokes `scripts/smoke-*.mjs`, uno por vez (tardan de 2 s a 36 s cada uno). En macOS no existe el comando `timeout`: no usarlo como prefijo.
+- `scripts/smoke-escort-hud.mjs` es **flaky**: puede fallar la lectura del minimapa ("S42: the escort is missing") bajo carga y pasar al reintentar. No es una regresión de nada.
+- El árbol de trabajo está limpio: todo lo cerrado hasta S122 está commiteado.
 
 ## Cerrado: las escoltas hacían bolutas (S96)
 
