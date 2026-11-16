@@ -1,0 +1,21 @@
+index.html
+  s_8e1c453d9c7d4d::t_9b0a7630a834d1 173
+scripts/smoke-fleet-hold.mjs
+  s_8e1c453d9c7d4d::t_dfb0f8e3c516f1 1-158
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.6",
+  "base_commit_sha": "85e8b59380f36f7fc94fb0d3aff8105100a2057b",
+  "prompts": {},
+  "sessions": {
+    "s_8e1c453d9c7d4d": {
+      "agent_id": {
+        "tool": "pi",
+        "id": "01a1e495-607a-72a4-8b05-a77ff14397f8",
+        "model": "deepseek-v4.1-flash_high"
+      },
+      "human_author": "Raul Ripoll <raulral@ext.inditex.com>"
+    }
+  }
+}
