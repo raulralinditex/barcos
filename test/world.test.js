@@ -308,3 +308,32 @@ test("S89: a shredded rig slows the hull, the same way on every ship", () => {
     `a shredded rig must leave 30 % of the hull's speed, got ${shredded} of ${whole}`,
   );
 });
+
+test("S128: any hull of the squadron picks up a prize, not only the captain", () => {
+  // The captain is at the origin; the escort sits 40 m away, inside the 60 m pickup radius,
+  // and the prize is under the escort. The captain used to be the only picker.
+  const base = createWorld({ seed: 11 }, { ship: { speedKn: 6 } });
+  // The prize is 200 m out, well beyond the 60 m pickup radius of the captain, so only a
+  // hull standing on it can take it.
+  const escort = { id: "escolta-1", x: 200, y: 0, heading: 0, currentSpeedKn: 0, speedKn: 6 };
+  const prize = { id: 901, type: "treasure", x: 200, y: 0, gold: 500, zoneId: "costera" };
+  const world = {
+    ...base,
+    ship: { ...base.ship, x: 0, y: 0, currentSpeedKn: 0 },
+    escorts: [escort],
+    encounters: [prize],
+  };
+  const after = updateWorld(world, {}, 0);
+  assert.equal(after.gold, world.gold + 500, "the escort's prize must reach the shared purse");
+  assert.equal(after.encounters.some((e) => e.id === prize.id), false, "and the prize leaves the sea");
+  assert.equal(after.collected, 1);
+
+  // A prize nobody reached stays where it is, so the rule did not become a magnet.
+  // A prize nobody reached pays nothing. It may still be despawned by the distance rule
+  // (a seeded encounter 4000 m away is beyond the forget radius), so the assertion is
+  // about the purse, which is what the rule governs.
+  const far = { ...prize, id: 902, x: 400, y: 0 };
+  const missed = updateWorld({ ...world, encounters: [far] }, {}, 0);
+  assert.equal(missed.gold, world.gold, "an untouched prize pays nothing");
+  assert.equal(missed.encounters.some((e) => e.id === far.id), true, "and stays afloat at 400 m");
+});

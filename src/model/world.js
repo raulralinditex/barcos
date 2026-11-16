@@ -406,17 +406,19 @@ export function updateWorld(world, input = {}, dt = 0) {
     return { ...encounter, x, y, drift: { ...encounter.drift, heading } };
   });
 
-  // collect treasures and wrecks under the ship
+  // Collect treasures and wrecks under any hull of the squadron (S128). The captain used
+  // to be the only one who could pick anything up, so a prize she sailed past went to
+  // nobody: the sea has no reason to care which of our hulls reaches it.
+  const pickers = [ship, ...escorts];
   encounters = encounters.filter((encounter) => {
-    if (
-      (encounter.type === "treasure" || encounter.type === "wreck") &&
-      Math.hypot(encounter.x - ship.x, encounter.y - ship.y) <= WORLD.pickupRadiusM
-    ) {
-      gold += encounter.gold;
-      collected += 1;
-      return false;
-    }
-    return true;
+    if (encounter.type !== "treasure" && encounter.type !== "wreck") return true;
+    const reached = pickers.some(
+      (hull) => Math.hypot(encounter.x - hull.x, encounter.y - hull.y) <= WORLD.pickupRadiusM,
+    );
+    if (!reached) return true;
+    gold += encounter.gold;
+    collected += 1;
+    return false;
   });
 
   // An enemy in combat is not forgotten for being far: it is the one hunting you, and
