@@ -1,0 +1,16 @@
+scripts/smoke-minimap-fort.mjs
+  h_8b9b8fe190c867 1-151
+src/ui/sea.js
+  h_8b9b8fe190c867 1364-1370,1372,1375,1377-1391
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.6",
+  "base_commit_sha": "598dbfa1bab1185a6ec3bf3fa79cf8fbd1dbfbd6",
+  "prompts": {},
+  "humans": {
+    "h_8b9b8fe190c867": {
+      "author": "Raul Ripoll <raulral@ext.inditex.com>"
+    }
+  }
+}
