@@ -296,7 +296,21 @@ function saveGame() {
             escorts: Object.fromEntries(
               escorts.map((escort) => [
                 escort.id,
-                { condition: escort.combat.condition, crew: escort.combat.crew },
+                {
+                  condition: escort.combat.condition,
+                  crew: escort.combat.crew,
+                  // Her racks ride with her (S122). Without this an escort came out of a
+                  // fight dry, the yard sold her the rounds back, and the next voyage
+                  // re-rigged her out of the fleet sheet as if nothing had happened: the
+                  // rearm was paid for and forgotten.
+                  pieces: (escort.combat.pieces ?? []).map((p) => ({
+                    pieceId: p.pieceId,
+                    side: p.side,
+                    ammoId: p.ammoId,
+                    shotsLeft: p.shotsLeft,
+                    reloadTimer: p.reloadTimer,
+                  })),
+                },
               ]),
             ),
             player: {
@@ -2532,6 +2546,24 @@ function boot() {
       // voyage wins, or an escort would come back whole after being shot to pieces.
       combatant.condition = { ...combatant.condition, ...saved.condition };
       combatant.crew = { ...combatant.crew, ...saved.crew };
+      // Her rounds too (S122): the guns are rebuilt from the fleet sheet, which knows the
+      // allowance she was built with and nothing about what the last fight spent.
+      if (Array.isArray(saved.pieces)) {
+        combatant.pieces = combatant.pieces.map((piece, index) => {
+          const stored = saved.pieces[index];
+          if (!stored) return piece;
+          // A refit can put a different gun in that slot, and the round the player chose
+          // only comes back when the gun can actually fire it (S65).
+          const samePiece = !stored.pieceId || stored.pieceId === piece.pieceId;
+          const carries = samePiece && pieceById(piece.pieceId).ammo.includes(stored.ammoId);
+          return {
+            ...piece,
+            ...(carries ? { ammoId: stored.ammoId } : {}),
+            shotsLeft: stored.shotsLeft ?? piece.shotsLeft,
+            reloadTimer: stored.reloadTimer ?? 0,
+          };
+        });
+      }
     }
     // Neither a saved sea nor the fleet sheet may bring a lost hull back fighting.
     refreshStatus(combatant);

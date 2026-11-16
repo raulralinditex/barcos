@@ -1,6 +1,6 @@
 # Juego de barcos — comercio y astilleros por zona
 
-Estado: cerrada S112-S121, sin pendientes. Rama: `feat/comercio-y-astilleros` (se crea desde `feat/t7-combate-costados` antes del primer commit). Cierra el pendiente grande de `pendientes.md`: la carga deja de ser castigo puro y pasa a producir dinero.
+Estado: cerrada S112-S122, sin pendientes. Rama: `feat/comercio-y-astilleros` (se crea desde `feat/t7-combate-costados` antes del primer commit). Cierra el pendiente grande de `pendientes.md`: la carga deja de ser castigo puro y pasa a producir dinero.
 
 ## Specs
 
@@ -68,6 +68,11 @@ S121. **Un casco sin pólvora se rearma en el astillero.** Reporte del usuario (
 - **El mar lo dice en voz alta**: cuando la capitana se queda sin una sola ronda entre todos sus cañones, sale el banner `sea.banner.dry` nombrando el casco y dónde arreglarlo. Antes la nave simplemente se callaba, que es exactamente lo que el jugador reportó como síntoma.
 - **Lados**: una recámara vieja guardada con `side: "lado"` cuenta como la misma banda que declara la ficha (`babor`): mismo cañón con otro nombre no es otro cañón.
 
+S122. **Las recámaras de una escolta viajan con ella.** Consecuencia de S121: rearmar escribe las rondas en `combat.escorts[id].pieces` del guardado del mar, pero el mar **nunca escribía ni leía** las piezas de una escolta — sólo `condition` y `crew`. El resultado era el peor de los dos mundos: el jugador pagaba el rearme y la escolta zarpaba como recién construida, con la asignación completa del constructor.
+- **Se guarda**: el autoguardado del mar escribe `pieces` por escolta con `pieceId`, `side`, `ammoId`, `shotsLeft` y `reloadTimer` — los mismos campos que ya se guardaban para la capitana.
+- **Se lee**: al zarpar, cada cañón de la escolta se restaura índice a índice, con las mismas dos guardas que la capitana: la pieza tiene que ser la misma (un reformador puede poner otro cañón en ese hueco) y el proyectil guardado tiene que ser uno que esa pieza pueda disparar (S65).
+- **Un guardado anterior a S122 no rompe nada**: sin `pieces` el casco se arma desde la ficha de la flota, que es lo que hacía siempre.
+
 ## Tasks
 
 - T1 — S112: registro de astilleros, `shipyardAt`/`currentShipyard` y zona derivada. Ruta: inline. Commit: `a4b7b1e`.
@@ -78,6 +83,7 @@ S121. **Un casco sin pólvora se rearma en el astillero.** Reporte del usuario (
 - T6 — S119: mercado con memoria. Stock por astillero, precio derivado del stock, recuperación por reloj de juego, persistencia en el guardado del mar y pantalla con el stock a la vista. Ruta: worker con contrato cerrado por el orquestador. Commit: `feat(market): a port remembers what she sold you`.
 - T7 — S120: identidad de dos cascos iguales. El rol `combat.player` se movía sin la nave que lo ocupaba. Ruta: worker + verificación del orquestador en rojo y verde. Commit: `fix(fleet): two identical hulls no longer swap their combat record`.
 - T8 — S121: el astillero rearma, y el tope de munición por cañón es un valor declarado. Modelo (`src/model/rearm.js`), botón en el panel del casco, banner en el mar, i18n y smoke. Ruta: inline. Commit: `fix(gunnery): a dry hull buys her rounds back at the yard`.
+- T9 — S122: las recámaras de las escoltas en el guardado del mar (escritura y lectura). Ruta: inline. Commit: `fix(fleet): an escort's racks travel with her`.
 
 ## Log
 
@@ -106,3 +112,5 @@ L11 (pedido de continuación, verbatim): "arranca el servidor y continua con lo 
 L12 (decisión del orquestador, sin consulta): el tope de rondas por cañón pasa a ser **un valor declarado** (`REARM.maxRoundsPerGun`, 400) en vez del 200 escrito dos veces en la pantalla del constructor. El pedido del jugador de "llevar más munición" no se puede cumplir con el número hardcodeado en el HTML, y la regla de diseño del proyecto es que todo número de diseño es configurable o declarado. Se reporta en el cierre.
 
 L13 (cierre de S121): `npm test` **726/726**. `scripts/smoke-rearm.mjs` nuevo, verde, con RED observado en dos tandas: sin el handler del botón falla con "the yard charges exactly what it quoted" (el oro no se movía); sin `warnIfDry()` falla con "the sea names the dry hull instead of going silent". El smoke no usa números mágicos: la cotización esperada sale de `rearmQuote`, la misma llamada que hace la pantalla. Cotización medida en el caso del smoke: 60 rondas por 92 doblones. Se corrigió de paso `writeFortSave` en el camino del reflotado, que escribía `gold` dentro de `fort` en vez de en la raíz del guardado del mar.
+
+L14 (S122, autorizado con "si" sobre la limitación reportada en el cierre de S121): el guardado del mar no llevaba las recámaras de las escoltas. Se agregaron al autoguardado y al arranque de la travesía, con las mismas guardas de pieza y proyectil que la capitana. `scripts/smoke-escort-racks.mjs` nuevo: RED observado sin el arreglo con "the escort's racks are in the sea save at all (S122)"; con el arreglo verde, y prueba además que la escolta zarpó con las 25 rondas que le vendió el astillero y no con la asignación del constructor. `npm test` 726/726. Smokes en 0: escort-racks, escort-dock, escort-range, formation, visible-escorts, command-handover, combat, fleet, rearm, two-hulls, sea, anchor-yard.
