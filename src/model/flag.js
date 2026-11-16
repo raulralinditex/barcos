@@ -14,6 +14,7 @@
  */
 
 import { COUNTRIES, hullById } from "../data/naval-data.js";
+import { isCountryId } from "./country.js";
 
 /** The country id a hull was built in, resolved from its own catalogue entry (S72). */
 export function hullCountryId(hullId) {
@@ -36,12 +37,20 @@ export function hullCountryId(hullId) {
 export function flagFor(input) {
   // A null or non-object argument must not throw: the sea calls this for every hull it
   // draws, including one whose record failed to load.
-  const { hullId, isFleet = false, captainHullId = null } =
+  const { hullId, isFleet = false, captainHullId = null, country = null } =
     input && typeof input === "object" ? input : {};
   if (isFleet) {
+    // The player's fleet flies the country the player selected, whatever her hulls were
+    // built as. Without a valid one the captain's hull decides, as it always did (S72).
+    if (isCountryId(country)) return country;
     return hullCountryId(captainHullId) ?? hullCountryId(hullId) ?? COUNTRIES[0];
   }
   return hullCountryId(hullId) ?? COUNTRIES[0];
+}
+
+/** The flag a shipyard flies: the player's selected country, or the default one. */
+export function yardFlag(country) {
+  return isCountryId(country) ? country : COUNTRIES[0];
 }
 
 /**

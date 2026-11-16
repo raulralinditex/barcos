@@ -73,7 +73,8 @@ import {
 } from "../model/squadron.js";
 import { createEscort } from "../model/formation.js";
 import { hasEnemyInGunshot, hullBarShare, timeScaleOnEngage } from "../model/sea-hud.js";
-import { flagColours, flagFor } from "../model/flag.js";
+import { flagColours, flagFor, yardFlag } from "../model/flag.js";
+import { normaliseCountry } from "../model/country.js";
 import { conditionShare, duelRoster, duelVisible } from "../model/duel-panel.js";
 import {
   canAssaultFort,
@@ -110,6 +111,20 @@ import {
 const SHIP_KEY = "barcos:current-ship:v1";
 const FLEET_KEY = "barcos:fleet:v1";
 const GAME_KEY = "barcos:game:v1";
+const COUNTRY_KEY = "barcos:country:v1";
+
+/**
+ * The country the player selected in the shipyard: it is the colours of every hull of
+ * the fleet and of every yard. Read once when the sea opens, because the country can only
+ * change in the shipyard; unreadable storage means the default country.
+ */
+const playerCountry = (() => {
+  try {
+    return normaliseCountry(localStorage.getItem(COUNTRY_KEY));
+  } catch {
+    return normaliseCountry(null);
+  }
+})();
 
 const PX_PER_M = 0.4; // camera scale: 1 px on screen = 2.5 m of sea
 const MINIMAP_RADIUS = 85;
@@ -752,6 +767,7 @@ function drawSea(ctx) {
     ctx.font = "600 90px ui-sans-serif, system-ui, sans-serif";
     ctx.textAlign = "center";
     ctx.fillText("⚓", yard.x, yard.y + 32);
+    drawYardFlag(ctx, yard);
   }
 
   // A yard the enemy holds flies her colours over the anchor (S93): the player has to be
@@ -1148,6 +1164,24 @@ function drawFlag(ctx, countryId, { x = -10, y = 0, size = 26 } = {}) {
   ctx.strokeRect(x - size, y - height / 2, size, height);
 }
 
+/**
+ * The flag of a shipyard: a mast on the quay with the player's colours streaming from it.
+ * A yard the enemy holds flies none, because it is not hers to fly (S93).
+ */
+function drawYardFlag(ctx, yard) {
+  if (yard.home && fortCombat && fortHeldByEnemy(fortCombat)) return;
+  const x = yard.x + yard.mooringM * 0.42;
+  const y = yard.y - yard.mooringM * 0.42;
+  ctx.save();
+  ctx.translate(x, y);
+  ctx.beginPath();
+  ctx.arc(0, 0, 5, 0, Math.PI * 2);
+  ctx.fillStyle = "#3a4048";
+  ctx.fill();
+  drawFlag(ctx, yardFlag(playerCountry), { x: 0, size: 48 });
+  ctx.restore();
+}
+
 function drawEnemySail(ctx, encounter) {
   ctx.save();
   ctx.translate(encounter.x, encounter.y);
@@ -1245,7 +1279,7 @@ function drawRangeArcs(ctx, combatant, x, y, heading, { captain }) {
 function drawPlayerShip(ctx) {
   const ship = world.ship;
   const hull = hullById(runtimeShip.hullId);
-  const flag = flagFor({ hullId: runtimeShip.hullId, isFleet: true, captainHullId: runtimeShip.hullId });
+  const flag = flagFor({ hullId: runtimeShip.hullId, isFleet: true, captainHullId: runtimeShip.hullId, country: playerCountry });
   const lengthRatio = hull ? Math.min(1.5, Math.max(0.7, hull.lengthM / 25)) : 1;
   const len = 70 * lengthRatio;
   const beam = 26 * lengthRatio;
@@ -1325,7 +1359,7 @@ function drawEscortShip(ctx, escort) {
   }
   // Every hull in the fleet flies the captain's colours (S72).
   const captainHull = captainShip(fleet)?.hullId ?? runtimeShip.hullId;
-  drawFlag(ctx, flagFor({ hullId: ship?.hullId, isFleet: true, captainHullId: captainHull }), {
+  drawFlag(ctx, flagFor({ hullId: ship?.hullId, isFleet: true, captainHullId: captainHull, country: playerCountry }), {
     x: -len * 0.3,
     size: 22,
   });
