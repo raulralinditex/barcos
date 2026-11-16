@@ -58,6 +58,7 @@ import { ARRIVAL_NOTICE_KEY } from "../model/arrival-notice.js";
 import { normaliseGold } from "../model/economy.js";
 import { awardHold, bindGameTime, defeatedHold, enemyHoldFor, normaliseMarkets, recoverMarkets } from "../model/commerce.js";
 import { isWreck, wreckHull } from "../model/sinking.js";
+import { isOutOfAmmo } from "../model/rearm.js";
 import { bootSettings } from "../model/settings-storage.js";
 import { bootCatalogue } from "../model/catalogue-storage.js";
 import { AUTOFIRE } from "../model/settings.js";
@@ -231,6 +232,8 @@ let playerCombat = null;
 let supplyLeftS = 0;
 /** Set once, so the "no provisions" warning fires on the moment it runs out. */
 let supplyWarned = false;
+/** Whether the player has been told her guns are dry (S121). */
+let dryWarned = false;
 /**
  * The shipyard as a combatant (S74). She is built at boot and kept in the save, so her
  * damage and her garrison survive a reload, like a hull's.
@@ -1757,6 +1760,7 @@ function processCombat(dt, now) {
   }
 
   resolveDefeatedEnemies();
+  warnIfDry();
 
   // The voyage ends when nothing is left to sail (S87): losing the flagship is a blow,
   // not the end, and the next hull in line takes over. Only when every hull is gone does
@@ -1892,6 +1896,18 @@ function resolveDefeatedEnemies() {
  * home and find a market for it. Whatever does not fit stays in the water and the crew is
  * told, because silently dropping it would read as the game eating the prize.
  */
+/**
+ * Say it out loud when the captain's guns run dry (S121). Before this the ship simply
+ * went silent, which the player read as a broken game rather than as an empty rack: the
+ * warning names the cause and where to fix it.
+ */
+function warnIfDry() {
+  if (dryWarned || !playerCombat) return;
+  if (!isOutOfAmmo(playerCombat)) return;
+  dryWarned = true;
+  showBanner(t("sea.banner.dry", { name: runtimeShip.name }), "danger", 5000);
+}
+
 function collectCargoFrom(encounter, status) {
   const carried = enemyHoldFor(encounter);
   const spoils = defeatedHold(carried, status);

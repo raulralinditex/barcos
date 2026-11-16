@@ -2336,6 +2336,16 @@ input[type="number"] {
   font-size: 10.5px;
 }
 
+/* S121: the rearm action rides with the repair and sell ones in the hull's panel. */
+.fleet-rearm {
+  padding: 4px 8px;
+  font-size: 11px;
+}
+
+.fleet-rearm[hidden] {
+  display: none;
+}
+
 .market-empty,
 .market-status {
   font-size: 11px;

@@ -1,6 +1,6 @@
 # Juego de barcos — comercio y astilleros por zona
 
-Estado: cerrada S112-S120, sin pendientes. Rama: `feat/comercio-y-astilleros` (se crea desde `feat/t7-combate-costados` antes del primer commit). Cierra el pendiente grande de `pendientes.md`: la carga deja de ser castigo puro y pasa a producir dinero.
+Estado: cerrada S112-S121, sin pendientes. Rama: `feat/comercio-y-astilleros` (se crea desde `feat/t7-combate-costados` antes del primer commit). Cierra el pendiente grande de `pendientes.md`: la carga deja de ser castigo puro y pasa a producir dinero.
 
 ## Specs
 
@@ -59,6 +59,15 @@ S120. **Dos cascos iguales no comparten identidad.** Reporte del usuario (verbat
 - **Arreglo**: al cambiar de capitana, los dos combatientes se mueven juntos (`savePurse` con `promoteFrom`/`promoteTo`): el viejo baja a `escorts[suId]` y el nuevo sube a `player`. Los loadouts de cada casco nunca se tocaron: el bug era de condición y tripulación, no del reformador.
 - **Prueba en rojo**: `scripts/smoke-two-hulls.mjs` recorre reformar A, reformar B, descartar A, reformar A dos veces, ascender capitana y transferir el mando en el mar. Sin el parche falla con "promotion missing combat player / condition / crew"; con el parche pasa entero.
 
+S121. **Un casco sin pólvora se rearma en el astillero.** Reporte del usuario (verbatim): "despues de librar varias batallas y teniendo todo correctamente el barco a dejado de disparar".
+- **Causa real**: cada cañón lleva `shotsLeft`; disparar gasta uno, y un cañón en cero se filtra fuera de `firingPieces`, así que deja de existir como cañón. Nada en el juego reponía rondas: ni el astillero, ni el ancla, ni la reparación. Tras suficientes batallas el casco quedaba con cañones mudos para siempre, y el jugador lo leía como un juego roto.
+- **La regla**: rearmar es un servicio que el astillero **vende**, al precio de la misma fórmula de munición que ya usa el constructor (precio del proyectil + la pólvora del disparo). Se cobra **sólo por las rondas que faltan**, así que media recámara cuesta la mitad y rearmar dos veces paga una vez.
+- **Qué se mide**: la asignación comprada del casco (`shotsPerPiece` de su entrada en la flota) contra lo que queda en las recámaras del guardado del mar. Un casco en puerto sin estado vivo de combate no debe nada: no hay recámara que reponer.
+- **Dónde se escribe**: en los dos lados. El guardado del mar (`barcos:game:v1`, `combat.player.pieces[].shotsLeft`) es de donde el mar reconstruye los cañones en la próxima travesía; la ficha de la flota es de donde se arma el casco. Reponer sólo uno de los dos deja el bug vivo en el otro.
+- **El tope de munición es un valor declarado**: `REARM.maxRoundsPerGun` (400), no el 200 escrito dos veces en la pantalla del constructor. El pedido del jugador de llevar más munición no se puede cumplir con el número hardcodeado en el HTML.
+- **El mar lo dice en voz alta**: cuando la capitana se queda sin una sola ronda entre todos sus cañones, sale el banner `sea.banner.dry` nombrando el casco y dónde arreglarlo. Antes la nave simplemente se callaba, que es exactamente lo que el jugador reportó como síntoma.
+- **Lados**: una recámara vieja guardada con `side: "lado"` cuenta como la misma banda que declara la ficha (`babor`): mismo cañón con otro nombre no es otro cañón.
+
 ## Tasks
 
 - T1 — S112: registro de astilleros, `shipyardAt`/`currentShipyard` y zona derivada. Ruta: inline. Commit: `a4b7b1e`.
@@ -67,6 +76,8 @@ S120. **Dos cascos iguales no comparten identidad.** Reporte del usuario (verbat
 - T4 — S117: ajuste `sinking.keepWreck`, naufragio en la flota y reflotado en el astillero. Ruta: inline. Commit: `06cebbe`.
 - T5 — S118 y la UI de S112-S117: pestaña Mercado, astilleros en el HUD y el minimapa, grupo `commerce` y el interruptor en Configuración, i18n es/en y smokes. Ruta: inline + un worker para el bug del click. Commit: `4633a20`.
 - T6 — S119: mercado con memoria. Stock por astillero, precio derivado del stock, recuperación por reloj de juego, persistencia en el guardado del mar y pantalla con el stock a la vista. Ruta: worker con contrato cerrado por el orquestador. Commit: `feat(market): a port remembers what she sold you`.
+- T7 — S120: identidad de dos cascos iguales. El rol `combat.player` se movía sin la nave que lo ocupaba. Ruta: worker + verificación del orquestador en rojo y verde. Commit: `fix(fleet): two identical hulls no longer swap their combat record`.
+- T8 — S121: el astillero rearma, y el tope de munición por cañón es un valor declarado. Modelo (`src/model/rearm.js`), botón en el panel del casco, banner en el mar, i18n y smoke. Ruta: inline. Commit: `fix(gunnery): a dry hull buys her rounds back at the yard`.
 
 ## Log
 
@@ -85,6 +96,13 @@ L6: El usuario eligió la opción A: el reposo (60) es el centro de la banda; la
 L7: El usuario eligió la opción B: no se compra más de lo que tiene el puerto; el pedido entero se rechaza sin mover oro, bodega ni stock. Dos viajes idénticos de 20 unidades caben en el stock inicial. La venta separada de 40 de sal en el abismo ilustra «unos 35 %»: con la curva acordada el precio redondeado cae de 58 a 36, un 37,93 %, sin alterar `floorShare` para forzar el ejemplo.
 
 L8 (cierre de S119): `npm test` **717/717**. Smokes verificados uno por uno con su exit code: market, sale, fleet, dock, settings, tabs, sea, anchor-yard, shipyard-layout, todos en 0. Los dos smokes que el worker había saltado por miedo a escribir capturas fuera de su superficie no escriben en el repo: van a `/tmp/fleet.png` y `/tmp/sea.png`, que no están versionados.
-- T7 — S120: identidad de dos cascos iguales. El rol `combat.player` se movía sin la nave que lo ocupaba. Ruta: worker + verificación del orquestador en rojo y verde. Commit: `fix(fleet): two identical hulls no longer swap their combat record`.
 
 L9 (S120): el worker se colgó a los 4 minutos pero dejó el parche y el smoke. Verifiqué el rojo yo mismo con `git stash`: sin el parche el smoke falla con la capitana nueva heredando condición, tripulación y cañones de la vieja; con el parche pasa. `npm test` 717/717, y smokes market, fleet, sale, dock y tabs en 0.
+
+L10 (pedido original de S121, verbatim): "despues de librar varias batallas y teniendo todo correctamente el barco a dejado de disparar".
+
+L11 (pedido de continuación, verbatim): "arranca el servidor y continua con lo que no esta cerrado".
+
+L12 (decisión del orquestador, sin consulta): el tope de rondas por cañón pasa a ser **un valor declarado** (`REARM.maxRoundsPerGun`, 400) en vez del 200 escrito dos veces en la pantalla del constructor. El pedido del jugador de "llevar más munición" no se puede cumplir con el número hardcodeado en el HTML, y la regla de diseño del proyecto es que todo número de diseño es configurable o declarado. Se reporta en el cierre.
+
+L13 (cierre de S121): `npm test` **726/726**. `scripts/smoke-rearm.mjs` nuevo, verde, con RED observado en dos tandas: sin el handler del botón falla con "the yard charges exactly what it quoted" (el oro no se movía); sin `warnIfDry()` falla con "the sea names the dry hull instead of going silent". El smoke no usa números mágicos: la cotización esperada sale de `rearmQuote`, la misma llamada que hace la pantalla. Cotización medida en el caso del smoke: 60 rondas por 92 doblones. Se corrigió de paso `writeFortSave` en el camino del reflotado, que escribía `gold` dentro de `fort` en vez de en la raíz del guardado del mar.

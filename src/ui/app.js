@@ -72,6 +72,8 @@ import { GAME_TIME } from "../model/game-time.js";
 import { currentShipyard, deserializeWorld, shipyardZone } from "../model/world.js";
 import { COMMODITIES, SHIPYARDS } from "../data/naval-data.js";
 import { floatsAgain, isWreck, refloatCost } from "../model/sinking.js";
+import { rearmQuote, rearmShip } from "../model/rearm.js";
+import { REARM } from "../model/rearm.js";
 
 const STORAGE_KEY = "barcos:config:v1";
 const GAME_KEY = "barcos:game:v1";
@@ -218,6 +220,7 @@ const els = {
   fleetDetailHull: $("#fleet-detail-hull"),
   fleetBars: $("#fleet-bars"),
   fleetRepairBtn: $("#fleet-repair-btn"),
+  fleetRearmBtn: $("#fleet-rearm-btn"),
   fleetSellBtn: $("#fleet-sell-btn"),
   fleetEmptyHint: $("#fleet-empty-hint"),
   eraseBtn: $("#erase-btn"),
@@ -460,7 +463,7 @@ function renderBatteries() {
           <input type="number" min="0" max="40" step="1" value="${entry.qty}" data-field="qty" />
         </label>
         <label><span>${t("shipyard.battery.shots")}</span>
-          <input type="number" min="0" max="200" step="5" value="${entry.shotsPerPiece}" data-field="shotsPerPiece" />
+          <input type="number" min="0" max="${REARM.maxRoundsPerGun}" step="5" value="${entry.shotsPerPiece}" data-field="shotsPerPiece" />
         </label>
         <label><span>${t("shipyard.battery.ammo")}</span>
           <select data-field="ammoId">
@@ -1492,6 +1495,44 @@ function renderFort() {
       : "";
 }
 
+/**
+ * Write the topped-up racks back into the sea save (S121). The rearm is useless if only
+ * the fleet sheet learns about it: the sea rebuilds every gun from `combat`, so that is
+ * where the rounds have to land or the next voyage sails with empty racks again.
+ */
+function writeRackedRounds(shipId, live) {
+  if (!live || !Array.isArray(live.pieces)) return;
+  const record = readFortSave();
+  if (!record?.combat) return;
+  const combat = record.combat;
+  const isCaptain = fleet.captainId === shipId;
+  const patched = isCaptain
+    ? { ...combat, player: { ...combat.player, pieces: live.pieces } }
+    : { ...combat, escorts: { ...combat.escorts, [shipId]: { ...combat.escorts?.[shipId], pieces: live.pieces } } };
+  // The first argument of `writeFortSave` is the FORT patch; a top-level field of the
+  // sea save goes in the second one, or the racks would be written under `fort.combat`.
+  writeFortSave({}, { combat: patched });
+}
+
+/**
+ * What the sea save says is left in one hull's racks (S121). The fleet sheet carries the
+ * bought loadout, not the rounds: only the sea knows what a battle spent, so the quote
+ * has to read it from there or the yard would always think the racks are full.
+ *
+ * A hull with nothing saved (never sailed, or a save written before this feature) comes
+ * back null, which the quote reads as "nothing owed" — the safe direction, because it can
+ * never charge for rounds that were never spent.
+ */
+function readLiveCombat(shipId) {
+  const game = readFortSave();
+  const combat = game?.combat;
+  if (!combat) return null;
+  const isCaptain = fleet.captainId === shipId;
+  const saved = isCaptain ? combat.player : combat.escorts?.[shipId];
+  if (!saved || !Array.isArray(saved.pieces)) return null;
+  return { pieces: saved.pieces };
+}
+
 function saveFleet() {
   try {
     localStorage.setItem(FLEET_KEY, serializeFleet(fleet));
@@ -1592,6 +1633,7 @@ function renderFleetDetail() {
     els.fleetRepairBtn.title = t("fleet.wreckHint");
     els.fleetSellBtn.disabled = true;
     els.fleetSellBtn.textContent = t("shipyard.sell", { gold: gold(0) });
+    if (els.fleetRearmBtn) els.fleetRearmBtn.hidden = true;
     return;
   }
 
@@ -1604,6 +1646,22 @@ function renderFleetDetail() {
   els.fleetRepairBtn.title = cost > 0
     ? t("fleet.repairTitle", { name: ship.name, gold: gold(priceWithPurse(cost, state.gold)) })
     : t("fleet.repairSound", { name: ship.name });
+
+  // S121: what the yard charges to put the rounds back. A hull in port has no live racks
+  // to measure, so the button reads her loadout and offers nothing to top up until the
+  // sea save says how much she actually spent.
+  const liveCombat = readLiveCombat(ship.id);
+  const rearm = rearmQuote(ship, liveCombat);
+  if (els.fleetRearmBtn) {
+    els.fleetRearmBtn.hidden = !rearm.rearmable;
+    els.fleetRearmBtn.disabled = !rearm.rearmable || state.gold < rearm.cost;
+    els.fleetRearmBtn.textContent = rearm.rearmable
+      ? t("fleet.rearm", { gold: gold(priceWithPurse(rearm.cost, state.gold)), rounds: fmtInt.format(rearm.rounds) })
+      : "";
+    els.fleetRearmBtn.title = rearm.rearmable
+      ? t("fleet.rearmTitle", { name: ship.name, rounds: fmtInt.format(rearm.rounds) })
+      : "";
+  }
 
   const canSell = canSellShip(fleet, ship.id);
   els.fleetSellBtn.disabled = !canSell;
@@ -1655,6 +1713,31 @@ els.fleetList.addEventListener("click", (event) => {
 // Repairing is the player's decision, one hull at a time (S86): the sea no longer repairs
 // on arrival, so this button is where a damaged hull is put right. It acts on the hull
 // the fleet list has selected.
+els.fleetRearmBtn?.addEventListener("click", () => {
+  const target = fleet.ships.find((entry) => entry.id === refitId);
+  if (!target || isWreck(target)) return;
+  const live = readLiveCombat(target.id);
+  const result = rearmShip(target, live, state.gold);
+  if (!result) {
+    els.purchaseNotice.textContent = t("fleet.rearmNone");
+    return;
+  }
+  fleet = { ...fleet, ships: fleet.ships.map((entry) => (entry.id === target.id ? result.ship : entry)) };
+  state.gold = result.gold;
+  saveFleet();
+  // The rounds live in the sea save's racks, so the rearm is written there too (S121).
+  writeRackedRounds(target.id, result.live);
+  writeFortSave({}, { gold: state.gold });
+  els.goldValue.textContent = gold(state.gold);
+  els.purchaseNotice.textContent = t("fleet.rearmed", {
+    name: target.name,
+    rounds: fmtInt.format(result.quote.rounds),
+    gold: gold(result.quote.cost),
+  });
+  renderFleet();
+  render();
+});
+
 els.fleetRepairBtn.addEventListener("click", () => {
   const target = fleet.ships.find((entry) => entry.id === refitId);
   if (!target) return;
@@ -1673,7 +1756,7 @@ els.fleetRepairBtn.addEventListener("click", () => {
     fleet = { ...fleet, ships: fleet.ships.map((entry) => (entry.id === target.id ? floated : entry)) };
     state.gold -= price;
     saveFleet();
-    writeFortSave({ gold: state.gold });
+    writeFortSave({}, { gold: state.gold });
     els.goldValue.textContent = gold(state.gold);
     els.purchaseNotice.textContent = t("fleet.refloated", { name: floated.name, gold: gold(price) });
     renderFleet();
