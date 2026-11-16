@@ -28,6 +28,7 @@ import {
   loadedShare,
   maneuverFactor,
   setBroadsideAmmo,
+  setFleetAmmo,
   readyDamage,
   sideCapacity,
   sideForBearing,
@@ -585,14 +586,17 @@ function toggleTimeWarp() {
 }
 
 /**
- * Load the guns with the round a key stands for (S65). The guns that cannot fire it keep
- * the round they already had, and the banner says how many of each, so the player can see
- * that a 32-pounder did not follow the order.
+ * Load the guns with the round a key stands for (S65, S127). The guns that cannot fire it
+ * keep the round they already had, and the banner says how many of each, so the player can
+ * see that a 32-pounder did not follow the order.
+ *
+ * The order is the whole squadron's (S127): when the captain changes ammunition every
+ * escort that can fire that round changes with her, because the fleet is one command.
  */
 function chooseAmmunition(key) {
   const ammoId = ammoKeyAmmoId(key);
   if (!ammoId || !playerCombat) return;
-  const result = setBroadsideAmmo(playerCombat, ammoId);
+  const result = setFleetAmmo(playerCombat, escorts, ammoId);
   if (result.switched === 0 && result.kept === 0) return;
   const name = localisedAmmo(ammoId, t).name;
   showBanner(

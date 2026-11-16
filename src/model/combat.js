@@ -372,6 +372,38 @@ export function setBroadsideAmmo(combatant, ammoId) {
   return result;
 }
 
+/**
+ * Load the whole squadron with one round (S127). The captain's order is the fleet's order:
+ * when she changes ammunition, every hull that can fire that round changes with her.
+ *
+ * Each escort answers for her own guns, so the totals add up over the fleet: a hull with a
+ * 32-pounder still keeps it, exactly as the captain's own big gun does. Nothing is spent
+ * by switching and each gun that changes pays its own reload penalty (S70).
+ *
+ * Returns the captain's own result plus a total across the squadron, so the banner can say
+ * how many guns of the whole fleet took the round.
+ */
+export function setFleetAmmo(captain, escorts, ammoId) {
+  const total = { ammoId, switched: 0, kept: 0, hulls: 0 };
+  const add = (one) => {
+    total.switched += one.switched;
+    total.kept += one.kept;
+    return one;
+  };
+  const own = add(setBroadsideAmmo(captain, ammoId));
+  if (own.switched > 0 || own.kept > 0) total.hulls += 1;
+  for (const escort of Array.isArray(escorts) ? escorts : []) {
+    const combat = escort?.combat;
+    // A hull that struck or sank is not a gun that can take an order.
+    if (!combat || combat.status !== "fighting") continue;
+    const one = setBroadsideAmmo(combat, ammoId);
+    if (one.switched === 0 && one.kept === 0) continue;
+    add(one);
+    total.hulls += 1;
+  }
+  return { ...total, captain: own };
+}
+
 /** The same as `setBroadsideAmmo`, named for what the key press does. */
 export function chooseAmmo(combatant, ammoId) {
   return setBroadsideAmmo(combatant, ammoId);

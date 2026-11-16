@@ -19,6 +19,7 @@ import {
   describeAmmo,
   fireBroadside as fireVolley,
   setBroadsideAmmo,
+  setFleetAmmo,
   setSideAmmo,
 } from "../src/model/combat.js";
 import { pieceById } from "../src/data/naval-data.js";
@@ -253,4 +254,61 @@ test("S65: the switch does not cost gold or ammunition", () => {
 
 test("S65: AMMO_SWITCH names the three rounds the keys cycle", () => {
   assert.deepEqual(AMMO_SWITCH, ["bala-hierro", "cadena", "metralla"]);
+});
+
+test("S127: the captain's order loads every hull of the squadron that can fire it", () => {
+  const captain = createPlayerCombatant(runtime([
+    { pieceId: "minion", qty: 2, side: "babor", shotsPerPiece: 25, ammoId: "bala-hierro" },
+    { pieceId: "medio-canon-32", qty: 1, side: "estribor", shotsPerPiece: 20, ammoId: "bala-hierro" },
+  ]));
+  const minionEscort = createPlayerCombatant(runtime([
+    { pieceId: "minion", qty: 2, side: "babor", shotsPerPiece: 25, ammoId: "bala-hierro" },
+  ]));
+  // A hull with only a 32-pounder cannot fire chain: she must keep her iron.
+  const heavyEscort = createPlayerCombatant(runtime([
+    { pieceId: "medio-canon-32", qty: 1, side: "babor", shotsPerPiece: 20, ammoId: "bala-hierro" },
+  ]));
+  const escorts = [
+    { id: "a", combat: minionEscort },
+    { id: "b", combat: heavyEscort },
+  ];
+
+  const result = setFleetAmmo(captain, escorts, "cadena");
+  assert.equal(result.ammoId, "cadena");
+  assert.equal(result.hulls, 3, "the captain and two escorts took the order");
+
+  const rounds = (combatant) => combatant.pieces.map((p) => p.ammoId);
+  assert.deepEqual(rounds(captain), ["cadena", "cadena", "bala-hierro"], "the big gun keeps her iron");
+  assert.deepEqual(rounds(minionEscort), ["cadena", "cadena"], "the light escort follows the captain");
+  assert.deepEqual(rounds(heavyEscort), ["bala-hierro"], "a gun that cannot fire it keeps its round");
+
+  // The totals add up over the fleet, which is what the banner says out loud.
+  assert.equal(result.switched, 4);
+  assert.equal(result.kept, 2);
+});
+
+test("S127: a hull that struck or sank does not take the order", () => {
+  const captain = createPlayerCombatant(runtime([
+    { pieceId: "minion", qty: 1, side: "babor", shotsPerPiece: 25, ammoId: "bala-hierro" },
+  ]));
+  const sunk = createPlayerCombatant(runtime([
+    { pieceId: "minion", qty: 1, side: "babor", shotsPerPiece: 25, ammoId: "bala-hierro" },
+  ]));
+  sunk.status = "sunk";
+  const result = setFleetAmmo(captain, [{ id: "a", combat: sunk }], "cadena");
+  assert.equal(result.hulls, 1, "only the captain answered");
+  assert.deepEqual(sunk.pieces.map((p) => p.ammoId), ["bala-hierro"], "the sunk hull was left alone");
+});
+
+test("S127: the whole fleet pays the reload penalty, and the round costs nothing", () => {
+  const captain = createPlayerCombatant(runtime([
+    { pieceId: "minion", qty: 1, side: "babor", shotsPerPiece: 25, ammoId: "bala-hierro" },
+  ]));
+  const escort = createPlayerCombatant(runtime([
+    { pieceId: "minion", qty: 1, side: "babor", shotsPerPiece: 25, ammoId: "bala-hierro" },
+  ]));
+  const before = [captain, escort].map((c) => c.pieces[0].shotsLeft);
+  setFleetAmmo(captain, [{ id: "a", combat: escort }], "cadena");
+  assert.deepEqual([captain, escort].map((c) => c.pieces[0].shotsLeft), before, "switching spends no round");
+  for (const hull of [captain, escort]) assert.ok(hull.pieces[0].ammoPenalty > 0, "each gun pays its own reload cost");
 });
