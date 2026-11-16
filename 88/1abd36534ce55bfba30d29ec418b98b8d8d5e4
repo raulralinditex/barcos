@@ -1,0 +1,21 @@
+src/model/world.js
+  s_8e1c453d9c7d4d::t_533da35d233085 409-412,414-421
+test/world.test.js
+  s_8e1c453d9c7d4d::t_5f097952aa742f 311-339
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.6",
+  "base_commit_sha": "881abd36534ce55bfba30d29ec418b98b8d8d5e4",
+  "prompts": {},
+  "sessions": {
+    "s_8e1c453d9c7d4d": {
+      "agent_id": {
+        "tool": "pi",
+        "id": "01a1e495-607a-72a4-8b05-a77ff14397f8",
+        "model": "deepseek-v4.1-flash_high"
+      },
+      "human_author": "Raul Ripoll <raulral@ext.inditex.com>"
+    }
+  }
+}
