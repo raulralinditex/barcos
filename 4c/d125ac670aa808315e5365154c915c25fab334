@@ -1,27 +1,25 @@
+scripts/smoke-settings.mjs
+  s_48f93862b4f568::t_90cbdb0f36cc54 80-82
+test/yard-markets.test.js
+  s_48f93862b4f568::t_6688aaa88e5bd9 1-103
 src/i18n/en.js
   s_48f93862b4f568::t_4aabecff9841b4 336-337
   s_48f93862b4f568::t_c78a876844348e 596
-test/yard-markets.test.js
-  s_48f93862b4f568::t_6688aaa88e5bd9 1-103
+src/i18n/es.js
+  s_48f93862b4f568::t_c78a876844348e 593
+  s_48f93862b4f568::t_4aabecff9841b4 333-334
 src/model/settings.js
   s_48f93862b4f568::t_4aabecff9841b4 13,184
-scripts/smoke-market.mjs
-  s_48f93862b4f568::t_dd5301b7a3dca8 330-336
-  s_48f93862b4f568::t_103e08f0742564 284-287
-  s_48f93862b4f568::t_90cbdb0f36cc54 102,109-110,113-114,117,129-130,170-171,275
 src/model/commerce.js
   s_48f93862b4f568::t_4d1ce4b9561eab 13,42-71,78-79,85-86,91,152,185,239,399-400,406-407,415
-src/ui/settings-tab.js
-  s_48f93862b4f568::t_4aabecff9841b4 108-113
+scripts/smoke-market.mjs
+  s_48f93862b4f568::t_103e08f0742564 284-287
+  s_48f93862b4f568::t_dd5301b7a3dca8 330-336
+  s_48f93862b4f568::t_90cbdb0f36cc54 102,109-110,113-114,117,129-130,170-171,275
 src/data/naval-data.js
   s_48f93862b4f568::t_4d1ce4b9561eab 688-695,706-711,719-724,732-737
-scripts/smoke-settings.mjs
-  s_48f93862b4f568::t_90cbdb0f36cc54 80-82
-src/i18n/es.js
-  s_48f93862b4f568::t_4aabecff9841b4 333-334
-  s_48f93862b4f568::t_c78a876844348e 593
-scripts/smoke-tabs.mjs
-  s_48f93862b4f568::t_a2537e60ecd805 76
+src/ui/settings-tab.js
+  s_48f93862b4f568::t_4aabecff9841b4 108-113
 ---
 {
   "schema_version": "authorship/3.0.0",
