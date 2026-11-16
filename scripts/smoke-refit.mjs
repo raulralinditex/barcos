@@ -32,6 +32,8 @@ try {
   await page.evaluate(() => {
     localStorage.clear();
     localStorage.setItem("barcos:lang:v1", "es");
+    // This smoke is the manual refit (the save button): the automatic one is off here.
+    localStorage.setItem("barcos:settings:v1", JSON.stringify({ "refit.autoSave": 0 }));
     localStorage.setItem("barcos:game:v1", JSON.stringify({ gold: 100000 }));
   });
   await page.reload({ waitUntil: "networkidle" });

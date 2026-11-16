@@ -78,7 +78,7 @@ const shown = {
 check(shown.rows >= 20, `the screen shows only ${shown.rows} values`);
 // Fort reinforcement (S100/S102) adds its own block to the settings screen, and the trade
 // brings two more (S113, S117): the sinking switch and the market prices.
-check(shown.groups.length === 17, `expected seventeen blocks, got ${shown.groups.join(", ")}`);
+check(shown.groups.length === 18, `expected eighteen blocks, got ${shown.groups.join(", ")}`);
 check(
   shown.groups.some((name) => /Naufragio/i.test(name)) && shown.groups.some((name) => /Comercio/i.test(name)),
   `the sinking and trade blocks must be on screen, got ${shown.groups.join(", ")}`,

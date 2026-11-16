@@ -53,7 +53,7 @@ import {
 import { conditionOf, damagedShips, priceWithPurse, repairCost, repairFleetShip, repairReport } from "../model/repair.js";
 import { buildShip, toRuntimeShip } from "../model/shipyard.js";
 import { repaintSettingsForLanguage } from "./settings-tab.js";
-import { applyRefit, configFromShip, quoteRefit } from "../model/refit.js";
+import { applyRefit, configFromShip, quoteRefit, REFIT } from "../model/refit.js";
 import { canSellShip, salePrice, sellShip } from "../model/sale.js";
 import { FORT, buyFortGun, fortBoughtGuns, fortGunCost, fortGunHeadroom, fortGunsPerSide, fortRepair, fortRepairQuote } from "../model/fort.js";
 import { ARRIVAL_NOTICE_KEY, parseArrivalNotice } from "../model/arrival-notice.js";
@@ -999,6 +999,7 @@ function renderHullPicture(hull) {
 }
 
 function render() {
+  autoSaveRefit();
   const refitShip = fleet.ships.find((entry) => entry.id === refitId);
   const quote = refitShip ? quoteRefit(refitShip, currentConfig(), state.gold) : null;
   const ship = quote
@@ -1023,6 +1024,7 @@ function render() {
 
   els.goldValue.textContent = gold(state.gold);
   els.launchBtn.disabled = !ship.feasible;
+  syncLaunchButton();
 
   for (const card of els.hullList.children) {
     const isActive =
@@ -1037,6 +1039,72 @@ function render() {
 
 /* ---------------------------------------------------------------- launch */
 
+/**
+ * Save the refit editor into the selected hull. The button saves and leaves the mode
+ * (`leave`); the automatic refit saves in place and keeps her selected, so the next
+ * change is a refit of the same hull.
+ */
+function saveRefit({ leave }) {
+  const target = fleet.ships.find((entry) => entry.id === refitId);
+  if (!target) return false;
+  const name = state.shipName.trim() || target.name;
+  const result = applyRefit(target, { ...currentConfig(), name }, state.gold);
+  if (!result.applied) return false;
+  fleet = { ...fleet, ships: fleet.ships.map((entry) => entry.id === target.id ? result.ship : entry) };
+  state.gold = result.gold;
+  saveFleet();
+  savePurse(result.ship, target.id === fleet.captainId, { refit: true });
+  arrivalNotice = null;
+  lastAddedName = name;
+  lastNoticeKey = "shipyard.refit.saved";
+  els.purchaseNotice.textContent = t(lastNoticeKey, { name });
+  els.goldValue.textContent = gold(state.gold);
+  if (leave) {
+    refitId = null;
+    renderFleet();
+    // The refitted hull is fleet business (S98): her strip and her sail checks are what
+    // the player wants to see next; the builder stays where the mode put it.
+    showScreen("flota");
+  } else {
+    renderFleet();
+  }
+  return true;
+}
+
+/** A loadout as a string that does not depend on key order. */
+function stableJson(value) {
+  return JSON.stringify(value, (_key, node) =>
+    node && typeof node === "object" && !Array.isArray(node)
+      ? Object.fromEntries(Object.entries(node).sort(([a], [b]) => (a < b ? -1 : 1)))
+      : node);
+}
+
+/**
+ * The automatic refit (setting `refit.autoSave`, on by default): every change the editor
+ * holds that differs from the selected hull is saved at once. A change that cannot be
+ * saved (it does not fit, or the purse is short) stays in the editor with its verdict on
+ * screen, and is saved the moment it can be. Returns whether something was saved.
+ */
+function autoSaveRefit() {
+  if (!(REFIT.autoSave > 0) || !refitId) return false;
+  const target = fleet.ships.find((entry) => entry.id === refitId);
+  if (!target || isWreck(target)) return false;
+  const quote = quoteRefit(target, currentConfig(), state.gold);
+  const before = buildShip(configFromShip(target))?.config;
+  if (!quote?.feasible || !before) return false;
+  const loadoutChanged = stableJson(quote.built.config) !== stableJson(before);
+  const renamed = (state.shipName.trim() || target.name) !== target.name;
+  if (!loadoutChanged && !renamed) return false;
+  return saveRefit({ leave: false });
+}
+
+/** The save button belongs to buying, and to refitting only when it is not automatic. */
+function syncLaunchButton() {
+  const buying = activeScreen === "comprar";
+  const refitting = activeScreen === "flota" && Boolean(refitId);
+  els.launchBtn.style.display = buying || (refitting && !(REFIT.autoSave > 0)) ? "" : "none";
+}
+
 function launch() {
   const ship = lastShip;
   if (!ship || !ship.feasible) return;
@@ -1047,22 +1115,7 @@ function launch() {
 
   const target = fleet.ships.find((entry) => entry.id === refitId);
   if (target) {
-    const name = state.shipName.trim() || target.name;
-    const result = applyRefit(target, { ...currentConfig(), name }, state.gold);
-    if (!result.applied) return;
-    fleet = { ...fleet, ships: fleet.ships.map((entry) => entry.id === target.id ? result.ship : entry) };
-    state.gold = result.gold;
-    saveFleet();
-    savePurse(result.ship, target.id === fleet.captainId, { refit: true });
-    refitId = null;
-    arrivalNotice = null;
-    lastAddedName = name;
-    lastNoticeKey = "shipyard.refit.saved";
-    els.purchaseNotice.textContent = t(lastNoticeKey, { name });
-    renderFleet();
-    // The refitted hull is fleet business (S98): her strip and her sail checks are what
-    // the player wants to see next; the builder stays where the mode put it.
-    showScreen("flota");
+    saveRefit({ leave: true });
     return;
   }
 
@@ -1124,6 +1177,10 @@ els.addBattery.addEventListener("click", () => {
 els.shipName.addEventListener("input", (event) => {
   state.shipName = event.target.value;
   saveConfig();
+});
+// A rename is a change too: with the automatic refit on it is saved when the box is left.
+els.shipName.addEventListener("change", () => {
+  if (autoSaveRefit()) render();
 });
 
 document.querySelectorAll(".tab").forEach((tab) => {
@@ -1187,7 +1244,7 @@ function showScreen(next) {
   const refitting = next === "flota" && Boolean(refitId);
   const editing = buying || refitting;
   els.priceStrip.style.display = editing ? "" : "none";
-  els.launchBtn.style.display = editing ? "" : "none";
+  syncLaunchButton();
   els.setSailBtn.style.display = next === "flota" ? "" : "none";
   els.eraseBtn.style.display = next === "flota" ? "" : "none";
   els.verdictIssues.style.display = editing ? "" : "none";
