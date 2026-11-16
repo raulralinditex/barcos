@@ -88,6 +88,9 @@ S122. **Las recámaras de una escolta viajan con ella.** Consecuencia de S121: r
 - T11 — S124: la bodega del casco seleccionado en el panel de la flota. Ruta: inline. Commit: `feat(fleet): the panel shows what the hull is carrying`.
 - T12 — S125: la venta grande paga el precio de cada unidad. Ruta: inline. Commit: `fix(market): a big sale pays the curve, not one quote`.
 - T13 — S126: la yarda dispara a cualquier enemigo en alcance. Ruta: worker + verificación del orquestador en rojo y verde. Commit: `fix(fort): the yard fires at any enemy in range`.
+- T14 — S127: la orden de munición es de toda la escuadra. Ruta: inline. Commit: `feat(gunnery): the captain-s ammunition order loads the squadron`.
+- T15 — S128: cualquier casco de la escuadra recoge un pecio. Ruta: inline. Commit: `feat(squadron): any hull of the squadron picks up a prize`.
+- T16 — S129: el arranque en Comprar no entra en modo reforma. Ruta: inline. Commit: `fix(shipyard): the buy screen opens able to sell any hull`.
 
 ## Log
 
@@ -148,3 +151,19 @@ S126. **El astillero dispara a cualquier enemigo en su alcance, venga de donde v
 L15 (S126): el worker quitó la puerta de zona del fuego de la yarda y escribió `scripts/smoke-fort-defence.mjs`. Su smoke salía flaky en mi máquina: el empuje de la zona segura deja al enemigo a 299,99999999999994 m contra un radio de 300, así que el assert `>= 300` fallaba por coma flotante. Lo arreglé con un metro de tolerancia (test nuevo, no existente). RED verificado por mí restaurando la línea vieja: "the yard should damage the coastal enemy (hull 100 -> 100, crew 100 -> 100)"; con el arreglo, tres corridas seguidas en verde. `npm test` 727/727. Smokes en 0: fort-defence, fort-combat, fort, safe-zone, fort-recovery.
 
 L16 (límite conocido que el worker reportó, no arreglado): `ensureEnemyCombat` se construye por proximidad a la **capitana**, no a la yarda. Un enemigo que está cerca del puerto pero lejos del jugador puede no tener combatiente y entonces la yarda lo salta. No cambia el reporte del usuario (que veía enemigos encima suyo, con combatiente ya creado), pero es la parte que falta para que "cualquier enemigo en rango" sea literal. Queda abierto como pendiente menor.
+
+S129. **Comprar un barco deja elegir el casco aunque la flota ya tenga uno.** Reporte del usuario (verbatim): "al comprar un barco, si has comprado un barco antes, no puedes cambiar el tipo de barco, siempre compras el mismo independientemente del que elijas".
+- **Causa medida**: al arrancar, el boot llenaba el editor con la capitana y dejaba `refitId` apuntando a ella, mientras la pantalla de entrada es Comprar. `renderHulls` deshabilita **todas** las cartas cuando `refitId !== null`, y el botón se vuelve "Guardar reforma". El click sobre un casco no hacía nada (estaba `disabled`) y el botón aplicaba la reforma de la capitana: se lee como "siempre compra el mismo barco". Nada de la compra estaba roto.
+- **La regla**: el arranque en Comprar **no entra en modo reforma**. El editor sigue llenándose con la capitana, pero `refitId` queda en `null`, así que las cartas responden y el botón ofrece añadir a la flota.
+- **La reforma no se toca**: sigue disponible eligiendo un casco desde la pestaña Flota, que es lo que hace `selectRefitShip` con `openRoom: true`.
+- **Medido**: `scripts/smoke-buy-hull.mjs` — abre en Comprar con 0 cartas deshabilitadas y el botón "Añadir a la flota", elige `barca-costera`, la compra deja la flota en `galeon-pequeno + barca-costera`, y elegir la capitana desde Flota vuelve a ofrecer "Guardar reforma". Sin el arreglo falla con "with a fleet already afloat the yard must offer a purchase, not a refit: Guardar reforma".
+
+S127. **La munición que elige la capitana la carga toda la escuadra.** Pedido del usuario (verbatim): "quiero que cuando la capitana cambie de municion, toda la flota adjunta la cambie tambien".
+- `setFleetAmmo(captain, escorts, ammoId)` en `src/model/combat.js`: aplica `setBroadsideAmmo` a la capitana y a cada escolta, y devuelve los totales de la escuadra además del resultado de la capitana.
+- **Cada casco responde por sus propios cañones**: un 32 libras no puede disparar metralla, así que la conserva — igual que en la capitana. Nada se gasta al cambiar, y cada cañón que cambia paga su propia penalización de recarga (S70).
+- **Un casco hundido o rendido no recibe la orden**: no es un cañón que pueda obedecer.
+- El banner cuenta los cañones de **toda la flota**, que es lo que el jugador ve.
+
+S128. **Cualquier casco de la escuadra recoge un pecio.** Pedido del usuario (verbatim): "tambien quiero que todos los barcos de la flota actuen igual que la capitana si pasan por un naufragio".
+- En `updateWorld` la recogida de tesoros y pecios miraba sólo la posición de la capitana, así que un premio por el que pasaba una escolta se quedaba en el agua. Ahora `pickers = [ship, ...escorts]`: cualquier casco dentro de `pickupRadiusM` (60 m) lo recoge y el oro va a la bolsa compartida.
+- La regla es la misma para todos los cascos: no hay excepción ni prioridad por ser la capitana.
