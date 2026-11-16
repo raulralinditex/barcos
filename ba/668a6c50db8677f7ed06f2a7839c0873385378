@@ -1,0 +1,33 @@
+index.html
+  s_48f93862b4f568::t_08381f4eee0e71 221-224
+scripts/smoke-market-ship.mjs
+  s_48f93862b4f568::t_d3f9afce7ff0af 1-135
+src/i18n/en.js
+  s_48f93862b4f568::t_40e28607d23d5b 591
+src/i18n/es.js
+  s_48f93862b4f568::t_122b3a6004d883 588
+src/model/fleet.js
+  s_48f93862b4f568::t_aa81a67e45dacb 14,68-79
+src/ui/app.js
+  s_48f93862b4f568::t_a32a8cf9256b0c 51,214,1197-1199,1233-1237,1239-1245,1324-1326,1332,1340-1362,1379
+src/ui/styles.css
+  s_48f93862b4f568::t_3675d73a7c714b 2314-2326
+test/trading-ship.test.js
+  s_48f93862b4f568::t_f336b4bdf5e438 1-32
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.6",
+  "base_commit_sha": "ba668a6c50db8677f7ed06f2a7839c0873385378",
+  "prompts": {},
+  "sessions": {
+    "s_48f93862b4f568": {
+      "agent_id": {
+        "tool": "pi",
+        "id": "01a1e58e-9669-713e-b888-48e76698935d",
+        "model": "claude-sonnet-5.5"
+      },
+      "human_author": "Raul Ripoll <raulral@ext.inditex.com>"
+    }
+  }
+}
