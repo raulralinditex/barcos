@@ -1,0 +1,29 @@
+src/ui/app.js
+  s_48f93862b4f568::t_c78a876844348e 1447
+test/flag-country.test.js
+  s_48f93862b4f568::t_142c8a0c694b4a 1-37
+src/model/flag.js
+  s_48f93862b4f568::t_93a3b93a801fe3 17,40,43-45,51-53
+  s_48f93862b4f568::t_e9bbce57be6d9e 54-55
+src/ui/sea.js
+  s_48f93862b4f568::t_6997e62276d6a8 76-77,114-127,770,1167-1184,1282,1362
+src/model/settings.js
+  s_48f93862b4f568::t_4aabecff9841b4 148-162
+  s_48f93862b4f568::t_8ad7ce6f32658e 163-164
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.6",
+  "base_commit_sha": "93ce8dff4f1c8a193118cff0786b4ca925a0a023",
+  "prompts": {},
+  "sessions": {
+    "s_48f93862b4f568": {
+      "agent_id": {
+        "tool": "pi",
+        "id": "01a1e58e-9669-713e-b888-48e76698935d",
+        "model": "claude-sonnet-5.5"
+      },
+      "human_author": "Raul Ripoll <raulral@ext.inditex.com>"
+    }
+  }
+}
