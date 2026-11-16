@@ -1,0 +1,14 @@
+odd/tasks/pendientes.md
+  h_8b9b8fe190c867 55,57,59-64,66,70-71,76-78
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.6",
+  "base_commit_sha": "a08929523b575669900e94a5fb910d9023b9295a",
+  "prompts": {},
+  "humans": {
+    "h_8b9b8fe190c867": {
+      "author": "Raul Ripoll <raulral@ext.inditex.com>"
+    }
+  }
+}
