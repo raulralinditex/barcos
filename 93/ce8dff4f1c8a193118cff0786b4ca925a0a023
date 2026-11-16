@@ -1,15 +1,15 @@
-src/ui/app.js
-  s_48f93862b4f568::t_c78a876844348e 1447
-test/flag-country.test.js
-  s_48f93862b4f568::t_142c8a0c694b4a 1-37
-src/model/flag.js
-  s_48f93862b4f568::t_93a3b93a801fe3 17,40,43-45,51-53
-  s_48f93862b4f568::t_e9bbce57be6d9e 54-55
 src/ui/sea.js
   s_48f93862b4f568::t_6997e62276d6a8 76-77,114-127,770,1167-1184,1282,1362
+test/flag-country.test.js
+  s_48f93862b4f568::t_142c8a0c694b4a 1-37
+src/ui/app.js
+  s_48f93862b4f568::t_c78a876844348e 1447
 src/model/settings.js
   s_48f93862b4f568::t_4aabecff9841b4 148-162
-  s_48f93862b4f568::t_8ad7ce6f32658e 163-164
+  s_48f93862b4f568::t_df95a5df2980b9 163-164
+src/model/flag.js
+  s_48f93862b4f568::t_93a3b93a801fe3 17,40,43-45,51-53
+  s_48f93862b4f568::t_59e302e7f77804 54-55
 ---
 {
   "schema_version": "authorship/3.0.0",
