@@ -1,20 +1,17 @@
-src/i18n/en.js
-  s_48f93862b4f568::t_bbba3f55626664 170
 src/i18n/es.js
   s_48f93862b4f568::t_bbba3f55626664 167
 src/ui/styles.css
   s_48f93862b4f568::t_bbba3f55626664 59-64
-src/ui/app.js
-  s_48f93862b4f568::t_bbba3f55626664 1002
-  s_48f93862b4f568::t_4d20e8a104a629 1355
-scripts/smoke-shipyard-layout.mjs
-  s_48f93862b4f568::t_8610a7dcdf36a1 42-43,45
+src/i18n/en.js
+  s_48f93862b4f568::t_bbba3f55626664 170
 index.html
   s_48f93862b4f568::t_bbba3f55626664 26-35
+scripts/smoke-shipyard-layout.mjs
+  s_48f93862b4f568::t_8610a7dcdf36a1 42-43,45
+src/ui/app.js
+  s_48f93862b4f568::t_bbba3f55626664 1002
 scripts/smoke-shipyard-buttons.mjs
   s_48f93862b4f568::t_8610a7dcdf36a1 39-42
-src/model/settings.js
-  s_48f93862b4f568::t_fd81d6eec04b57 19
 ---
 {
   "schema_version": "authorship/3.0.0",
