@@ -1,0 +1,23 @@
+src/model/flag.js
+  s_48f93862b4f568::t_c305921635ba69 17,40,43-45,51-55
+src/ui/sea.js
+  s_48f93862b4f568::t_c87fcbd156b31d 76-77,114-127,770,1167-1184,1282,1362
+test/flag-country.test.js
+  s_48f93862b4f568::t_5581f4a7ebcf7d 1-37
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.6",
+  "base_commit_sha": "1ea62cf065be9bd2899bf396ae580915b258d814",
+  "prompts": {},
+  "sessions": {
+    "s_48f93862b4f568": {
+      "agent_id": {
+        "tool": "pi",
+        "id": "01a1e58e-9669-713e-b888-48e76698935d",
+        "model": "claude-sonnet-5.5"
+      },
+      "human_author": "Raul Ripoll <raulral@ext.inditex.com>"
+    }
+  }
+}
