@@ -1,0 +1,42 @@
+src/model/settings.js
+  s_48f93862b4f568::t_09261f739fd868 132-133
+  s_48f93862b4f568::t_07197171df6b75 16,134-135,167
+test/refit-autosave.test.js
+  s_48f93862b4f568::t_09261f739fd868 1-73
+scripts/smoke-tabs.mjs
+  s_48f93862b4f568::t_78af786cdba1cf 76
+src/ui/app.js
+  s_48f93862b4f568::t_c78a876844348e 65,1318
+  s_48f93862b4f568::t_bbba3f55626664 56,1026,1041-1106,1117,1180-1183,1246
+  s_48f93862b4f568::t_abe018c43f4e83 1425,1429,1439
+scripts/smoke-refit.mjs
+  s_48f93862b4f568::t_8610a7dcdf36a1 35-36
+scripts/smoke-refit-autosave.mjs
+  s_48f93862b4f568::t_09261f739fd868 1-103
+test/settings.test.js
+  s_48f93862b4f568::t_8610a7dcdf36a1 271
+src/model/refit.js
+  s_48f93862b4f568::t_09261f739fd868 3,7-11,64-68,78
+scripts/smoke-settings.mjs
+  s_48f93862b4f568::t_90ab9f250b5dbb 81
+src/i18n/en.js
+  s_48f93862b4f568::t_11065b68ddc086 335,403
+src/i18n/es.js
+  s_48f93862b4f568::t_4a8299aea10a40 332,400
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.6",
+  "base_commit_sha": "a647412957ef4f6d28fda1b07926fb3fd7e4ad99",
+  "prompts": {},
+  "sessions": {
+    "s_48f93862b4f568": {
+      "agent_id": {
+        "tool": "pi",
+        "id": "01a1e58e-9669-713e-b888-48e76698935d",
+        "model": "claude-sonnet-5.5"
+      },
+      "human_author": "Raul Ripoll <raulral@ext.inditex.com>"
+    }
+  }
+}
