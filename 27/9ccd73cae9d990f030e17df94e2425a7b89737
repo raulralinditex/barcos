@@ -1,0 +1,34 @@
+src/ui/sea.js
+  s_42611a708d9c32::t_1cc0f4087655f5 45-46,401-402,504,1946,2558-2562,2564-2565,2603
+src/model/fleet.js
+  s_42611a708d9c32::t_f8f4818bb82aef 13,17-63,212
+scripts/smoke-yard-mooring.mjs
+  s_42611a708d9c32::t_d42c41108b9ea5 49-50,58
+  s_42611a708d9c32::t_60f40c2a9ea00b 74-104
+  s_42611a708d9c32::t_5bc8832a32ac78 1-48,51-57,59-73,105-111
+test/fleet-mooring.test.js
+  s_42611a708d9c32::t_964808ebbfad7a 1-55
+src/model/world.js
+  s_42611a708d9c32::t_06c7e3eea907c8 13-14,327,347-349
+test/world-escorts.test.js
+  s_42611a708d9c32::t_b600484035aa0c 1-23
+src/ui/app.js
+  s_42611a708d9c32::t_3ed08e6075b0fa 42,1132-1135,1882-1885,2060
+  s_42611a708d9c32::t_614bee644e8e59 48,51,1050,1092,1125,1127-1128,1130,1136-1137,1298-1302,1304,1409,1420,1528-1529,1665-1666,1668,1670,1672-1673,1676-1678,1682,1714-1715,1717,1787-1788,1861,1879,1895,1908,1933,1980-1981,1983-1984,1987,2052,2145,2209,2230,2248,2267
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.6",
+  "base_commit_sha": "279ccd73cae9d990f030e17df94e2425a7b89737",
+  "prompts": {},
+  "sessions": {
+    "s_42611a708d9c32": {
+      "agent_id": {
+        "tool": "pi",
+        "id": "01a1e6c3-7ee5-77f0-ba59-53c99e4356bc",
+        "model": "gpt-6.1-terra"
+      },
+      "human_author": "Raul Ripoll <raulral@ext.inditex.com>"
+    }
+  }
+}
