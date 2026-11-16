@@ -73,7 +73,7 @@ check(String(await page.$eval("#purchase-notice", (n) => n.textContent)).include
 
 // --- Configuración: the settings screen is in the room --------------------------------
 await page.click('.screen-tab[data-screen="configuracion"]');
-check((await page.locator(".settings-card").count()) === 18, `the settings tab mounts every block, got ${await page.locator(".settings-card").count()}`);
+check((await page.locator(".settings-card").count()) === 19, `the settings tab mounts every block, got ${await page.locator(".settings-card").count()}`);
 await page.fill("#field-wind\\.maxSpeedBonus", "500");
 await page.click("#settings-apply");
 await page.waitForTimeout(200);

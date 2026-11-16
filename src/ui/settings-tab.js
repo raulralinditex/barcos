@@ -105,7 +105,12 @@ function renderField(field, settings) {
   const label = document.createElement("label");
   label.className = "settings-label";
   label.htmlFor = `field-${id}`;
-  label.textContent = t(field.label);
+  // A row built from data (one per yard and good) names its parts by i18n key, resolved
+  // here so the label follows the language.
+  const labelArgs = field.labelArgs
+    ? Object.fromEntries(Object.entries(field.labelArgs).map(([name, key]) => [name, t(key)]))
+    : undefined;
+  label.textContent = t(field.label, labelArgs);
 
   const control = document.createElement("div");
   control.className = "settings-control";

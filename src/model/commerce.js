@@ -10,7 +10,7 @@
  * (S110, S111): the manifest is what the hold is made of, and `cargoKg` is its total.
  */
 
-import { COMMODITIES, commodityById, hullById, shipyardById } from "../data/naval-data.js";
+import { COMMODITIES, SHIPYARDS, commodityById, hullById, shipyardById } from "../data/naval-data.js";
 
 /**
  * The market of each zone (S113): how a commodity's base price is scaled when the yard
@@ -39,26 +39,56 @@ export function marketOf(zoneId) {
   return MARKETS[zoneId] ?? MARKETS.costera;
 }
 
+/**
+ * The live price multipliers of every yard and good, flat and keyed `yardId/commodityId`.
+ * Each entry IS the object in the yard's own `market`, so the settings screen edits the
+ * yard's market in place and the prices follow.
+ */
+export const YARD_MARKETS = Object.fromEntries(
+  SHIPYARDS.flatMap((yard) => Object.entries(yard.market ?? {}).map(([id, shares]) => [`${yard.id}/${id}`, shares])),
+);
+
+/** The yard whose own market list this key names, or null when it names a zone. */
+const yardMarket = (key) => {
+  const yard = shipyardById(key);
+  return yard?.market && typeof yard.market === "object" ? yard : null;
+};
+
+/**
+ * Whether a market trades a good. A yard trades exactly the goods she lists (her own
+ * market); a market with no list of its own, a zone, trades everything.
+ */
+export function tradedHere(key, commodityId) {
+  const yard = yardMarket(key);
+  return yard ? Boolean(yard.market[commodityId]) : Boolean(commodityById(commodityId));
+}
+
+/** The multiplier a market puts on a good's base price, on one side (`buy` or `sell`). */
+const shareOf = (key, commodityId, side) => {
+  const yard = yardMarket(key);
+  return yard ? yard.market[commodityId]?.[side] : marketOf(key)[side];
+};
+
 /** A price, in whole doblones, never negative and never NaN. */
 const price = (value) => (Number.isFinite(value) && value > 0 ? Math.round(value) : 0);
 
 /** What one unit of a commodity costs to buy in a zone. */
 export function buyPrice(commodityId, zoneId) {
   const commodity = commodityById(commodityId);
-  if (!commodity) return 0;
-  return price(commodity.baseGold * marketOf(zoneId).buy);
+  if (!commodity || !tradedHere(zoneId, commodity.id)) return 0;
+  return price(commodity.baseGold * shareOf(zoneId, commodity.id, "buy"));
 }
 
 /** What one unit of a commodity pays to sell in a zone. */
 export function sellPrice(commodityId, zoneId) {
   const commodity = commodityById(commodityId);
-  if (!commodity) return 0;
-  return price(commodity.baseGold * marketOf(zoneId).sell);
+  if (!commodity || !tradedHere(zoneId, commodity.id)) return 0;
+  return price(commodity.baseGold * shareOf(zoneId, commodity.id, "sell"));
 }
 
 /** The whole catalogue priced for one yard, which is what the market screen lists. */
 export function marketBoard(zoneId) {
-  return COMMODITIES.map((commodity) => ({
+  return COMMODITIES.filter((commodity) => tradedHere(zoneId, commodity.id)).map((commodity) => ({
     id: commodity.id,
     nameKey: commodity.nameKey,
     kgPerUnit: commodity.kgPerUnit,
@@ -119,7 +149,7 @@ export function salvageHold(manifest, share) {
 export function buyCargo({ manifest, capacityKg, cargoKg, gold }, commodityId, units, zoneId, { unitPrice, availableStock } = {}) {
   const commodity = commodityById(commodityId);
   const wanted = Math.floor(Number(units) || 0);
-  if (!commodity || wanted <= 0 || wanted > availableUnits(commodity.id, availableStock)) return null;
+  if (!commodity || !tradedHere(zoneId, commodity.id) || wanted <= 0 || wanted > availableUnits(commodity.id, availableStock)) return null;
   const purse = Number.isFinite(gold) ? gold : 0;
   const quoted = Number.isFinite(unitPrice) && unitPrice >= 0 ? unitPrice : buyPrice(commodity.id, zoneId);
   const cost = quoted * wanted;
@@ -152,7 +182,7 @@ export function buyCargo({ manifest, capacityKg, cargoKg, gold }, commodityId, u
 export function sellCargo({ manifest, gold }, commodityId, units, zoneId, { unitPrice, memory } = {}) {
   const commodity = commodityById(commodityId);
   const wanted = Math.floor(Number(units) || 0);
-  if (!commodity || wanted <= 0) return null;
+  if (!commodity || !tradedHere(zoneId, commodity.id) || wanted <= 0) return null;
   const hold = holdOf(manifest);
   const available = hold.manifest.filter((entry) => entry.commodityId === commodity.id)
     .reduce((sum, entry) => sum + entry.units, 0);
@@ -206,7 +236,7 @@ function availableUnits(commodityId, availableStock) {
 
 export function affordableUnits({ capacityKg, cargoKg, gold }, commodityId, zoneId, { unitPrice: quote, availableStock } = {}) {
   const commodity = commodityById(commodityId);
-  if (!commodity) return 0;
+  if (!commodity || !tradedHere(zoneId, commodity.id)) return 0;
   const unitPrice = Number.isFinite(quote) && quote >= 0 ? quote : buyPrice(commodity.id, zoneId);
   const freeKg = Math.max(0, (Number(capacityKg) || 0) - (Number(cargoKg) || 0));
   const bySpace = Math.floor(freeKg / commodity.kgPerUnit);
@@ -366,15 +396,15 @@ export function stockFactor(stock, { base = MARKET_MEMORY.baseStock, max = MARKE
  */
 export function buyPriceNow(commodityId, zoneId, memory) {
   const commodity = commodityById(commodityId);
-  if (!commodity) return 0;
-  return price(commodity.baseGold * marketOf(zoneId).buy * stockFactor(stockOf(memory, commodity.id)));
+  if (!commodity || !tradedHere(zoneId, commodity.id)) return 0;
+  return price(commodity.baseGold * shareOf(zoneId, commodity.id, "buy") * stockFactor(stockOf(memory, commodity.id)));
 }
 
 /** What the yard pays for one unit right now (S119), moved by her own stock. */
 export function sellPriceNow(commodityId, zoneId, memory) {
   const commodity = commodityById(commodityId);
-  if (!commodity) return 0;
-  return price(commodity.baseGold * marketOf(zoneId).sell * stockFactor(stockOf(memory, commodity.id)));
+  if (!commodity || !tradedHere(zoneId, commodity.id)) return 0;
+  return price(commodity.baseGold * shareOf(zoneId, commodity.id, "sell") * stockFactor(stockOf(memory, commodity.id)));
 }
 
 /**
@@ -382,7 +412,7 @@ export function sellPriceNow(commodityId, zoneId, memory) {
  * paints. `before` is the base price for the zone, so the screen can show the drift.
  */
 export function marketBoardNow(zoneId, memory) {
-  return COMMODITIES.map((commodity) => ({
+  return COMMODITIES.filter((commodity) => tradedHere(zoneId, commodity.id)).map((commodity) => ({
     id: commodity.id,
     nameKey: commodity.nameKey,
     kgPerUnit: commodity.kgPerUnit,

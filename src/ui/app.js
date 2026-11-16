@@ -62,7 +62,7 @@ import {
   bindGameTime,
   buyCargo,
   marketBoardNow,
-  marketOf,
+  tradedHere,
   normaliseMarkets,
   sellCargo,
   shipHold,
@@ -1316,7 +1316,7 @@ function marketBuy(commodityId) {
     { manifest: hold.manifest, capacityKg: ship.capacityKg, cargoKg: ship.cargoKg, gold: state.gold },
     commodityId,
     1,
-    zone.id,
+    yard.id,
     { unitPrice: quote.buy, availableStock: quote.stock },
   );
   if (!trade) {
@@ -1352,7 +1352,7 @@ function marketSell(commodityId) {
     { manifest: hold.manifest, gold: state.gold },
     commodityId,
     units,
-    zone.id,
+    yard.id,
     // A yard with no memory yet is a yard at rest, not a yard without prices (S125):
     // passing `undefined` would fall back to the flat quote and the first sale of the
     // game would be the one that escapes the curve.
@@ -1423,12 +1423,11 @@ function renderMarket() {
   const zone = yard ? shipyardZone(yard) : null;
   const ship = marketShip();
   els.marketYard.textContent = yard ? t(yard.nameKey) : t("market.noYard");
-  // The zone line reads as a sentence, so it is built once, with the two live factors.
+  // The line names the water and the goods this yard trades: her market is her own.
   els.marketZone.textContent = zone
     ? t("market.zone", {
         zone: t(`zone.${zone.id}.name`),
-        buy: `${Math.round(marketOf(zone.id).buy * 100)} %`,
-        sell: `${Math.round(marketOf(zone.id).sell * 100)} %`,
+        goods: COMMODITIES.filter((entry) => tradedHere(yard.id, entry.id)).map((entry) => t(entry.nameKey)).join(", "),
       })
     : t("market.noYard");
 
@@ -1438,14 +1437,14 @@ function renderMarket() {
     ? t("market.hold", { used: gold(hold.cargoKg), capacity: gold(ship.capacityKg ?? 0) })
     : t("market.noYard");
 
-  const board = zone ? marketBoardNow(zone.id, markets[yard.id]) : [];
+  const board = zone ? marketBoardNow(yard.id, markets[yard.id]) : [];
   quotedYardId = yard?.id ?? null;
   marketQuotes = new Map(board.map((row) => [row.id, row]));
   els.marketBoard.innerHTML = board
     .map((row) => {
       const stock = hold.manifest.filter((entry) => entry.commodityId === row.id).reduce((sum, entry) => sum + entry.units, 0);
       const room = ship && zone
-        ? affordableUnits({ capacityKg: ship.capacityKg, cargoKg: ship.cargoKg, gold: state.gold }, row.id, zone.id, { unitPrice: row.buy, availableStock: row.stock })
+        ? affordableUnits({ capacityKg: ship.capacityKg, cargoKg: ship.cargoKg, gold: state.gold }, row.id, yard.id, { unitPrice: row.buy, availableStock: row.stock })
         : 0;
       return `
         <li class="market-row" data-commodity="${row.id}">

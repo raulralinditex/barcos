@@ -685,9 +685,14 @@ export const SHIPYARD_MOORING_M = 110;
  * The shipyards of the sea (S112). One per zone, and the list is meant to grow: a new
  * yard is a row here plus her mark on the chart, and no trade rule changes.
  *
- * `zoneId` is deliberately absent. A yard's market is her water, and her water is
- * derived from `x`/`y` by `zoneAtRadius` (world.js), so a new yard cannot be built in
- * the coastal band and trade at abyssal prices.
+ * `zoneId` is deliberately absent: a yard's zone is derived from `x`/`y` by
+ * `zoneAtRadius` (world.js), so a new yard cannot be built in the coastal band and sit
+ * in the abyssal water.
+ *
+ * `market` is the yard's own market: the goods she trades and her own price multipliers
+ * over each good's `baseGold` (`buy` is what she charges, `sell` what she pays). A good
+ * that is not listed is neither bought nor sold there. The numbers are chosen so that
+ * every good is cheap where it is made and dear where it is missed.
  */
 export const SHIPYARDS = [
   {
@@ -698,6 +703,12 @@ export const SHIPYARDS = [
     mooringM: SHIPYARD_MOORING_M,
     /** The port a voyage starts from, so the builder screen opens here (S51). */
     home: true,
+    market: {
+      sal: { buy: 0.55, sell: 0.9 },
+      vino: { buy: 0.6, sell: 1.0 },
+      tabaco: { buy: 0.95, sell: 1.5 },
+      plata: { buy: 1.1, sell: 1.7 },
+    },
   },
   {
     id: "ensenada-abierta",
@@ -705,6 +716,12 @@ export const SHIPYARDS = [
     x: 2400,
     y: 0,
     mooringM: 140,
+    market: {
+      vino: { buy: 0.95, sell: 1.5 },
+      tabaco: { buy: 0.6, sell: 1.0 },
+      especias: { buy: 1.1, sell: 1.8 },
+      plata: { buy: 0.9, sell: 1.5 },
+    },
   },
   {
     id: "cala-del-abismo",
@@ -712,6 +729,12 @@ export const SHIPYARDS = [
     x: 4600,
     y: 0,
     mooringM: 160,
+    market: {
+      sal: { buy: 1.4, sell: 2.2 },
+      tabaco: { buy: 1.6, sell: 2.6 },
+      especias: { buy: 0.7, sell: 1.1 },
+      plata: { buy: 0.75, sell: 1.3 },
+    },
   },
 ];
 

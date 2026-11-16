@@ -99,22 +99,22 @@ check(/Puerto de casa/i.test(yardName), `S118: the yard should be the home port,
 
 /* ------------------------------------------------- S113: the board is the model's board */
 
-const board = marketBoard("costera");
+const board = marketBoard("puerto-casa");
 const rows = await page.locator(".market-row").count();
 check(rows === board.length, `S113: the board should list ${board.length} goods, it lists ${rows}`);
 
 const first = COMMODITIES[0];
 const rowText = await page.locator(`.market-row[data-commodity="${first.id}"]`).textContent();
 check(
-  rowText.includes(String(buyPrice(first.id, "costera"))),
-  `S113: the buy price of ${first.id} should read ${buyPrice(first.id, "costera")}: "${rowText}"`,
+  rowText.includes(String(buyPrice(first.id, "puerto-casa"))),
+  `S113: the buy price of ${first.id} should read ${buyPrice(first.id, "puerto-casa")}: "${rowText}"`,
 );
 check(
-  rowText.includes(String(sellPrice(first.id, "costera"))),
-  `S113: the sell price of ${first.id} should read ${sellPrice(first.id, "costera")}: "${rowText}"`,
+  rowText.includes(String(sellPrice(first.id, "puerto-casa"))),
+  `S113: the sell price of ${first.id} should read ${sellPrice(first.id, "puerto-casa")}: "${rowText}"`,
 );
 check(
-  buyPrice(first.id, "costera") < buyPrice(first.id, "abismo"),
+  buyPrice(first.id, "puerto-casa") < buyPrice(first.id, "cala-del-abismo"),
   "S113: the coast must be cheaper than the abyss",
 );
 
@@ -126,8 +126,8 @@ await page.locator(`.market-row[data-commodity="${first.id}"] [data-buy]`).click
 await page.waitForTimeout(400);
 const afterBuy = await purse();
 check(
-  afterBuy === before - buyPrice(first.id, "costera"),
-  `S114: buying should take ${buyPrice(first.id, "costera")}, purse went ${before} -> ${afterBuy}`,
+  afterBuy === before - buyPrice(first.id, "puerto-casa"),
+  `S114: buying should take ${buyPrice(first.id, "puerto-casa")}, purse went ${before} -> ${afterBuy}`,
 );
 check((await holdKg()) === first.kgPerUnit, `S114: the hold should hold one unit of ${first.id}`);
 check(
@@ -167,8 +167,8 @@ await sellBtn.click();
 await page.waitForTimeout(400);
 const afterSell = await purse();
 check(
-  afterSell === beforeSell + sellPrice(first.id, "costera"),
-  `S114: selling should pay ${sellPrice(first.id, "costera")}, purse went ${beforeSell} -> ${afterSell}`,
+  afterSell === beforeSell + sellPrice(first.id, "puerto-casa"),
+  `S114: selling should pay ${sellPrice(first.id, "puerto-casa")}, purse went ${beforeSell} -> ${afterSell}`,
 );
 check((await holdKg()) === 0, "S114: selling everything must empty the hold");
 check((await manifest()).length === 0, "S114: the manifest must be empty after selling it all");
@@ -272,7 +272,7 @@ await legacy.addInitScript((fleetJson) => {
   localStorage.setItem("barcos:fleet:v1", fleetJson);
   localStorage.setItem("barcos:game:v1", JSON.stringify({ gold: 20000, ship: { x: 0, y: 0 } }));
 }, JSON.stringify(fleet));
-for (const [x, zone] of [[0, "costera"], [2400, "abierto"], [4600, "abismo"]]) {
+for (const [x, zone] of [[0, "puerto-casa"], [2400, "ensenada-abierta"], [4600, "cala-del-abismo"]]) {
   await legacy.goto("http://localhost:8765/index.html", { waitUntil: "networkidle" });
   await legacy.evaluate((x) => {
     const game = JSON.parse(localStorage.getItem("barcos:game:v1"));
@@ -281,6 +281,10 @@ for (const [x, zone] of [[0, "costera"], [2400, "abierto"], [4600, "abismo"]]) {
   }, x);
   await legacy.reload({ waitUntil: "networkidle" });
   await legacy.click('.screen-tab[data-screen="mercado"]');
+  // Each yard lists only the goods she trades, so a missing good has no row at all.
+  const listed = marketBoard(zone).length;
+  check(listed < COMMODITIES.length, `${zone} must trade fewer goods than the whole catalogue`);
+  check((await legacy.locator(".market-row").count()) === listed, `${zone} must list exactly her ${listed} goods`);
   for (const row of marketBoard(zone)) {
     const element = legacy.locator(`.market-row[data-commodity="${row.id}"]`);
     check((await element.locator(".market-yard-stock").textContent()).includes("60"), `S119: legacy ${zone}/${row.id} stock is at rest`);
@@ -323,7 +327,13 @@ const exampleBefore = await examplePrice();
 await exampleRow.locator("[data-sell]").click();
 const exampleAfter = await examplePrice();
 const exampleSave = await example.evaluate(() => JSON.parse(localStorage.getItem("barcos:game:v1")));
-check(exampleBefore === 58 && exampleAfter === 36, `S119: 40 salt move abyss price 58 -> 36, got ${exampleBefore} -> ${exampleAfter}`);
+// The abyss yard's own price for salt (the yards set their own prices now), and the fall
+// that 40 barrels cause on it: the curve is what is pinned, not a number of doblones.
+const drop = 1 - exampleAfter / exampleBefore;
+check(
+  exampleBefore === sellPrice(first.id, "cala-del-abismo") && drop > 0.3 && drop < 0.45,
+  `S119: 40 salt must drop the abyss price by 30-45% from its own price, got ${exampleBefore} -> ${exampleAfter}`,
+);
 check(exampleSave.gold > 20000 && exampleSave.gold < 20000 + 40 * exampleBefore, `S125: the 40-barrel sale pays the curve, not 40 × the displayed quote: ${exampleSave.gold - 20000}`);
 check(exampleSave.markets["cala-del-abismo"].stock.sal === 100, "S119: selling 40 moves abyss stock 60 -> 100");
 await example.reload({ waitUntil: "networkidle" });

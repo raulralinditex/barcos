@@ -10,13 +10,13 @@
  */
 
 import { COMBAT, LOOT, ZONE_DAMAGE } from "./combat.js";
-import { PIECES, PRICES, START } from "../data/naval-data.js";
+import { COMMODITIES, PIECES, PRICES, SHIPYARDS, START } from "../data/naval-data.js";
 import { GUNNERY } from "./gunnery.js";
 import { REPAIR } from "./repair.js";
 import { REFIT } from "./refit.js";
 import { SALES } from "./sale.js";
 import { SINKING } from "./sinking.js";
-import { COMMERCE, MARKETS } from "./commerce.js";
+import { COMMERCE, MARKETS, YARD_MARKETS } from "./commerce.js";
 import { GAME_TIME } from "./game-time.js";
 import { FORT, FORT_UPGRADE } from "./fort.js";
 import { WIND } from "./wind.js";
@@ -145,6 +145,23 @@ export const SETTINGS_FIELDS = [
   { group: "commerce", key: "buy-abismo", label: "settings.commerce.buyAbismo", scale: "percent", min: 0.1, max: 4, step: 0.05, target: "markets", targetKey: "abismo", targetField: "buy" },
   { group: "commerce", key: "sell-abismo", label: "settings.commerce.sellAbismo", scale: "percent", min: 0.1, max: 8, step: 0.05, target: "markets", targetKey: "abismo", targetField: "sell" },
 
+  // Every yard's own market: her price multipliers for each good she trades, one row per
+  // yard, good and side. The list is built from the yards' data, so a new yard or a new
+  // good on her list gets its settings without touching this file.
+  ...SHIPYARDS.flatMap((yard) => Object.keys(yard.market ?? {}).flatMap((id) => ["buy", "sell"].map((side) => ({
+    group: "yardMarkets",
+    key: `${yard.id}-${id}-${side}`,
+    label: "settings.yardMarkets.row",
+    labelArgs: { yard: yard.nameKey, good: COMMODITIES.find((c) => c.id === id)?.nameKey ?? id, side: `market.${side}` },
+    scale: "percent",
+    min: 0.1,
+    max: 8,
+    step: 0.05,
+    target: "yardMarkets",
+    targetKey: `${yard.id}/${id}`,
+    targetField: side,
+  })))),
+
   // Minimum 2500: the cheapest playable hull of the dearest country (Portugal) costs 2036,
   // so a poorer start would leave a whole nation's captain unable to buy a single ship.
   { group: "prices", key: "startGold", label: "settings.prices.startGold", scale: "gold", min: 2500, max: 1000000, step: 500, target: "start", targetKey: "gold" },
@@ -164,7 +181,7 @@ export const SETTINGS_FIELDS = [
 /** The automatic-fire switch as a live block, so it is a setting like any other (S88). */
 export const AUTOFIRE = { enabled: AUTOFIRE_DEFAULT ? 1 : 0 };
 
-export const SETTINGS_BLOCKS = { wind: WIND, world: WORLD, combat: COMBAT, repair: REPAIR, prices: PRICES, gunnery: GUNNERY, gunners: GUNNERY.gunnersPerGun, zones: ZONE_DAMAGE, loot: LOOT, sales: SALES, time: GAME_TIME, fort: FORT, fortUpgrade: FORT_UPGRADE, start: START, turning: TURNING, escort: ESCORT, trail: TRAIL, bars: BAR_SCALE, autofire: AUTOFIRE, sinking: SINKING, refit: REFIT, commerce: COMMERCE, markets: MARKETS };
+export const SETTINGS_BLOCKS = { wind: WIND, world: WORLD, combat: COMBAT, repair: REPAIR, prices: PRICES, gunnery: GUNNERY, gunners: GUNNERY.gunnersPerGun, zones: ZONE_DAMAGE, loot: LOOT, sales: SALES, time: GAME_TIME, fort: FORT, fortUpgrade: FORT_UPGRADE, start: START, turning: TURNING, escort: ESCORT, trail: TRAIL, bars: BAR_SCALE, autofire: AUTOFIRE, sinking: SINKING, refit: REFIT, commerce: COMMERCE, markets: MARKETS, yardMarkets: YARD_MARKETS };
 
 /**
  * The design constant blocks S79 promises to expose, by name.
