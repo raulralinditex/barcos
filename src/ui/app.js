@@ -219,6 +219,7 @@ const els = {
   fleetDetailName: $("#fleet-detail-name"),
   fleetDetailHull: $("#fleet-detail-hull"),
   fleetBars: $("#fleet-bars"),
+  fleetHold: $("#fleet-hold"),
   fleetRepairBtn: $("#fleet-repair-btn"),
   fleetRearmBtn: $("#fleet-rearm-btn"),
   fleetSellBtn: $("#fleet-sell-btn"),
@@ -1277,7 +1278,18 @@ function marketSell(commodityId) {
     els.marketStatus.textContent = t("market.nothing");
     return;
   }
-  const trade = sellCargo({ manifest: hold.manifest, gold: state.gold }, commodityId, units, zone.id, { unitPrice: quote.sell });
+  // The yard pays unit by unit from her own stock (S125): quoting one price for the whole
+  // load let a single sale of 500 silver pay 288000 into a market holding 60.
+  const trade = sellCargo(
+    { manifest: hold.manifest, gold: state.gold },
+    commodityId,
+    units,
+    zone.id,
+    // A yard with no memory yet is a yard at rest, not a yard without prices (S125):
+    // passing `undefined` would fall back to the flat quote and the first sale of the
+    // game would be the one that escapes the curve.
+    { unitPrice: quote.sell, memory: markets[yard.id] ?? {} },
+  );
   if (!trade) {
     els.marketStatus.textContent = t("market.nothing");
     return;
@@ -1601,6 +1613,7 @@ function renderFleetDetail() {
 
   els.fleetDetailName.textContent = ship.name ?? "";
   els.fleetDetailHull.textContent = ship.hullName ?? "";
+  renderFleetHold(ship);
 
   // The same segments the sea paints (S21), in the dock's order, with the dock's words.
   const condition = conditionOf(ship);
@@ -1669,6 +1682,69 @@ function renderFleetDetail() {
   els.fleetSellBtn.title = canSell
     ? t("shipyard.sellTitle", { name: ship.name, gold: gold(salePrice(ship)) })
     : t("shipyard.sellLast");
+}
+
+/**
+ * What the selected hull is carrying (S124). The market loads her hold and the sea saves
+ * it, but the fleet panel used to show her condition and nothing else: a player who bought
+ * a cargo could not see it anywhere without sailing back to a yard.
+ *
+ * The manifest is the merchandise, and `cargoKg` is that plus whatever loose cargo the
+ * builder loaded. The two are shown apart, because only the manifest can be sold and only
+ * the loose part explains a hold that reads heavier than her manifest.
+ */
+function renderFleetHold(ship) {
+  if (!els.fleetHold) return;
+  const hold = shipHold(ship);
+  const capacity = Math.max(0, Number(ship.capacityKg) || 0);
+  // A hull with no hold at all (nothing aboard, no room recorded) says nothing: an empty
+  // line on every hull would be noise, and this panel is a summary, not a manifest book.
+  if (capacity === 0 && hold.cargoKg === 0) {
+    els.fleetHold.hidden = true;
+    els.fleetHold.textContent = "";
+    return;
+  }
+  els.fleetHold.hidden = false;
+  els.fleetHold.textContent = "";
+
+  const full = capacity > 0 && hold.cargoKg >= capacity;
+  const sum = document.createElement("div");
+  sum.className = `fleet-hold-line is-sum${full ? " is-full" : ""}`;
+  const used = document.createElement("span");
+  used.className = "fleet-hold-used";
+  used.textContent = hold.cargoKg > 0
+    ? t("fleet.hold", { used: fmtInt.format(hold.cargoKg), capacity: fmtInt.format(capacity) })
+    : t("fleet.holdEmpty");
+  const tag = document.createElement("span");
+  tag.textContent = full ? t("fleet.holdFull") : `${fmtInt.format(Math.max(0, capacity - hold.cargoKg))} kg`;
+  sum.append(used, tag);
+  els.fleetHold.append(sum);
+
+  for (const entry of hold.manifest) {
+    if (!entry.units) continue;
+    const row = document.createElement("div");
+    row.className = "fleet-hold-line";
+    const name = document.createElement("span");
+    name.textContent = t("fleet.holdRow", {
+      units: fmtInt.format(entry.units),
+      name: t(commodityNameKey(entry.commodityId)),
+      kg: fmtInt.format(entry.kg),
+    });
+    row.append(name);
+    els.fleetHold.append(row);
+  }
+
+  // Loose cargo is the builder's hand-typed weight: it is not merchandise and cannot be
+  // sold, but it still weighs and it is why a hold can read heavier than her manifest.
+  const loose = Math.max(0, hold.cargoKg - hold.manifest.reduce((total, entry) => total + entry.kg, 0));
+  if (loose > 0) {
+    const row = document.createElement("div");
+    row.className = "fleet-hold-line";
+    const name = document.createElement("span");
+    name.textContent = `${t("fleet.holdGeneric")} · ${fmtInt.format(loose)} kg`;
+    row.append(name);
+    els.fleetHold.append(row);
+  }
 }
 
 /** Select an owned ship and copy her bought configuration into the refit editor. */

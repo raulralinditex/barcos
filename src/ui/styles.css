@@ -782,6 +782,35 @@ h3 {
   gap: 4px;
 }
 
+/* S124: what the selected hull is carrying. The market loads her hold and the sea saves
+   it, so the fleet is where the player checks it without sailing back to a port. */
+.fleet-hold {
+  display: grid;
+  gap: 3px;
+  padding-top: 6px;
+  border-top: 1px solid rgba(201, 189, 164, 0.22);
+}
+
+.fleet-hold[hidden] {
+  display: none;
+}
+
+.fleet-hold-line {
+  display: grid;
+  grid-template-columns: 1fr auto;
+  gap: 6px;
+  font-size: 10.5px;
+  color: var(--ink-soft);
+}
+
+.fleet-hold-line.is-sum {
+  color: var(--ink);
+}
+
+.fleet-hold-line.is-full .fleet-hold-used {
+  color: #d0503c;
+}
+
 .fleet-bar-row {
   display: grid;
   grid-template-columns: 62px 1fr 34px;
