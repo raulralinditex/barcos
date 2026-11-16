@@ -11,6 +11,7 @@
  */
 
 import { holdOf } from "./commerce.js";
+import { isWreck } from "./sinking.js";
 
 /**
  * Add a freshly launched ship to the fleet and make it the captain: buying a new
@@ -62,6 +63,18 @@ export function sailingShips(fleet) {
 export function captainShip(fleet) {
   const ships = fleet?.ships ?? [];
   return ships.find((ship) => ship.id === fleet?.captainId) ?? ships[0] ?? null;
+}
+
+/**
+ * The hull the market trades with: the one the player picked, else the captain. A wreck
+ * cannot carry goods (S117), and an unknown pick is no pick, so neither can leave the
+ * market without a hold.
+ */
+export function tradingShip(fleet, pickedId) {
+  const picked = (fleet?.ships ?? []).find((ship) => ship.id === pickedId);
+  if (picked && !isWreck(picked)) return picked;
+  const captain = captainShip(fleet);
+  return captain && !isWreck(captain) ? captain : null;
 }
 
 /** Fleet value in gold: what the hulls cost, which is what the player sank into it. */

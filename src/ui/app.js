@@ -48,6 +48,7 @@ import {
   isEmptyFleet,
   serializeFleet,
   setCaptain,
+  tradingShip,
 } from "../model/fleet.js";
 import { conditionOf, damagedShips, priceWithPurse, repairCost, repairFleetShip, repairReport } from "../model/repair.js";
 import { buildShip, toRuntimeShip } from "../model/shipyard.js";
@@ -210,6 +211,7 @@ const els = {
   marketYard: $("#market-yard"),
   marketZone: $("#market-zone"),
   marketHold: $("#market-hold"),
+  marketShip: $("#market-ship"),
   marketBoard: $("#market-board"),
   marketStatus: $("#market-status"),
   purchaseNotice: $("#purchase-notice"),
@@ -1192,6 +1194,9 @@ function showScreen(next) {
   // The ship+rig panels stand in read-only rooms too (S105): her banner, her verdict
   // chips and her button states must not leak the mode the room came from, so the
   // render runs here as well with the refit target already cleared.
+  // The market trades with the selected hull, and the rig beside it is that hull's rig:
+  // entering with nobody selected (or a wreck) selects the captain first.
+  if (next === "mercado") ensureMarketSelection();
   if (next !== "configuracion") render();
   // The yard's room repaints on entry: her state may have changed at sea since the
   // last look (S100).
@@ -1225,12 +1230,19 @@ function screenShipyard() {
   return yard ?? SHIPYARDS.find((entry) => entry.home) ?? SHIPYARDS[0] ?? null;
 }
 
-/** The captain's hull, which is the one whose hold the market reads and writes. */
+/**
+ * The selected hull, which is the one whose hold the market reads and writes. The
+ * selection is the fleet's own (`refitId`), so the market, the fleet list and the rig
+ * panel always talk about the same hull; with no usable selection it is the captain.
+ */
 function marketShip() {
-  const captain = captainShip(fleet);
-  if (!captain) return null;
-  // A hull at sea carries the live cargo the sea saved; a hull in port carries her own.
-  return captain;
+  return tradingShip(fleet, refitId);
+}
+
+/** Make the selection a hull that can trade, so the rig panel stands for her too. */
+function ensureMarketSelection() {
+  const ship = marketShip();
+  if (ship && ship.id !== refitId) selectRefitShip(ship, { openRoom: false });
 }
 
 /**
@@ -1309,17 +1321,44 @@ function applyMarketTrade(ship, hold, nextGold, yardId, commodityId, delta) {
     ships: fleet.ships.map((entry) => (entry.id === ship.id ? withHold(entry, hold) : entry)),
   };
   saveFleet();
+  // The rig panel shows this hull's cargo (Aparejo / Carga): it follows the trade.
+  const traded = fleet.ships.find((entry) => entry.id === ship.id);
+  if (traded && traded.id === refitId) state.cargoKg = traded.cargoKg;
   state.gold = normaliseGold(nextGold);
   markets = { ...markets, [yardId]: withStock(markets[yardId], commodityId, delta) };
   // Gold and markets belong to the same sea save, not to the fort's nested state.
   writeFortSave({}, { gold: state.gold, markets });
   els.goldValue.textContent = gold(state.gold);
+  render();
   renderMarket();
   renderFleet();
 }
 
 const commodityNameKey = (commodityId) =>
   COMMODITIES.find((entry) => entry.id === commodityId)?.nameKey ?? commodityId;
+
+/** The hulls that can take goods aboard, with the selected one chosen. */
+function renderMarketShipPicker(ship) {
+  if (!els.marketShip) return;
+  els.marketShip.textContent = "";
+  for (const entry of fleet.ships.filter((candidate) => !isWreck(candidate))) {
+    const option = document.createElement("option");
+    option.value = entry.id;
+    option.textContent = entry.name ?? entry.hullName ?? entry.id;
+    els.marketShip.append(option);
+  }
+  els.marketShip.value = ship?.id ?? "";
+  els.marketShip.disabled = els.marketShip.options.length < 2;
+}
+
+els.marketShip?.addEventListener("change", () => {
+  const ship = tradingShip(fleet, els.marketShip.value);
+  if (!ship) return;
+  selectRefitShip(ship, { openRoom: false });
+  renderFleet();
+  render();
+  renderMarket();
+});
 
 /** The market board of the yard the screen is in (S118). */
 function renderMarket() {
@@ -1337,6 +1376,7 @@ function renderMarket() {
       })
     : t("market.noYard");
 
+  renderMarketShipPicker(ship);
   const hold = ship ? shipHold(ship) : { manifest: [], cargoKg: 0 };
   els.marketHold.textContent = ship
     ? t("market.hold", { used: gold(hold.cargoKg), capacity: gold(ship.capacityKg ?? 0) })

@@ -588,6 +588,7 @@ export const en = {
   /* ---------------------------------------------------------------- market (S118) */
   "market.title": "Market",
   "market.yard": "Shipyard",
+  "market.ship": "Ship",
   "market.zone": "You are in {zone}. She buys at {buy} and sells at {sell} of the base price.",
   "market.noYard": "You are not at a shipyard: sail into port to trade.",
   "market.hold": "Hold: {used} of {capacity} kg",

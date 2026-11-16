@@ -2311,6 +2311,19 @@ input[type="number"] {
   color: var(--ink-soft);
 }
 
+.market-ship-pick {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 11px;
+  color: var(--ink-soft);
+}
+
+.market-ship-pick select {
+  flex: 1;
+  min-width: 0;
+}
+
 .market-zone,
 .market-hold {
   margin: 0;
