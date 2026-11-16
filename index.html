@@ -23,13 +23,16 @@
         <strong id="gold-value">0</strong>
         <span id="gold-delta" class="purse-delta"></span>
       </div>
-      <label class="lang-picker">
-        <span class="lang-label" data-i18n="app.language">Idioma</span>
-        <select id="lang-select">
-          <option value="es">Español</option>
-          <option value="en">English</option>
-        </select>
-      </label>
+      <div class="topbar-actions">
+        <label class="lang-picker">
+          <span class="lang-label" data-i18n="app.language">Idioma</span>
+          <select id="lang-select">
+            <option value="es">Español</option>
+            <option value="en">English</option>
+          </select>
+        </label>
+        <button id="erase-btn" class="btn btn-erase" type="button" data-i18n="shipyard.erase">Reiniciar</button>
+      </div>
     </header>
 
     <nav class="screen-tabs" role="tablist" aria-label="Astillero">
@@ -261,7 +264,6 @@
         </div>
         <button id="launch-btn" class="btn btn-launch" type="button" disabled data-i18n="shipyard.launch">Añadir a la flota</button>
         <button id="set-sail-btn" class="btn btn-launch" type="button" disabled data-i18n="fleet.setSail">Zarpar</button>
-        <button id="erase-btn" class="btn btn-erase" type="button" data-i18n="shipyard.erase">Borrar partida</button>
       </div>
     </footer>
 

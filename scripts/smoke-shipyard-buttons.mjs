@@ -36,7 +36,10 @@ try {
       check(await sail.isDisabled(), `${language}: empty fleet must not sail`);
       check(await sail.evaluate((el) => !!el.closest(".footer .launch")), `${language}: sail button belongs in the footer actions`);
       check(await sail.evaluate((el) => !el.closest(".fleet-bar")), `${language}: sail button must leave the fleet panel`);
-      check(await sail.evaluate((el) => el.parentElement === document.querySelector("#launch-btn")?.parentElement && el.parentElement === document.querySelector("#erase-btn")?.parentElement), `${language}: sail shares the add and erase actions`);
+      check(await sail.evaluate((el) => el.parentElement === document.querySelector("#launch-btn")?.parentElement), `${language}: sail shares the add action`);
+      // "Reiniciar" lives in the top bar, next to the language picker (it left the footer).
+      check(await page.evaluate(() => document.querySelector("#erase-btn")?.parentElement === document.querySelector("#lang-select")?.closest(".topbar-actions")), `${language}: restart sits next to the language picker`);
+      check((await page.locator("#erase-btn").textContent())?.trim() === (language === "es" ? "Reiniciar" : "Restart"), `${language}: restart button label`);
     }
 
     const layout = await page.evaluate(() => {

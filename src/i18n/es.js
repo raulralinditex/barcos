@@ -164,7 +164,7 @@ export const es = {
   "shipyard.added": "{name} añadida a la flota.",
   "shipyard.knots": "{value} nudos",
   "shipyard.peopleCount": "{value} personas",
-  "shipyard.erase": "Borrar partida",
+  "shipyard.erase": "Reiniciar",
 
   /* ---------------------------------------------------------------- erase dialog */
   "erase.title": "Borrar partida",

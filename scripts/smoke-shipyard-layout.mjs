@@ -39,9 +39,10 @@ const yard = await page.evaluate(() => {
     sailInFleet: Boolean(fleetBar?.querySelector("#set-sail-btn")),
     sailInFooter: Boolean(footer?.querySelector("#set-sail-btn")),
     sailInDom: Boolean(sail),
-    // The button must sit next to the erase one, which is what "abajo con los botones" means.
+    // The button must sit next to the add one, which is what "abajo con los botones" means
+    // ("Reiniciar" moved to the top bar, next to the language picker).
     sailNextToErase:
-      sail?.parentElement === document.querySelector("#erase-btn")?.parentElement,
+      sail?.parentElement === document.querySelector("#launch-btn")?.parentElement,
   };
 });
 check(!yard.autofireInFleet, "the fleet panel still holds the automatic-fire switch");

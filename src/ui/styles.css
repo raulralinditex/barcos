@@ -56,6 +56,12 @@ h3 {
   background: linear-gradient(180deg, #fffdf8, #f6f1e6);
 }
 
+.topbar-actions {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
 .brand {
   display: flex;
   align-items: center;

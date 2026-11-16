@@ -167,7 +167,7 @@ export const en = {
   "shipyard.added": "{name} added to the fleet.",
   "shipyard.knots": "{value} knots",
   "shipyard.peopleCount": "{value} people",
-  "shipyard.erase": "Erase game",
+  "shipyard.erase": "Restart",
 
   /* ---------------------------------------------------------------- erase dialog */
   "erase.title": "Erase game",

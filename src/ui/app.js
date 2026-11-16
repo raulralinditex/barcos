@@ -1246,7 +1246,6 @@ function showScreen(next) {
   els.priceStrip.style.display = editing ? "" : "none";
   syncLaunchButton();
   els.setSailBtn.style.display = next === "flota" ? "" : "none";
-  els.eraseBtn.style.display = next === "flota" ? "" : "none";
   els.verdictIssues.style.display = editing ? "" : "none";
   // The ship+rig panels stand in read-only rooms too (S105): her banner, her verdict
   // chips and her button states must not leak the mode the room came from, so the
