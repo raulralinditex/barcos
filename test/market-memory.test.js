@@ -4,7 +4,7 @@ import { COMMODITIES, SHIPYARDS } from "../src/data/naval-data.js";
 import { GAME_TIME } from "../src/model/game-time.js";
 import {
   MARKET_MEMORY, stockOf, stockFactor, buyPrice, sellPrice, buyPriceNow, sellPriceNow,
-  marketBoardNow, marketOf, normaliseMarkets, withStock, recoverMarkets, bindGameTime, buyCargo, sellCargo, affordableUnits,
+  marketBoardNow, marketOf, normaliseMarkets, withStock, recoverMarkets, bindGameTime, buyCargo, sellCargo, affordableUnits, holdOf,
 } from "../src/model/commerce.js";
 import { shipyardZone } from "../src/model/world.js";
 
@@ -214,4 +214,34 @@ test("S114 preserved: trades without a memory quote retain zone prices and refus
   const sold = sellCargo({ manifest: bought.hold.manifest, gold: bought.gold }, commodity, 1, "abismo");
   assert.equal(sold.earned, sellPrice(commodity, "abismo"));
   assert.equal(sellCargo({ manifest: [], gold: 0 }, commodity, 1, "abismo"), null);
+});
+
+test("S125: a big load pays the price of each unit, not one price for all of them", () => {
+  const commodityId = "plata";
+  const units = 500;
+  const manifest = holdOf([{ commodityId, units }]).manifest;
+
+  // The bug the player reported: one quote for the whole lot, with the stock moving only
+  // afterwards. 500 silver paid 288000 into a market that holds 60.
+  const quote = marketBoardNow("abismo", {}).find((row) => row.id === commodityId);
+  const flat = sellCargo({ manifest, gold: 0 }, commodityId, units, "abismo", { unitPrice: quote.sell });
+  assert.equal(flat.earned, quote.sell * units);
+
+  // Paying unit by unit is the same money for a load that fits, and much less for one
+  // that floods the port: that is the curve of S119 finally biting.
+  const honest = sellCargo({ manifest, gold: 0 }, commodityId, units, "abismo", { memory: {} });
+  assert.ok(honest.earned < flat.earned, `${honest.earned} must pay less than ${flat.earned}`);
+  assert.ok(honest.earned > 0);
+  // A small sale is not punished: the first units pay the resting price.
+  const small = sellCargo({ manifest: holdOf([{ commodityId, units: 5 }]).manifest, gold: 0 }, commodityId, 5, "abismo", { memory: {} });
+  assert.ok(small.earned > quote.sell * 5 * 0.95, `a five-unit sale keeps its price: ${small.earned}`);
+  // And the price never rises as the yard fills up.
+  let memory = {};
+  let last = Infinity;
+  for (let i = 0; i < 30; i += 1) {
+    const unit = sellPriceNow(commodityId, "abismo", memory);
+    assert.ok(unit <= last, `unit ${i} paid ${unit}, more than the previous ${last}`);
+    last = unit;
+    memory = withStock(memory, commodityId, 1);
+  }
 });

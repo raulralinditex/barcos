@@ -233,7 +233,11 @@ for (let trip = 0; trip < 2; trip++) {
   const earned = (await purse()) - beforeSale;
   const abyssAfter = (await marketState()).markets["cala-del-abismo"].stock[first.id];
   const sellAfter = await boardPrice("sell");
-  check(earned === 20 * sellStart, `S119: sale pays displayed ${sellStart} × 20, got ${earned}`);
+  // S125: the yard pays the price of each unit from her own stock, so a 20-unit sale no
+  // longer pays the single displayed quote twenty times. It pays a little less, and the
+  // screen must say the same number the purse received.
+  check(earned > 0 && earned < 20 * sellStart, `S125: a 20-unit sale pays less than ${sellStart} × 20, got ${earned}`);
+  check(earned > 20 * sellAfter, `S125: and more than the price it leaves behind (${sellAfter} × 20), got ${earned}`);
   check(abyssAfter === abyssBefore + 20, `S119: abyss stock ${abyssBefore} -> ${abyssAfter}`);
   check(sellAfter < sellStart, `S119: abyss price must drop: ${sellStart} -> ${sellAfter}`);
   check((await holdKg()) === 0, "S119: selling the load empties the hold");
@@ -320,7 +324,7 @@ await exampleRow.locator("[data-sell]").click();
 const exampleAfter = await examplePrice();
 const exampleSave = await example.evaluate(() => JSON.parse(localStorage.getItem("barcos:game:v1")));
 check(exampleBefore === 58 && exampleAfter === 36, `S119: 40 salt move abyss price 58 -> 36, got ${exampleBefore} -> ${exampleAfter}`);
-check(exampleSave.gold === 20000 + 40 * exampleBefore, "S119: the 40-barrel sale pays the displayed quote");
+check(exampleSave.gold > 20000 && exampleSave.gold < 20000 + 40 * exampleBefore, `S125: the 40-barrel sale pays the curve, not 40 × the displayed quote: ${exampleSave.gold - 20000}`);
 check(exampleSave.markets["cala-del-abismo"].stock.sal === 100, "S119: selling 40 moves abyss stock 60 -> 100");
 await example.reload({ waitUntil: "networkidle" });
 await example.click('.screen-tab[data-screen="mercado"]');

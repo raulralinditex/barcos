@@ -139,8 +139,17 @@ export function buyCargo({ manifest, capacityKg, cargoKg, gold }, commodityId, u
 /**
  * Sell `units` of a commodity at a yard (S114). Only what is actually in the hold can be
  * sold: a hold with 3 barrels sells 3, never 4.
+ *
+ * The yard pays the price her own stock earns, unit by unit (S125). Quoting one price and
+ * applying it to the whole load made a single sale of 500 silver pay 288000 doblones into
+ * a market that holds 60: the stock only moved after the money was counted, so the curve
+ * of S119 never had a chance to bite. With `memory` the yard pays the price that
+ * corresponds to each unit she takes, so a big load pays less per unit the deeper it goes.
+ *
+ * Without `memory` the old flat quote stands: callers that have no market state (and the
+ * tests that pin a single price) keep working.
  */
-export function sellCargo({ manifest, gold }, commodityId, units, zoneId, { unitPrice } = {}) {
+export function sellCargo({ manifest, gold }, commodityId, units, zoneId, { unitPrice, memory } = {}) {
   const commodity = commodityById(commodityId);
   const wanted = Math.floor(Number(units) || 0);
   if (!commodity || wanted <= 0) return null;
@@ -148,8 +157,21 @@ export function sellCargo({ manifest, gold }, commodityId, units, zoneId, { unit
   const available = hold.manifest.filter((entry) => entry.commodityId === commodity.id)
     .reduce((sum, entry) => sum + entry.units, 0);
   if (available < wanted) return null;
-  const quoted = Number.isFinite(unitPrice) && unitPrice >= 0 ? unitPrice : sellPrice(commodity.id, zoneId);
-  const earned = quoted * wanted;
+
+  // Per-unit pricing when the caller hands the yard's memory: the stock climbs with each
+  // unit sold, so the next unit pays less. The flat quote is the fallback.
+  let earned = 0;
+  if (memory && typeof memory === "object") {
+    let walking = memory;
+    for (let sold = 0; sold < wanted; sold += 1) {
+      earned += sellPriceNow(commodity.id, zoneId, walking);
+      walking = withStock(walking, commodity.id, 1);
+    }
+  } else {
+    const quoted = Number.isFinite(unitPrice) && unitPrice >= 0 ? unitPrice : sellPrice(commodity.id, zoneId);
+    earned = quoted * wanted;
+  }
+
   let remaining = wanted;
   const left = hold.manifest.map((entry) => {
     if (entry.commodityId !== commodity.id) return entry;
