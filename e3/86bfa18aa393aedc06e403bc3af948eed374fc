@@ -1,0 +1,39 @@
+scripts/smoke-market.mjs
+  s_48f93862b4f568::t_bb2b9b5129acf3 102,109-110,113-114,117,129-130,170-171,275,284-287,330-336
+scripts/smoke-settings.mjs
+  s_48f93862b4f568::t_46c93bd92416da 80-82
+scripts/smoke-tabs.mjs
+  s_48f93862b4f568::t_af5830bd8bf031 76
+src/data/naval-data.js
+  s_48f93862b4f568::t_ff157f4b712572 688-695,706-711,719-724,732-737
+src/i18n/en.js
+  s_48f93862b4f568::t_30c29425f800e1 336-337,596
+src/i18n/es.js
+  s_48f93862b4f568::t_8501c6aa9817d0 333-334,593
+src/model/commerce.js
+  s_48f93862b4f568::t_70c3d19039892d 13,42-71,78-79,85-86,91,152,185,239,399-400,406-407,415
+src/model/settings.js
+  s_48f93862b4f568::t_d53f382c9c5e1b 13,19,148-164,184
+src/ui/app.js
+  s_48f93862b4f568::t_0adec43f829a62 65,1319,1355,1426,1430,1440,1447
+src/ui/settings-tab.js
+  s_48f93862b4f568::t_6fb0c347f24b29 108-113
+test/yard-markets.test.js
+  s_48f93862b4f568::t_41178002c645ca 1-103
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.6",
+  "base_commit_sha": "e386bfa18aa393aedc06e403bc3af948eed374fc",
+  "prompts": {},
+  "sessions": {
+    "s_48f93862b4f568": {
+      "agent_id": {
+        "tool": "pi",
+        "id": "01a1e58e-9669-713e-b888-48e76698935d",
+        "model": "claude-sonnet-5.5"
+      },
+      "human_author": "Raul Ripoll <raulral@ext.inditex.com>"
+    }
+  }
+}
