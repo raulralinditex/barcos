@@ -1361,11 +1361,34 @@ function drawMinimap() {
 
   // Every shipyard on the chart (S118): the market is a place, so the player has to be
   // able to see where the next one lies before deciding to cross for a price.
+  //
+  // A yard the enemy holds is the one mark on this chart that has to say more than
+  // "here" (S123): she is the objective of a siege, and her garrison is what the fight is
+  // against. Drawn at real size it would be a single dot, so her mark and her bar are
+  // drawn in screen units, after undoing the world scale, or they would shrink with the
+  // chart and be unreadable.
+  const markPx = 1 / scale;
   for (const yard of SHIPYARDS) {
+    const held = yard.home && fortCombat && fortHeldByEnemy(fortCombat);
     ctx.beginPath();
     ctx.arc(yard.x, yard.y, 120, 0, Math.PI * 2);
-    ctx.fillStyle = "#a9955f";
+    ctx.fillStyle = held ? "#d0503c" : "#a9955f";
     ctx.fill();
+
+    if (!held) continue;
+    // The garrison, as a bar over the yard: how much fight the occupiers have left.
+    // Sized in screen pixels (46 × 6 on a 170 px chart) and lifted nine pixels over the
+    // dot, because the world scale would turn a readable bar into a sliver.
+    const w = 46 * markPx;
+    const h = 6 * markPx;
+    const gap = 3 * markPx;
+    const left = yard.x - w / 2;
+    const top = yard.y - 9 * markPx - h;
+    const share = Math.max(0, Math.min(100, fortOccupierCondition(fortCombat))) / 100;
+    ctx.fillStyle = "rgba(12,20,30,0.85)";
+    ctx.fillRect(left - gap, top - gap, w + gap * 2, h + gap * 2);
+    ctx.fillStyle = "#d0503c";
+    ctx.fillRect(left, top, w * share, h);
   }
 
   for (const encounter of world.encounters) {
