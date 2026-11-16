@@ -1,0 +1,19 @@
+test/ammo-switch.test.js
+  s_8e1c453d9c7d4d::t_68d3ac9b3a3e15 22,258-314
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.6",
+  "base_commit_sha": "e42b02970853ded08fff6493bb9f2f6591b50dae",
+  "prompts": {},
+  "sessions": {
+    "s_8e1c453d9c7d4d": {
+      "agent_id": {
+        "tool": "pi",
+        "id": "01a1e495-607a-72a4-8b05-a77ff14397f8",
+        "model": "deepseek-v4.1-flash_high"
+      },
+      "human_author": "Raul Ripoll <raulral@ext.inditex.com>"
+    }
+  }
+}
