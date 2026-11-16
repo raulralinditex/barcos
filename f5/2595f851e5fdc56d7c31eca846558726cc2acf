@@ -1,0 +1,34 @@
+scripts/smoke-refit-autosave.mjs
+  h_8b9b8fe190c867 1-103
+scripts/smoke-refit.mjs
+  h_8b9b8fe190c867 35-36
+scripts/smoke-settings.mjs
+  h_8b9b8fe190c867 81
+scripts/smoke-tabs.mjs
+  h_8b9b8fe190c867 76
+src/i18n/en.js
+  h_8b9b8fe190c867 335,403
+src/i18n/es.js
+  h_8b9b8fe190c867 332,400
+src/model/refit.js
+  h_8b9b8fe190c867 3,7-11,64-68,78
+src/model/settings.js
+  h_8b9b8fe190c867 16,132-135,167
+src/ui/app.js
+  h_8b9b8fe190c867 56,1002,1027,1042-1107,1118,1181-1184,1247
+test/refit-autosave.test.js
+  h_8b9b8fe190c867 1-73
+test/settings.test.js
+  h_8b9b8fe190c867 271
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.6",
+  "base_commit_sha": "f52595f851e5fdc56d7c31eca846558726cc2acf",
+  "prompts": {},
+  "humans": {
+    "h_8b9b8fe190c867": {
+      "author": "Raul Ripoll <raulral@ext.inditex.com>"
+    }
+  }
+}
