@@ -64,7 +64,9 @@ import { isOutOfAmmo } from "../model/rearm.js";
 import { bootSettings } from "../model/settings-storage.js";
 import { bootCatalogue } from "../model/catalogue-storage.js";
 import { AUTOFIRE } from "../model/settings.js";
-import { GAME_TIME, burnSupply, supplySeconds } from "../model/game-time.js";
+import { GAME_TIME } from "../model/game-time.js";
+import { voyageClock } from "../model/voyage-clock.js";
+import { buildReserves, burnReserves, squadronSupply, wagesFor } from "../model/supply.js";
 import {
   closestTarget,
   escortFire,
@@ -145,6 +147,11 @@ const els = {
   windNow: $("#wind-now"),
   name: $("#hud-ship-name"),
   gold: $("#hud-gold"),
+  voyageDays: $("#voyage-days"),
+  voyageUpkeep: $("#voyage-upkeep"),
+  voyageGoldDays: $("#voyage-gold-days"),
+  voyageWorst: $("#voyage-worst"),
+  voyageDry: $("#voyage-dry"),
   zone: $("#hud-zone"),
   throttle: $("#hud-throttle"),
   speed: $("#hud-speed"),
@@ -169,6 +176,7 @@ const els = {
 
 const fmtInt = new Intl.NumberFormat("es-ES", { maximumFractionDigits: 0 });
 const fmtOne = new Intl.NumberFormat("es-ES", { maximumFractionDigits: 1 });
+const fmtUpkeep = new Intl.NumberFormat("es-ES", { maximumFractionDigits: 2 });
 
 /* ---------------------------------------------------------------- i18n (S11-S13) */
 
@@ -242,13 +250,13 @@ let goldEarned = 0;
 let markets = {};
 let playerCombat = null;
 /**
- * The crew's reserve, in seconds of game time (S67). It is the shipyard's `days` of
- * provisions expressed in the clock the sea actually runs on, and it burns as the
- * voyage goes: every whole day it gives up is a day of wages the crew is owed.
+ * The crew's reserve of every hull at sea, in seconds of game time, keyed by hull id
+ * (S67, S132). Each hull carries her own `days` of provisions expressed in the clock the
+ * sea runs on, and burns only her own: a hull moored at a shipyard is not in the map at
+ * all, so she cannot spend a drop. The model in ../model/supply.js owns the rules; this
+ * is only the live copy.
  */
-let supplyLeftS = 0;
-/** Set once, so the "no provisions" warning fires on the moment it runs out. */
-let supplyWarned = false;
+let supplyByHull = {};
 /** Whether the player has been told her guns are dry (S121). */
 let dryWarned = false;
 /**
@@ -266,6 +274,11 @@ let gameOverShown = false;
 const fx = [];
 // The initial position is seeded at boot, so only movement into port counts.
 let wasInPort = false;
+
+/** The provision days the shipyard sheet gives one hull (S132). */
+function shipDays(shipId) {
+  return (fleet?.ships ?? []).find((ship) => ship.id === shipId)?.days ?? 0;
+}
 
 /* ---------------------------------------------------------------- persistence */
 
@@ -285,7 +298,13 @@ function saveGame() {
     const payload = {
       gold,
       markets,
-      supplyLeftS,
+      // The captain's own reserve, kept in the old key so the sea save stays readable
+      // (S132): a save written before the per-hull rule only has this one.
+      supplyLeftS: Number(supplyByHull[runtimeShip?.id]) || 0,
+      // The squadron's reserves, one per hull (S132). `supplyLeftS` stays as the
+      // captain's own reserve so a save written before the rule still opens with her
+      // days, exactly as it did when the single reserve was the whole squadron's.
+      supplyByHull: { ...supplyByHull },
       victories,
       fort: fortCombat
         ? {
@@ -1860,10 +1879,15 @@ function handOverCommand() {
   const previousName = runtimeShip.name;
   // The captain that was lost follows the same rule as an escort (S117): she is gone, or
   // she waits in a yard as a wreck. Either way the next hull in line takes over.
+  const previousCaptainId = runtimeShip?.id;
   fleet = setCaptain(loseHull(fleet, runtimeShip.id, playerCombat?.status), next.id);
   runtimeShip = captainShip(fleet);
   playerCombat = next.combat;
   escorts = escorts.filter((escort) => escort.id !== next.id);
+  // The new captain already carries her own reserve in the map (S132): it follows her from
+  // the escort's row to the captain's by itself, because the map is keyed by hull id and
+  // not by role. Only the lost captain's row goes.
+  delete supplyByHull[previousCaptainId];
   world = {
     ...world,
     ship: {
@@ -1890,6 +1914,9 @@ function pruneLostEscorts() {
   for (const gone of lost) {
     showBanner(t("sea.banner.escortLost", { name: gone.name }), "danger", 4000);
     fleet = loseHull(fleet, gone.id, gone.combat?.status);
+    // A hull that left the squadron carries no reserve any more (S132): keeping hers in
+    // the map would let the panel report a hull that is no longer there as the worst.
+    delete supplyByHull[gone.id];
   }
   escorts = survivors;
   saveFleetState();
@@ -2015,24 +2042,24 @@ function collectCargoFrom(encounter, status) {
 }
 
 /**
- * Spend the crew's reserve as the voyage goes, and pay the wages of every whole day it
- * gives up (S67). The supply is the shipyard's `days` of provisions turned into the
- * clock the sea runs on; the wages are the fleet's own per-day upkeep, which existed and
- * was never charged.
+ * Spend every hull's own reserve as the voyage goes, and pay the wages of every whole day
+ * the captain's clock gives up (S67, S132).
  *
- * Running out is reported once, and it does not sink the ship: it is a warning that the
- * crew is on short rations, not a hidden game over.
+ * The supply is the shipyard's `days` of provisions turned into the clock the sea runs on,
+ * per hull: each one burns only her own. The wages are the fleet's own per-day upkeep,
+ * charged once for the whole fleet and off the captain's clock, because the player decided
+ * the whole fleet pays (S-F).
+ *
+ * Running out is reported once per hull, naming her, and it does not sink the ship: it is
+ * a warning that she is on short rations and has to go back to a shipyard.
  */
 function burnVoyageSupply(dt) {
-  const result = burnSupply(supplyLeftS, dt);
-  supplyLeftS = result.secondsLeft;
-  if (result.daysSpent > 0) {
-    const owed = result.daysSpent * fleetUpkeep(fleet);
-    if (owed > 0) gold = Math.max(0, gold - owed);
-  }
-  if (result.exhausted && !supplyWarned) {
-    supplyWarned = true;
-    showBanner(t("sea.banner.noSupply"), "danger", 4000);
+  const result = burnReserves(supplyByHull, dt);
+  supplyByHull = result.reserves;
+  const owed = wagesFor(result.daysSpent, runtimeShip?.id, fleetUpkeep(fleet));
+  if (owed > 0) gold = Math.max(0, gold - owed);
+  if (result.dried.length > 0) {
+    showBanner(t("sea.banner.noSupply", { name: hullName(result.dried[0]) }), "danger", 4000);
   }
 }
 
@@ -2404,10 +2431,30 @@ function drawWindArrow(ctx, cx, cy, wind, radius, color, scale, ring = false) {
 
 /* ---------------------------------------------------------------- HUD */
 
+/** The name of a hull at sea, by her id: the captain's or an escort's (S132). */
+function hullName(id) {
+  if (id === null || id === undefined) return null;
+  if (id === runtimeShip?.id) return runtimeShip?.name ?? null;
+  return escorts.find((escort) => escort.id === id)?.name ?? String(id);
+}
+
 function updateHud() {
   const zone = zoneAtRadius(Math.hypot(world.ship.x, world.ship.y));
   els.name.textContent = `${runtimeShip.name} — ${runtimeShip.hullName}`;
   els.gold.textContent = fmtInt.format(gold);
+  const squadron = squadronSupply(supplyByHull);
+  const voyage = voyageClock({ supplyLeftS: squadron.worstSeconds, upkeep: fleetUpkeep(fleet), gold });
+  els.voyageDays.textContent = fmtInt.format(voyage.daysLeft);
+  els.voyageUpkeep.textContent = fmtUpkeep.format(voyage.goldPerDay);
+  els.voyageGoldDays.textContent = Number.isFinite(voyage.goldIn) ? fmtInt.format(voyage.goldIn) : "∞";
+  // S132: the supply the panel prints is the worst hull's, the same reserve the sea is
+  // charging, plus how many hulls are already dry.
+  if (els.voyageWorst) {
+    els.voyageWorst.textContent = hullName(squadron.worstId) ?? t("sea.voyage.noHulls");
+  }
+  if (els.voyageDry) {
+    els.voyageDry.textContent = fmtInt.format(squadron.dryCount);
+  }
   els.zone.textContent = localisedZone(zone, t).name;
   els.zone.style.color = zone.id === "abismo" ? "#c9a9ff" : zone.id === "abierto" ? "#9fc7e8" : "#bfe3c9";
   els.throttle.textContent = `${fmtInt.format(ui.throttle * 100)} %`;
@@ -2565,13 +2612,8 @@ function boot() {
   world = { ...world, ship: { ...world.ship, speedKn: runtimeShip.speedKn, turnFactor: shipTurnFactor(runtimeShip.hullId, runtimeShip.loadFraction) } };
 
   gold = normaliseGold(savedGame?.gold);
-  // The reserve starts as the captain's bought days of provisions (S67), and the sea
-  // save is fresher than the fleet sheet, as it is for damage and crew.
-  const savedSupply = Number(savedGame?.supplyLeftS);
-  supplyLeftS = Number.isFinite(savedSupply) && savedSupply >= 0
-    ? savedSupply
-    : supplySeconds(runtimeShip?.days ?? 0);
-  supplyWarned = supplyLeftS <= 0;
+  // The reserves are seeded once the squadron is built, below (S132): each hull needs her
+  // own id before her own `days` can be read.
 
   // The yard (S74). Her damage, garrison and the player's victories come from the save,
   // so a captured or battered yard is still that after a reload.
@@ -2645,6 +2687,16 @@ function boot() {
     };
   });
   world = { ...world, escorts: escorts.map(({ combat, ...rest }) => rest) };
+
+  // The squadron's reserves (S132), one per hull that actually sailed: the captain first
+  // and then every escort, each seeded from her own `days` of provisions. The sea save is
+  // fresher than the fleet sheet, as it is for damage and crew: a per-hull map wins, and an
+  // old save's single `supplyLeftS` lands on the captain and leaves the escorts to their
+  // own days.
+  supplyByHull = buildReserves(
+    [{ id: runtimeShip?.id, days: runtimeShip?.days }, ...escorts.map((escort) => ({ id: escort.id, days: shipDays(escort.id) }))],
+    { byHull: savedGame?.supplyByHull, legacy: savedGame?.supplyLeftS },
+  );
 
   // Restore the guns from the autosave, or rig the ship out of the shipyard sheet.
   playerCombat = createPlayerCombatant(runtimeShip);
