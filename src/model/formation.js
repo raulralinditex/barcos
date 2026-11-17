@@ -109,6 +109,26 @@ export function createEscort(spec = {}, captain = {}, index = 0) {
 }
 
 /**
+ * The escort a hull becomes when she joins the squadron mid-voyage (S139).
+ *
+ * The sea builds its escort list once, when the screen loads, so a prize captured at sea
+ * used to be saved to the fleet and never drawn: she appeared only after sailing back to a
+ * yard and reloading the sea. This returns the escort entry that puts her in the formation
+ * right now, or null when she is already in the line or the data is not enough to place her.
+ */
+export function prizeJoiningSquadron(line, captain, prize, index = 0) {
+  if (!Array.isArray(line) || !captain || typeof captain.x !== "number" || typeof captain.y !== "number") return null;
+  if (!prize || typeof prize.id !== "string" || prize.id.length === 0) return null;
+  if (line.some((escort) => escort?.id === prize.id)) return null;
+  const escort = createEscort(
+    { id: prize.id, speedKn: prize.speedKn, turnFactor: prize.turnFactor },
+    captain,
+    Number.isFinite(index) ? index : line.length,
+  );
+  return { ...escort, name: prize.name ?? prize.id };
+}
+
+/**
  * Advance one escort towards its station. It turns towards the bearing of the
  * station at the same rudder authority as the captain's ship, and accelerates
  * towards the speed that closes the gap, capped by its own hull speed (times the

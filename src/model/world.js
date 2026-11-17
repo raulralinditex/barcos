@@ -454,6 +454,11 @@ export function updateWorld(world, input = {}, dt = 0) {
     return distance <= forget;
   });
 
+  // A defeated enemy never comes back (S139). The zone's density is a target for the
+  // LEVEL's quota, not a licence to respawn a fight that is over: the spawner below skips
+  // every id this sea has already finished.
+  const finished = defeatedEnemyIds(world);
+
   // keep density matched to the current zone
   const zone = zoneAtRadius(Math.hypot(ship.x, ship.y));
   const wantEnemies = Math.round(zone.encounters * zone.enemyShare);
@@ -462,7 +467,10 @@ export function updateWorld(world, input = {}, dt = 0) {
   const haveTreasures = encounters.filter((e) => e.type === "treasure").length;
 
   for (let i = haveEnemies; i < wantEnemies; i += 1) {
+    // Never reuse an id this sea already defeated (S139).
+    while (finished.has(nextId)) nextId += 1;
     encounters.push(spawnOne(rnd, ship, "enemy", zone, nextId));
+    finished.add(nextId);
     nextId += 1;
   }
   for (let i = haveTreasures; i < wantTreasures; i += 1) {
@@ -489,6 +497,29 @@ export function nearestEncounter(world, type) {
 }
 
 /** Serialise for autosave. Returns a string; deserializeWorld validates it back. */
+/**
+ * The ids of the enemies this sea has already finished (S139).
+ *
+ * A defeated enemy is dropped from `encounters`, and without a record the zone's top-up
+ * put the same id back with its `surrendered` status intact: the same prize was captured on
+ * every frame. This is the record, kept on the world so it survives a save.
+ */
+export function defeatedEnemyIds(world) {
+  const list = world?.defeated;
+  if (!Array.isArray(list)) return new Set();
+  return new Set(list.filter((id) => Number.isFinite(id)));
+}
+
+/** Remember a defeated enemy by id, so the sea can never bring her back (S139). */
+export function markDefeated(world, enemyId) {
+  const id = Number(enemyId);
+  const base = world && typeof world === "object" ? world : {};
+  const ids = defeatedEnemyIds(base);
+  if (!Number.isFinite(id)) return { ...base, defeated: [...ids] };
+  ids.add(id);
+  return { ...base, defeated: [...ids] };
+}
+
 export function serializeWorld(world) {
   return JSON.stringify({
     v: 1,
@@ -500,6 +531,8 @@ export function serializeWorld(world) {
     ship: world.ship,
     escorts: world.escorts ?? [],
     encounters: world.encounters,
+    // The fights this sea has finished (S139): without them a defeated enemy comes back.
+    defeated: [...defeatedEnemyIds(world)],
   });
 }
 
@@ -536,6 +569,7 @@ export function deserializeWorld(json) {
           )
         : [],
       encounters: data.encounters,
+      defeated: Array.isArray(data.defeated) ? data.defeated.filter((id) => Number.isFinite(id)) : [],
     };
   } catch {
     return null;

@@ -64,7 +64,7 @@ import { isOutOfAmmo } from "../model/rearm.js";
 import { bootSettings } from "../model/settings-storage.js";
 import { bootCatalogue } from "../model/catalogue-storage.js";
 import { AUTOFIRE } from "../model/settings.js";
-import { GAME_TIME } from "../model/game-time.js";
+import { GAME_TIME, supplySeconds } from "../model/game-time.js";
 import { voyageClock } from "../model/voyage-clock.js";
 import { buildReserves, burnReserves, squadronSupply, wagesFor } from "../model/supply.js";
 import {
@@ -74,7 +74,7 @@ import {
   pruneAllies,
   squadronStatus,
 } from "../model/squadron.js";
-import { createEscort } from "../model/formation.js";
+import { createEscort, prizeJoiningSquadron } from "../model/formation.js";
 import { hasEnemyInGunshot, hullBarShare, timeScaleOnEngage } from "../model/sea-hud.js";
 import { flagColours, flagFor, yardFlag } from "../model/flag.js";
 import { normaliseCountry } from "../model/country.js";
@@ -104,6 +104,7 @@ import {
   ZONE_BANDS,
   createWorld,
   deserializeWorld,
+  markDefeated,
   nearestEncounter,
   serializeWorld,
   updateWorld,
@@ -1872,6 +1873,31 @@ function processCombat(dt, now) {
   }
 }
 
+/**
+ * Put a hull that just joined the fleet into the live squadron (S139), with her own guns
+ * and crew and her own supply reserve: a prize that fights alongside the captain has to
+ * carry what she captured, not a fresh hull's allowance.
+ */
+function joinSquadron(prize, encounter) {
+  const joined = prizeJoiningSquadron(escorts, world.ship, prize, escorts.length);
+  if (!joined) return;
+  const combatant = createPlayerCombatant(prize);
+  // Her guns come from the fight she lost, not from a new hull's default battery.
+  if (Array.isArray(encounter?.combat?.pieces)) {
+    const pieces = encounter.combat.pieces.map((piece) => ({
+      ...piece,
+      shotsLeft: Math.max(0, Number(piece.shotsLeft) || 0),
+      reloadTimer: 0,
+    }));
+    if (pieces.length > 0) combatant.pieces = pieces;
+  }
+  refreshStatus(combatant);
+  escorts = [...escorts, { ...joined, combat: combatant }];
+  supplyByHull = { ...supplyByHull, [prize.id]: supplySeconds(prize.days ?? 0) };
+  world = { ...world, escorts: escorts.map(({ combat, ...rest }) => rest) };
+  saveGame();
+}
+
 /** Promote the first fighting escort without moving her or rebuilding her combatant. */
 function handOverCommand() {
   const next = nextCommandShip(allies());
@@ -1956,7 +1982,11 @@ function loseHull(currentFleet, shipId, status) {
  */
 function resolveDefeatedEnemies() {
   const zone = currentZone();
-  world.encounters = world.encounters.map((encounter) => {
+  // The ids this pass finishes, applied AFTER the map (S139): `world` is reassigned here,
+  // and writing `world.encounters` from inside the map would land on the object the
+  // reassignment replaced, losing the record and bringing the enemy back.
+  const finished = [];
+  const resolved = world.encounters.map((encounter) => {
     if (encounter.type !== "enemy" || !encounter.combat) return encounter;
     const status = encounter.combat.status;
     if (status !== "sunk" && status !== "surrendered") return encounter;
@@ -1971,11 +2001,20 @@ function resolveDefeatedEnemies() {
     const prize = status === "surrendered" ? captureableShip(encounter) : null;
     if (prize) {
       fleet = withPrize(fleet, { ...prize, yardId: null });
+      // The fight is over for good (S139): remember her id, or the zone's top-up puts the
+      // same surrendered hull back and she is captured again on the next frame.
+      finished.push(encounter.id);
+      // She joins the squadron on the spot (S139): the live escort list is built when the
+      // sea loads, so without this she was saved to the fleet and never drawn until the
+      // player sailed back to a yard and the sea reloaded.
+      joinSquadron(prize, encounter);
       saveFleetState();
       showBanner(t("sea.banner.captured", { name: prize.name }), "gold", 4000);
       return null;
     }
 
+    // A sunk hull is finished too (S139): her wreck is a different encounter id.
+    finished.push(encounter.id);
     showBanner(
       status === "sunk" ? t("sea.banner.sunk") : t("sea.banner.surrendered"),
       "gold",
@@ -1991,6 +2030,8 @@ function resolveDefeatedEnemies() {
       zoneId: zone.id,
     };
   }).filter(Boolean);
+  world = { ...world, encounters: resolved };
+  for (const id of finished) world = markDefeated(world, id);
 }
 
 /**
