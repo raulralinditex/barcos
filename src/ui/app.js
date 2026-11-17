@@ -65,6 +65,8 @@ import {
   affordableUnits,
   bindGameTime,
   buyCargo,
+  holdBuyTotal,
+  holdBuyUnits,
   marketBoardNow,
   priceStanding,
   sellStanding,
@@ -1690,7 +1692,7 @@ function ensureMarketSelection() {
  * Buy one unit at the yard (S118). The hold is written back to the captain's fleet entry
  * and the purse to the shared game save, which is the only record of gold (S32).
  */
-function marketBuy(commodityId) {
+function marketBuy(commodityId, units = 1) {
   if (refuseVisit()) return;
   const ship = marketShip();
   const yard = screenShipyard();
@@ -1701,7 +1703,7 @@ function marketBuy(commodityId) {
   const trade = buyCargo(
     { manifest: hold.manifest, capacityKg: ship.capacityKg, cargoKg: ship.cargoKg, gold: state.gold },
     commodityId,
-    1,
+    units,
     yard.id,
     { unitPrice: quote.buy, availableStock: quote.stock },
   );
@@ -1901,6 +1903,72 @@ els.marketBoard?.addEventListener("click", (event) => {
   if (buy) return marketBuy(buy.dataset.buy);
   const sell = event.target.closest("[data-sell]");
   if (sell) return marketSell(sell.dataset.sell);
+});
+
+/* ------------------------------------------------- holding the buy button (S138) */
+
+/**
+ * Holding the buy button keeps buying (S138): the press buys one unit, and while the
+ * button stays down the purchase repeats ten at a time until the purse, the hold or the
+ * yard's stock stops it. One click stays one unit, because that is what the button has
+ * always done and what the player expects from a single press.
+ *
+ * The repeat runs on a timer, not on every frame: the market board is redrawn after each
+ * purchase, so the held element disappears and the pointer's target changes under us. The
+ * timer holds the commodity id, which is what actually has to survive.
+ */
+const HOLD_REPEAT_MS = 120;
+let holdTimer = null;
+let holdCommodityId = null;
+let holdRepeats = 0;
+
+function stopHolding() {
+  if (holdTimer) clearInterval(holdTimer);
+  holdTimer = null;
+  holdCommodityId = null;
+  holdRepeats = 0;
+}
+
+/** How many units the next repeat may buy, given what the yard and the purse allow now. */
+function holdBatch(commodityId) {
+  const ship = marketShip();
+  const yard = screenShipyard();
+  const quote = yard?.id === quotedYardId ? marketQuotes.get(commodityId) : null;
+  if (!ship || !yard || !quote) return 0;
+  const hold = shipHold(ship);
+  return holdBuyTotal({
+    unitPrice: quote.buy,
+    gold: state.gold,
+    room: (Number(ship.capacityKg) || 0) - (Number(hold.cargoKg) || 0),
+    stock: quote.stock,
+  });
+}
+
+function startHolding(commodityId) {
+  stopHolding();
+  holdCommodityId = commodityId;
+  holdTimer = setInterval(() => {
+    if (!holdCommodityId) return stopHolding();
+    holdRepeats += 1;
+    const units = holdBuyUnits(holdRepeats);
+    const allowed = holdBatch(holdCommodityId);
+    if (allowed <= 0 || units > allowed) {
+      // Nothing more fits or nothing more is affordable: the hold ends on its own.
+      stopHolding();
+      return;
+    }
+    marketBuy(holdCommodityId, units);
+  }, HOLD_REPEAT_MS);
+}
+
+for (const type of ["pointerup", "pointercancel", "pointerleave", "blur"]) {
+  window.addEventListener(type, stopHolding);
+}
+
+els.marketBoard?.addEventListener("pointerdown", (event) => {
+  const buy = event.target.closest("[data-buy]");
+  if (!buy || buy.disabled) return;
+  startHolding(buy.dataset.buy);
 });
 
 // The automatic-fire switch moved to the settings screen (S88), where every other

@@ -136,6 +136,43 @@ export function salvageHold(manifest, share) {
   return holdOf(entries);
 }
 
+/* ------------------------------------------------- holding the buy button (S138) */
+
+/**
+ * Holding the buy button (S138). The player's rule: one press buys a unit, and keeping the
+ * button down buys ten at a time until the money runs out. The step is data so the screen
+ * and the model can never disagree about it.
+ */
+export const HOLD_BUY = { firstUnits: 1, repeatUnits: 10 };
+
+/** How many units a repeat of the held button asks for: the first is one, the rest ten. */
+export function holdBuyUnits(repeat) {
+  const index = Number(repeat);
+  return Number.isFinite(index) && index > 0 ? HOLD_BUY.repeatUnits : HOLD_BUY.firstUnits;
+}
+
+/**
+ * How many units a held press may buy in total, given what the purse, the hold and the
+ * yard's stock allow (S138): one unit first, then as many whole batches of ten as fit.
+ * Nothing is rounded up, so the answer is always affordable and always fits.
+ */
+export function holdBuyTotal(input) {
+  const { unitPrice, gold, room, stock } = input && typeof input === "object" ? input : {};
+  const price = Number(unitPrice);
+  const purse = Number(gold);
+  const freeKg = Number(room);
+  const available = Number(stock);
+  if (!Number.isFinite(price) || price <= 0) return 0;
+  if (!Number.isFinite(purse) || purse <= 0) return 0;
+  const roomLeft = Number.isFinite(freeKg) && freeKg > 0 ? Math.floor(freeKg) : 0;
+  const stockLeft = Number.isFinite(available) && available > 0 ? Math.floor(available) : 0;
+  const byPurse = Math.floor(purse / price);
+  const ceiling = Math.min(byPurse, roomLeft, stockLeft);
+  if (ceiling <= 0) return 0;
+  const batches = Math.floor((ceiling - HOLD_BUY.firstUnits) / HOLD_BUY.repeatUnits);
+  return HOLD_BUY.firstUnits + Math.max(0, batches) * HOLD_BUY.repeatUnits;
+}
+
 /* -------------------------------------------------------------- buying and selling */
 
 /**
