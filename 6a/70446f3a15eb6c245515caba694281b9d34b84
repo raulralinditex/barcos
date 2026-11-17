@@ -1,0 +1,28 @@
+src/model/commerce.js
+  s_48f93862b4f568::t_55242453377415 159-160
+  s_48f93862b4f568::t_2b8abf7fc0a996 139-158,161-175
+src/ui/app.js
+  s_48f93862b4f568::t_8776793e24af19 68-69,1695,1706,1908-1971
+  s_48f93862b4f568::t_5eb7b281183ee3 1972-1973
+test/market-hold-buy.test.js
+  s_48f93862b4f568::t_a84d161d67a77f 1-64
+scripts/smoke-hold-buy.mjs
+  s_48f93862b4f568::t_e3a8eef7ec51ca 39-41,99-102,106,108-109
+  s_48f93862b4f568::t_0fabd39d5464ec 1-38,42-98,103-105,107,110-128
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.6",
+  "base_commit_sha": "6a70446f3a15eb6c245515caba694281b9d34b84",
+  "prompts": {},
+  "sessions": {
+    "s_48f93862b4f568": {
+      "agent_id": {
+        "tool": "pi",
+        "id": "01a1e58e-9669-713e-b888-48e76698935d",
+        "model": "deepseek-v4.1-flash_high"
+      },
+      "human_author": "Raul Ripoll <raulral@ext.inditex.com>"
+    }
+  }
+}
