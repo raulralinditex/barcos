@@ -23,6 +23,19 @@
         <strong id="gold-value">0</strong>
         <span id="gold-delta" class="purse-delta"></span>
       </div>
+      <!-- S133: the yard the screen is showing, her name (editable right here) and the
+           voyage to her when the captain is moored elsewhere. A visit is read-only: the
+           actions that need presence stay disabled and the travel button offers the trip. -->
+      <div class="yard-picker">
+        <label class="yard-field">
+          <span class="yard-label" data-i18n="shipyard.yard.label">Astillero</span>
+          <select id="yard-select"></select>
+        </label>
+        <button id="yard-rename-btn" class="yard-rename" type="button" data-i18n-aria="shipyard.yard.rename" aria-label="Cambiar el nombre del astillero">✎</button>
+        <input id="yard-name-input" class="yard-name-input is-hidden" type="text" maxlength="28" data-i18n-placeholder="shipyard.yard.namePlaceholder" placeholder="Nombre del astillero" />
+        <button id="yard-travel-btn" class="btn yard-travel is-hidden" type="button"></button>
+        <p id="yard-visit-note" class="yard-visit-note is-hidden"></p>
+      </div>
       <div class="topbar-actions">
         <label class="lang-picker">
           <span class="lang-label" data-i18n="app.language">Idioma</span>

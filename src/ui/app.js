@@ -46,6 +46,7 @@ import {
   captainShip,
   deserializeFleet,
   departYard,
+  fleetUpkeep,
   isEmptyFleet,
   reconcileCaptainPosition,
   serializeFleet,
@@ -72,9 +73,17 @@ import {
   withHold,
   withStock,
 } from "../model/commerce.js";
-import { GAME_TIME } from "../model/game-time.js";
+import { GAME_TIME, burnSupply, supplySeconds } from "../model/game-time.js";
 import { currentShipyard, deserializeWorld, shipyardZone } from "../model/world.js";
-import { COMMODITIES, SHIPYARDS } from "../data/naval-data.js";
+import { COMMODITIES, SHIPYARDS, shipyardById } from "../data/naval-data.js";
+// S133: the yard selector of the title bar, the editable names and the automatic voyage.
+import { arriveAt, voyageQuote } from "../model/voyage.js";
+import {
+  parseYardNames,
+  serialiseYardNames,
+  withYardName,
+  yardDisplayName,
+} from "../model/shipyard-names.js";
 import { floatsAgain, isWreck, refloatCost } from "../model/sinking.js";
 import { rearmQuote, rearmShip } from "../model/rearm.js";
 import { REARM } from "../model/rearm.js";
@@ -84,6 +93,8 @@ const GAME_KEY = "barcos:game:v1";
 const SHIP_KEY = "barcos:current-ship:v1";
 const FLEET_KEY = "barcos:fleet:v1";
 const COUNTRY_KEY = "barcos:country:v1";
+/** The player's own names for the yards (S133), kept apart from the fleet and the sea. */
+const YARD_NAMES_KEY = "barcos:yard-names:v1";
 /** Automatic fire (S47): a preference, so erasing the game does not touch it. */
 
 /**
@@ -234,6 +245,11 @@ const els = {
   eraseCancel: $("#erase-cancel"),
   eraseConfirm: $("#erase-confirm"),
   langSelect: $("#lang-select"),
+  yardSelect: $("#yard-select"),
+  yardRenameBtn: $("#yard-rename-btn"),
+  yardNameInput: $("#yard-name-input"),
+  yardTravelBtn: $("#yard-travel-btn"),
+  yardVisitNote: $("#yard-visit-note"),
   dockDialog: $("#dock-dialog"),
   dockList: $("#dock-list"),
   dockNote: $("#dock-note"),
@@ -1090,6 +1106,8 @@ function stableJson(value) {
  */
 function autoSaveRefit() {
   if (!(REFIT.autoSave > 0) || !refitId) return false;
+  // A refit is a presence action (S133-C): a visit shows the hull, it does not touch her.
+  if (visitingYard()) return false;
   const target = localFleet().ships.find((entry) => entry.id === refitId);
   if (!target || isWreck(target)) return false;
   const quote = quoteRefit(target, currentConfig(), state.gold);
@@ -1259,6 +1277,9 @@ function showScreen(next) {
   // The market trades with the selected hull, and the rig beside it is that hull's rig:
   // entering with nobody selected (or a wreck) selects the captain first.
   if (next === "mercado") ensureMarketSelection();
+  // The title bar's selector and the voyage offer belong to every room (S133-A).
+  renderYardSelector();
+  renderYardTravel();
   if (next !== "configuracion") render();
   // The yard's room repaints on entry: her state may have changed at sea since the
   // last look (S100).
@@ -1288,12 +1309,317 @@ function savedCaptainPosition() {
   return (game?.world ? deserializeWorld(game.world)?.ship : null) ?? game?.ship;
 }
 
-function screenShipyard() {
+/** The yard the captain's hull is moored at right now (S133-C). */
+function captainYard() {
   const ship = savedCaptainPosition();
   const yard = ship && Number.isFinite(ship.x) && Number.isFinite(ship.y)
     ? currentShipyard({ x: ship.x, y: ship.y })
     : null;
   return yard ?? SHIPYARDS.find((entry) => entry.home) ?? SHIPYARDS[0] ?? null;
+}
+
+/* ---------------------------------------------------------------- yard selector (S133) */
+
+/**
+ * Which yard the screen is showing (S133-A). It is the yard the player picked in the title
+ * bar's selector; with nobody picked it is the yard the captain is moored at, which is the
+ * yard the screen has always shown (S118). A pick that is not a real yard is no pick, so a
+ * broken save opens on the captain's own water.
+ */
+let viewedYardId = null;
+
+/** The player's own names for the yards, per yard id (S133-B). */
+let yardNames = loadYardNames();
+
+function loadYardNames() {
+  try {
+    return parseYardNames(localStorage.getItem(YARD_NAMES_KEY));
+  } catch {
+    return {};
+  }
+}
+
+function saveYardNames() {
+  try {
+    localStorage.setItem(YARD_NAMES_KEY, serialiseYardNames(yardNames));
+  } catch {
+    /* storage disabled: the names still live for this session */
+  }
+}
+
+function screenShipyard() {
+  return shipyardById(viewedYardId) ?? captainYard();
+}
+
+/** The name the selector shows: the player's own, else the one the yard shipped with. */
+function yardName(yard) {
+  return yardDisplayName(yard, yardNames, t);
+}
+
+/**
+ * True while the screen is only visiting a yard (S133-C): her data is on show, but every
+ * action that needs the captain's presence is disabled, because she is moored elsewhere.
+ */
+function visitingYard() {
+  const shown = screenShipyard();
+  const moored = captainYard();
+  return Boolean(shown && moored && shown.id !== moored.id);
+}
+
+/** The reason a presence action is refused right now, in the player's language. */
+function visitReason() {
+  return t("shipyard.yard.visitNote", { name: yardName(screenShipyard()) });
+}
+
+/**
+ * Refuse a presence action while the screen is a visit, saying why (S133-C). Returns true
+ * when the action was refused, so a handler can return on it.
+ */
+function refuseVisit() {
+  if (!visitingYard()) return false;
+  els.purchaseNotice.classList.add("is-error");
+  els.purchaseNotice.textContent = visitReason();
+  return true;
+}
+
+/** The list of yards in the title bar, with the yard on screen selected (S133-A). */
+function renderYardSelector() {
+  if (!els.yardSelect) return;
+  const shown = screenShipyard();
+  els.yardSelect.textContent = "";
+  for (const yard of SHIPYARDS) {
+    const option = document.createElement("option");
+    option.value = yard.id;
+    option.textContent = yardName(yard);
+    els.yardSelect.append(option);
+  }
+  els.yardSelect.value = shown?.id ?? "";
+  els.yardSelect.title = shown ? yardName(shown) : "";
+  if (els.yardRenameBtn) els.yardRenameBtn.disabled = !shown;
+}
+
+/** The captain's live supply, in days, as the shipyard knows it (S133-D). */
+function captainSupplyDays() {
+  const captain = captainShip(fleet);
+  const days = Number(captain?.days);
+  return Number.isFinite(days) && days > 0 ? days : 0;
+}
+
+/** What the voyage to the yard on screen would cost (S133-D), or null with no voyage. */
+function voyageToShownYard() {
+  const to = screenShipyard();
+  const from = captainYard();
+  if (!to || !from || to.id === from.id) return null;
+  return voyageQuote(from.id, to.id, {
+    speedKn: captainShip(fleet)?.speedKn ?? 0,
+    supplyDays: captainSupplyDays(),
+    gold: state.gold,
+    upkeep: fleetUpkeep(fleet),
+  });
+}
+
+/** The voyage that has been quoted but not yet charged (S133-E). */
+let quotedVoyageTo = null;
+
+/**
+ * The visit note and the voyage button (S133-C, S133-E): the button reports the quote
+ * before charging anything, and only the second press spends the supply and the gold.
+ */
+function renderYardTravel() {
+  if (!els.yardTravelBtn || !els.yardVisitNote) return;
+  const visiting = visitingYard();
+  const quote = visiting ? voyageToShownYard() : null;
+  const target = screenShipyard();
+  els.yardVisitNote.classList.toggle("is-hidden", !visiting);
+  if (visiting) els.yardVisitNote.textContent = visitReason();
+  els.yardTravelBtn.classList.toggle("is-hidden", !quote);
+  if (!quote) {
+    quotedVoyageTo = null;
+    return;
+  }
+  const name = yardName(target);
+  const quoted = quotedVoyageTo === target.id;
+  els.yardTravelBtn.disabled = !quote.canMake;
+  els.yardTravelBtn.textContent = quoted
+    ? t("shipyard.yard.travelConfirm", { name })
+    : t("shipyard.yard.travel", { name });
+  if (!quoted) els.yardTravelBtn.title = "";
+  if (quoted) {
+    els.yardTravelBtn.title = quote.canMake
+      ? t("shipyard.yard.travelQuote", {
+          name,
+          distance: gold(quote.distanceM),
+          days: gold(quote.days),
+          supply: gold(quote.supplyDays),
+          gold: gold(quote.gold),
+        })
+      : t("shipyard.yard.travelShort", {
+          supply: gold(quote.supplyShort),
+          gold: gold(quote.goldShort),
+        });
+  }
+}
+
+/**
+ * Move the captain to the yard on screen and charge what the quote said (S133-D, S133-E).
+ *
+ * The sea save is the record of where she is and what she carries, so the arrival is
+ * written there too: the position (or the next boot would read her back at the old yard),
+ * the purse, and the captain's own supply. Every other hull keeps her mooring.
+ */
+function sailToShownYard() {
+  const target = screenShipyard();
+  const quote = voyageToShownYard();
+  if (!target || !quote || !quote.canMake) return false;
+  const captain = captainShip(fleet);
+  const result = arriveAt(fleet, target.id, quote);
+  if (!result || !captain) return false;
+
+  fleet = {
+    ...result.fleet,
+    ships: result.fleet.ships.map((ship) => ship.id === captain.id
+      ? { ...ship, days: Math.max(0, (Number(ship.days) || 0) - result.supplyDaysSpent) }
+      : ship),
+  };
+  state.gold = Math.max(0, state.gold - result.goldSpent);
+  saveFleet();
+
+  // The sea's per-hull reserve is the live supply (S132): spend the same days there, or
+  // the next voyage would sail with the reserve the captain left the old yard with.
+  const game = readFortSave() ?? {};
+  const patch = { gold: state.gold, ship: { ...(game.ship ?? {}), x: target.x, y: target.y, heading: 0 } };
+  const reserves = game.supplyByHull && typeof game.supplyByHull === "object" ? { ...game.supplyByHull } : null;
+  if (reserves && Object.prototype.hasOwnProperty.call(reserves, captain.id)) {
+    const burned = burnSupply(reserves[captain.id], supplySeconds(result.supplyDaysSpent));
+    reserves[captain.id] = burned.secondsLeft;
+    patch.supplyByHull = reserves;
+    if (Number(game.supplyLeftS) >= 0 && game.supplyLeftS !== undefined) patch.supplyLeftS = burned.secondsLeft;
+  }
+  if (typeof game.world === "string") {
+    try {
+      const world = JSON.parse(game.world);
+      world.ship = { ...(world.ship ?? {}), x: target.x, y: target.y, heading: 0 };
+      patch.world = JSON.stringify(world);
+    } catch {
+      /* a broken sea save is left alone: the arrival still lives on the fleet sheet */
+    }
+  }
+  writeFortSave({}, patch);
+
+  quotedVoyageTo = null;
+  els.goldValue.textContent = gold(state.gold);
+  els.purchaseNotice.classList.remove("is-error");
+  els.purchaseNotice.textContent = t("shipyard.yard.arrived", {
+    name: yardName(target),
+    days: gold(result.supplyDaysSpent),
+    gold: gold(result.goldSpent),
+  });
+  renderFleet();
+  renderMarket();
+  renderYardSelector();
+  renderYardTravel();
+  render();
+  return true;
+}
+
+if (els.yardSelect) {
+  els.yardSelect.addEventListener("change", (event) => {
+    const yard = shipyardById(event.target.value);
+    viewedYardId = yard?.id ?? null;
+    quotedVoyageTo = null;
+    els.purchaseNotice.classList.remove("is-error");
+    els.purchaseNotice.textContent = "";
+    renderYardSelector();
+    renderYardTravel();
+    renderFleet();
+    renderFort();
+    renderMarket();
+    render();
+  });
+}
+
+/** The pencil opens the inline rename, which is the only way a name is edited (S133-B). */
+function openYardRename() {
+  const yard = screenShipyard();
+  if (!yard || !els.yardNameInput) return;
+  els.yardNameInput.value = yardName(yard);
+  els.yardNameInput.classList.remove("is-hidden");
+  els.yardNameInput.focus();
+  els.yardNameInput.select();
+}
+
+/** Store the typed name; an empty or whitespace name brings the shipped one back. */
+function commitYardRename() {
+  const yard = screenShipyard();
+  if (!yard || !els.yardNameInput) return;
+  yardNames = withYardName(yardNames, yard.id, els.yardNameInput.value);
+  saveYardNames();
+  els.yardNameInput.value = "";
+  els.yardNameInput.classList.add("is-hidden");
+  els.purchaseNotice.classList.remove("is-error");
+  els.purchaseNotice.textContent = t("shipyard.yard.renamed", { name: yardName(yard) });
+  renderYardSelector();
+  renderYardTravel();
+  renderMarket();
+}
+
+if (els.yardRenameBtn) {
+  els.yardRenameBtn.addEventListener("click", openYardRename);
+}
+
+if (els.yardNameInput) {
+  els.yardNameInput.addEventListener("keydown", (event) => {
+    if (event.key === "Enter") {
+      event.preventDefault();
+      commitYardRename();
+    } else if (event.key === "Escape") {
+      event.preventDefault();
+      els.yardNameInput.value = "";
+      els.yardNameInput.classList.add("is-hidden");
+    }
+  });
+  // Leaving the field saves too, so the control is usable without the keyboard shortcut.
+  els.yardNameInput.addEventListener("blur", () => {
+    if (els.yardNameInput.classList.contains("is-hidden")) return;
+    commitYardRename();
+  });
+}
+
+if (els.yardTravelBtn) {
+  els.yardTravelBtn.addEventListener("click", () => {
+    const target = screenShipyard();
+    if (!target) return;
+    const quote = voyageToShownYard();
+    if (!quote) return;
+    // First press quotes; the second one charges (S133-E).
+    if (quotedVoyageTo !== target.id) {
+      quotedVoyageTo = target.id;
+      renderYardTravel();
+      els.purchaseNotice.classList.remove("is-error");
+      els.purchaseNotice.textContent = quote.canMake
+        ? t("shipyard.yard.travelQuote", {
+            name: yardName(target),
+            distance: gold(quote.distanceM),
+            days: gold(quote.days),
+            supply: gold(quote.supplyDays),
+            gold: gold(quote.gold),
+          })
+        : t("shipyard.yard.travelShort", {
+            supply: gold(quote.supplyShort),
+            gold: gold(quote.goldShort),
+          });
+      return;
+    }
+    if (!sailToShownYard()) {
+      els.purchaseNotice.classList.add("is-error");
+      els.purchaseNotice.textContent = t("shipyard.yard.travelShort", {
+        supply: gold(quote.supplyShort),
+        gold: gold(quote.goldShort),
+      });
+      quotedVoyageTo = null;
+      renderYardTravel();
+    }
+  });
 }
 
 /** Persist only a real change, before any room reads its local fleet. */
@@ -1313,7 +1639,9 @@ function reconcileSavedCaptain() {
  */
 function localFleet() {
   const yard = screenShipyard();
-  return { ...fleet, ships: shipsAvailableAtYard(fleet, yard?.id, yard?.id) };
+  // The visitors' window is the yard the captain is moored at (S130): a visit to another
+  // yard shows her own moored hulls, never the squadron that is sailing elsewhere.
+  return { ...fleet, ships: shipsAvailableAtYard(fleet, yard?.id, captainYard()?.id) };
 }
 
 function marketShip() {
@@ -1331,6 +1659,7 @@ function ensureMarketSelection() {
  * and the purse to the shared game save, which is the only record of gold (S32).
  */
 function marketBuy(commodityId) {
+  if (refuseVisit()) return;
   const ship = marketShip();
   const yard = screenShipyard();
   const zone = yard ? shipyardZone(yard) : null;
@@ -1358,6 +1687,7 @@ function marketBuy(commodityId) {
 
 /** Sell every unit of one commodity the captain is carrying (S118). */
 function marketSell(commodityId) {
+  if (refuseVisit()) return;
   const ship = marketShip();
   const yard = screenShipyard();
   const zone = yard ? shipyardZone(yard) : null;
@@ -1447,7 +1777,7 @@ function renderMarket() {
   const yard = screenShipyard();
   const zone = yard ? shipyardZone(yard) : null;
   const ship = marketShip();
-  els.marketYard.textContent = yard ? t(yard.nameKey) : t("market.noYard");
+  els.marketYard.textContent = yard ? yardName(yard) : t("market.noYard");
   // The line names the water and the goods this yard trades: her market is her own.
   els.marketZone.textContent = zone
     ? t("market.zone", {
@@ -1465,6 +1795,10 @@ function renderMarket() {
   const board = zone ? marketBoardNow(yard.id, markets[yard.id]) : [];
   quotedYardId = yard?.id ?? null;
   marketQuotes = new Map(board.map((row) => [row.id, row]));
+  // A visit trades nothing (S133-C): her board is on show, but the buttons need the
+  // captain's presence, and they say so instead of silently failing.
+  const visiting = visitingYard();
+  const disabled = visiting ? ` disabled title="${visitReason().replace(/"/g, "&quot;")}"` : "";
   els.marketBoard.innerHTML = board
     .map((row) => {
       const stock = hold.manifest.filter((entry) => entry.commodityId === row.id).reduce((sum, entry) => sum + entry.units, 0);
@@ -1480,8 +1814,8 @@ function renderMarket() {
           <span class="market-stock">${gold(stock)}</span>
           <span class="market-yard-stock">${t("market.yardStock", { units: gold(Math.floor(row.stock)) })}</span>
           <span class="market-actions">
-            <button class="btn market-buy" type="button" data-buy="${row.id}" ${room > 0 ? "" : "disabled"}>${t("market.buyOne")}</button>
-            <button class="btn market-sell" type="button" data-sell="${row.id}" ${stock > 0 ? "" : "disabled"}>${t("market.sellAll")}</button>
+            <button class="btn market-buy" type="button" data-buy="${row.id}" ${room > 0 && !visiting ? "" : "disabled"}${disabled}>${t("market.buyOne")}</button>
+            <button class="btn market-sell" type="button" data-sell="${row.id}" ${stock > 0 && !visiting ? "" : "disabled"}${disabled}>${t("market.sellAll")}</button>
           </span>
         </li>`;
     })
@@ -1506,7 +1840,10 @@ for (const tab of document.querySelectorAll(".screen-tab")) {
   });
 }
 
-els.launchBtn.addEventListener("click", launch);
+els.launchBtn.addEventListener("click", () => {
+  if (refuseVisit()) return;
+  launch();
+});
 
 // The market board is redrawn on every trade, so its actions are delegated (S118).
 els.marketBoard?.addEventListener("click", (event) => {
@@ -1520,6 +1857,8 @@ els.marketBoard?.addEventListener("click", (event) => {
 // design number lives. Nothing on this screen owns it any more.
 
 els.setSailBtn.addEventListener("click", () => {
+  // A visit does not sail (S133-C): the voyage to that yard is the travel button's job.
+  if (refuseVisit()) return;
   // A yard in enemy hands closes the repairs, not the sailing (S92). The player has to be
   // able to put to sea to go and take her back; blocking the departure is what used to
   // lock the whole save, because from inside the shipyard there was no other way out.
@@ -1611,22 +1950,28 @@ function renderFort() {
   });
 
   // The yard's own room (S100): a taken yard sells nothing; a whole one offers nothing
-  // to fix, and a capped battery offers nothing to buy.
+  // to fix, and a capped battery offers nothing to buy. A visit (S133-C) offers neither,
+  // because both need the captain's presence.
+  const visiting = visitingYard();
   const quote = fortRepairQuote({ condition: { hull: condition.hull, crew: condition.crew }, status });
   const headroom = fortGunHeadroom(fort ?? {}, { victories });
-  els.fortRepairBtn.disabled = taken || !quote.repairable || state.gold < quote.cost;
-  els.fortGunBtn.disabled = taken || headroom <= 0 || state.gold < fortGunCost();
+  els.fortRepairBtn.disabled = visiting || taken || !quote.repairable || state.gold < quote.cost;
+  els.fortGunBtn.disabled = visiting || taken || headroom <= 0 || state.gold < fortGunCost();
+  els.fortRepairBtn.title = visiting ? visitReason() : "";
+  els.fortGunBtn.title = visiting ? visitReason() : "";
   els.fortGunBtn.textContent = headroom <= 0
     ? t("shipyard.fort.gunsCapped")
     : t("shipyard.fort.buyGunPlain", { gold: gold(fortGunCost()) });
   els.fortRepairBtn.textContent = quote.repairable
     ? t("shipyard.fort.repair", { gold: gold(priceWithPurse(quote.cost, state.gold)) })
     : t("shipyard.fort.repairPlain");
-  els.fortUpgradeNote.textContent = taken
-    ? t("shipyard.fort.takenNote")
-    : bought > 0
-      ? t(bought === 1 ? "shipyard.fort.bought.one" : "shipyard.fort.bought.many", { count: bought })
-      : "";
+  els.fortUpgradeNote.textContent = visiting
+    ? visitReason()
+    : taken
+      ? t("shipyard.fort.takenNote")
+      : bought > 0
+        ? t(bought === 1 ? "shipyard.fort.bought.one" : "shipyard.fort.bought.many", { count: bought })
+        : "";
 }
 
 /**
@@ -1679,7 +2024,9 @@ function saveFleet() {
 function renderFleet() {
   const captain = captainShip(fleet);
   const local = localFleet();
-  els.setSailBtn.disabled = !local.ships.some((ship) => ship.id === captain?.id && !isWreck(ship));
+  // A visit reads the yard but does not sail from it (S133-C): the captain is elsewhere.
+  els.setSailBtn.disabled = visitingYard() || !local.ships.some((ship) => ship.id === captain?.id && !isWreck(ship));
+  els.setSailBtn.title = visitingYard() ? visitReason() : "";
   renderFort();
   // Country remains locked by the whole fleet, not just this yard.
   renderCountry();
@@ -1762,10 +2109,12 @@ function renderFleetDetail() {
   }
 
   // A wreck has one action (S117): float her again. She cannot be repaired at the
-  // bottom, and a hull nobody can sail is not a hull a buyer wants.
+  // bottom, and a hull nobody can sail is not a hull a buyer wants. A visit does none of
+  // it (S133-C): the hull is here, the captain is not.
+  const visiting = visitingYard();
   if (isWreck(ship)) {
     const refloat = refloatCost(ship);
-    els.fleetRepairBtn.disabled = state.gold < refloat;
+    els.fleetRepairBtn.disabled = visiting || state.gold < refloat;
     els.fleetRepairBtn.textContent = t("fleet.refloat", { gold: gold(priceWithPurse(refloat, state.gold)) });
     els.fleetRepairBtn.title = t("fleet.wreckHint");
     els.fleetSellBtn.disabled = true;
@@ -1776,7 +2125,7 @@ function renderFleetDetail() {
 
   // Repair and sell, priced and gated exactly as they were on the row.
   const cost = repairCost(ship);
-  els.fleetRepairBtn.disabled = !(cost > 0);
+  els.fleetRepairBtn.disabled = visiting || !(cost > 0);
   els.fleetRepairBtn.textContent = cost > 0
     ? t("fleet.repair", { gold: gold(priceWithPurse(cost, state.gold)) })
     : t("fleet.repairNone");
@@ -1791,7 +2140,7 @@ function renderFleetDetail() {
   const rearm = rearmQuote(ship, liveCombat);
   if (els.fleetRearmBtn) {
     els.fleetRearmBtn.hidden = !rearm.rearmable;
-    els.fleetRearmBtn.disabled = !rearm.rearmable || state.gold < rearm.cost;
+    els.fleetRearmBtn.disabled = visiting || !rearm.rearmable || state.gold < rearm.cost;
     els.fleetRearmBtn.textContent = rearm.rearmable
       ? t("fleet.rearm", { gold: gold(priceWithPurse(rearm.cost, state.gold)), rounds: fmtInt.format(rearm.rounds) })
       : "";
@@ -1802,7 +2151,7 @@ function renderFleetDetail() {
 
   const canSell = canSellShip(fleet, ship.id) &&
     (ship.id !== fleet.captainId || local.ships.some((entry) => entry.id !== ship.id && !isWreck(entry)));
-  els.fleetSellBtn.disabled = !canSell;
+  els.fleetSellBtn.disabled = visiting || !canSell;
   els.fleetSellBtn.textContent = t("shipyard.sell", { gold: gold(salePrice(ship)) });
   els.fleetSellBtn.title = canSell
     ? t("shipyard.sellTitle", { name: ship.name, gold: gold(salePrice(ship)) })
@@ -1921,6 +2270,7 @@ els.fleetList.addEventListener("click", (event) => {
 // on arrival, so this button is where a damaged hull is put right. It acts on the hull
 // the fleet list has selected.
 els.fleetRearmBtn?.addEventListener("click", () => {
+  if (refuseVisit()) return;
   const target = localFleet().ships.find((entry) => entry.id === refitId);
   if (!target || isWreck(target)) return;
   const live = readLiveCombat(target.id);
@@ -1946,6 +2296,7 @@ els.fleetRearmBtn?.addEventListener("click", () => {
 });
 
 els.fleetRepairBtn.addEventListener("click", () => {
+  if (refuseVisit()) return;
   const target = localFleet().ships.find((entry) => entry.id === refitId);
   if (!target) return;
   // A wreck is floated, not repaired (S117): the yard charges a full repair for her and
@@ -1993,6 +2344,7 @@ els.fleetRepairBtn.addEventListener("click", () => {
 // Selling pays a share of the hull's value and takes her out of the fleet (S62). The last
 // hull is refused by the model, and the button is already disabled in that case.
 els.fleetSellBtn.addEventListener("click", () => {
+  if (refuseVisit()) return;
   const local = localFleet();
   const target = local.ships.find((entry) => entry.id === refitId);
   if (!target) return;
@@ -2024,6 +2376,7 @@ els.newShipBtn.addEventListener("click", () => {
 // Repairing the fort charges her quote against the purse and writes both back to the
 // sea save, her only record.
 els.fortRepairBtn.addEventListener("click", () => {
+  if (refuseVisit()) return;
   const record = readFortSave();
   const fort = record?.fort && typeof record.fort === "object" ? { ...record.fort } : null;
   if (!fort) return;
@@ -2042,6 +2395,7 @@ els.fortRepairBtn.addEventListener("click", () => {
 // One purchase arms both sides (S100): the count rides with the fort save, and the sea
 // rebuilds her battery from it on the next boot.
 els.fortGunBtn.addEventListener("click", () => {
+  if (refuseVisit()) return;
   const record = readFortSave();
   const fort = record?.fort && typeof record.fort === "object" ? { ...record.fort } : {};
   const result = buyFortGun(fort, state.gold);
@@ -2318,6 +2672,10 @@ function repaintForLanguage() {
   renderCountry();
   renderHulls();
   renderPieceSelect();
+  // The title bar speaks the new language too (S133-F).
+  renderYardSelector();
+  renderYardTravel();
+  renderMarket();
   renderFleet();
   render();
   if (els.dockDialog && !els.dockDialog.classList.contains("is-hidden")) {
