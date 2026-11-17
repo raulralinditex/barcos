@@ -1,0 +1,38 @@
+test/captain-mooring.test.js
+  s_42611a708d9c32::t_5270ab49c889c5 1-32
+scripts/smoke-yard-mooring.mjs
+  s_42611a708d9c32::t_dd156f58a9bdab 144-176
+  s_42611a708d9c32::t_e7b888b6686995 3,106-142
+  s_42611a708d9c32::t_701c6e80fc24eb 177-190
+  s_42611a708d9c32::t_976ff096dae68b 143
+src/model/sinking.js
+  s_42611a708d9c32::t_b3949c73a81f21 14,39-40,47
+src/ui/app.js
+  s_42611a708d9c32::t_3a752c37c5a644 1304
+  s_42611a708d9c32::t_141d195b36042a 50,1219,1286,1288-1292,1299-1303,1305-1308,2362
+test/wreck-yard.test.js
+  s_42611a708d9c32::t_45497faea36d25 1-32
+  s_42611a708d9c32::t_9bbcd98f26d56b 33-38
+src/model/fleet.js
+  s_42611a708d9c32::t_63b0928a05278f 13,33-43
+  s_42611a708d9c32::t_226fa1f3f40822 44-45
+odd/tasks/comercio-y-astilleros.md
+  s_42611a708d9c32::t_7ed0c9d878d6ce 80,183-184
+  s_42611a708d9c32::t_f9b17c4d015303 78
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.6",
+  "base_commit_sha": "59687cc87e931b113bc5064d631dc0311c09029d",
+  "prompts": {},
+  "sessions": {
+    "s_42611a708d9c32": {
+      "agent_id": {
+        "tool": "pi",
+        "id": "01a1e6c3-7ee5-77f0-ba59-53c99e4356bc",
+        "model": "gpt-6.1-terra"
+      },
+      "human_author": "Raul Ripoll <raulral@ext.inditex.com>"
+    }
+  }
+}
