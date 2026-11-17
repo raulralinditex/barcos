@@ -1,0 +1,32 @@
+index.html
+  h_8b9b8fe190c867 26-38
+odd/tasks/comercio-y-astilleros.md
+  h_8b9b8fe190c867 84-105,125-127,210-221
+scripts/smoke-yard-selector.mjs
+  h_8b9b8fe190c867 1-236
+src/i18n/en.js
+  h_8b9b8fe190c867 180-186,226,617-627
+src/i18n/es.js
+  h_8b9b8fe190c867 177-183,223,614-624
+src/model/shipyard-names.js
+  h_8b9b8fe190c867 1-78
+src/model/voyage.js
+  h_8b9b8fe190c867 1-94
+src/ui/app.js
+  h_8b9b8fe190c867 49,76,78-86,96-97,248-252,1109-1110,1280-1282,1312-1313,1321-1624,1642-1644,1662,1690,1780,1798-1801,1817-1818,1843-1846,1860-1861,1953-1955,1958-1961,1968-1974,2027-2029,2112-2114,2117,2128,2143,2154,2273,2299,2347,2379,2398,2675-2678
+test/voyage.test.js
+  h_8b9b8fe190c867 1-135
+test/yard-names.test.js
+  h_8b9b8fe190c867 1-75
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.6",
+  "base_commit_sha": "818202db60cdda2a138112c1848e924adb057061",
+  "prompts": {},
+  "humans": {
+    "h_8b9b8fe190c867": {
+      "author": "Raul Ripoll <raulral@ext.inditex.com>"
+    }
+  }
+}
