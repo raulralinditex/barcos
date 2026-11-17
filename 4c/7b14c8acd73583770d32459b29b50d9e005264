@@ -1,0 +1,34 @@
+scripts/serve.mjs
+  h_8b9b8fe190c867 1-49
+scripts/smoke-supply-per-hull.mjs
+  h_8b9b8fe190c867 1-233
+scripts/smoke-voyage-panel.mjs
+  h_8b9b8fe190c867 1-116
+sea.html
+  h_8b9b8fe190c867 67-77
+src/model/supply.js
+  h_8b9b8fe190c867 1-136
+src/model/voyage-clock.js
+  h_8b9b8fe190c867 1-46
+src/ui/sea.js
+  h_8b9b8fe190c867 67-69,150-154,179,253-257,259,278-282,301-307,1882,1887-1890,1917-1919,2045-2051,2053-2054,2057-2062,2434-2440,2445-2457,2615-2616,2691-2700
+src/ui/styles.css
+  h_8b9b8fe190c867 59-145,1431-1452
+test/supply-per-hull.test.js
+  h_8b9b8fe190c867 1-125
+test/voyage-clock.test.js
+  h_8b9b8fe190c867 1-66
+test/voyage-panel.test.js
+  h_8b9b8fe190c867 1-70
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.6",
+  "base_commit_sha": "4c7b14c8acd73583770d32459b29b50d9e005264",
+  "prompts": {},
+  "humans": {
+    "h_8b9b8fe190c867": {
+      "author": "Raul Ripoll <raulral@ext.inditex.com>"
+    }
+  }
+}
