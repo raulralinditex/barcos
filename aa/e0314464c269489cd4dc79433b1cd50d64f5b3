@@ -1,0 +1,30 @@
+test/market-standing.test.js
+  s_48f93862b4f568::t_9abe09af65888e 1-62,77-88
+  s_48f93862b4f568::t_c702c9151e64ba 63
+  s_48f93862b4f568::t_2e1e3dde26e8e2 64-76
+src/model/commerce.js
+  s_48f93862b4f568::t_2d9ec5742020a4 455-480
+  s_48f93862b4f568::t_66e6f0f52b1ef7 427-454
+test/market-sale-standing.test.js
+  s_48f93862b4f568::t_dfcda664314ab9 1-63,75-76,80-82,85-86,94-95
+  s_48f93862b4f568::t_c260d1d7c97f8d 64-74
+  s_48f93862b4f568::t_d175ded4fa4ea7 79,87,90-93
+  s_48f93862b4f568::t_58bdced7a69a31 83-84,88-89
+  s_48f93862b4f568::t_0e57583a63caff 77-78
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.6",
+  "base_commit_sha": "aae0314464c269489cd4dc79433b1cd50d64f5b3",
+  "prompts": {},
+  "sessions": {
+    "s_48f93862b4f568": {
+      "agent_id": {
+        "tool": "pi",
+        "id": "01a1e58e-9669-713e-b888-48e76698935d",
+        "model": "deepseek-v4.1-flash_high"
+      },
+      "human_author": "Raul Ripoll <raulral@ext.inditex.com>"
+    }
+  }
+}
