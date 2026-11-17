@@ -425,6 +425,60 @@ export function marketBoardNow(zoneId, memory) {
 }
 
 /**
+ * Where a yard stands on one good, compared with every other yard that trades it (S135):
+ * `cheaper` when she asks the least for it, `dearer` when she asks the most, `even`
+ * otherwise. A good only one yard trades has nothing to compare against, so it is `even`.
+ *
+ * The comparison uses the live board of each yard, so a drained market moves the colours
+ * with it: the answer is always "against the rest of my markets right now", never against
+ * a stored table.
+ */
+export function priceStanding(commodityId, yardId, memories) {
+  const commodity = commodityById(commodityId);
+  if (!commodity || !shipyardById(yardId)) return "even";
+  const prices = [];
+  for (const yard of SHIPYARDS) {
+    if (!tradedHere(yard.id, commodity.id)) continue;
+    prices.push({ id: yard.id, price: buyPriceNow(commodity.id, yard.id, memories?.[yard.id] ?? {}) });
+  }
+  const mine = prices.find((entry) => entry.id === yardId);
+  if (!mine) return "even";
+  const lowest = Math.min(...prices.map((entry) => entry.price));
+  const highest = Math.max(...prices.map((entry) => entry.price));
+  if (lowest === highest) return "even";
+  if (mine.price === lowest) return "cheaper";
+  if (mine.price === highest) return "dearer";
+  return "even";
+}
+
+/**
+ * Where a yard stands on one good as a place to SELL it (S136), compared with every other
+ * yard that trades it: `best` when she pays the most, `worst` when she pays the least,
+ * `even` otherwise.
+ *
+ * This is deliberately not `priceStanding`: buying wants the lowest ask and selling wants
+ * the highest bid, and a yard can be both the cheapest to buy from and the worst to sell
+ * to. One colour cannot answer two questions.
+ */
+export function sellStanding(commodityId, yardId, memories) {
+  const commodity = commodityById(commodityId);
+  if (!commodity || !shipyardById(yardId)) return "even";
+  const prices = [];
+  for (const yard of SHIPYARDS) {
+    if (!tradedHere(yard.id, commodity.id)) continue;
+    prices.push({ id: yard.id, price: sellPriceNow(commodity.id, yard.id, memories?.[yard.id] ?? {}) });
+  }
+  const mine = prices.find((entry) => entry.id === yardId);
+  if (!mine) return "even";
+  const lowest = Math.min(...prices.map((entry) => entry.price));
+  const highest = Math.max(...prices.map((entry) => entry.price));
+  if (lowest === highest) return "even";
+  if (mine.price === highest) return "best";
+  if (mine.price === lowest) return "worst";
+  return "even";
+}
+
+/**
  * A yard's memory, with one commodity's stock moved by `delta` units (S119). It is
  * clamped between zero and maxStock; a glut can exceed the resting stock.
  */
