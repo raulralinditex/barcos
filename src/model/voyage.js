@@ -18,6 +18,19 @@ import { GAME_TIME } from "./game-time.js";
 import { captainShip } from "./fleet.js";
 import { KN_TO_MS, WORLD } from "./world.js";
 
+/**
+ * The voyage button's visibility (S137). Off by default: the player asked for the button
+ * to be configurable and hidden until she asks for it, so the shipyard does not offer a
+ * shortcut she never wanted. Hiding it changes no rule: the quote and the arrival are the
+ * same functions, and the button is the only thing that appears or disappears.
+ */
+export const VOYAGE = { showTravelButton: 0 };
+
+/** Whether the shipyard may offer the voyage button right now (S137). */
+export function voyageButtonVisible(options = VOYAGE) {
+  return Number(options?.showTravelButton) > 0;
+}
+
 /** The live length of a game day, never zero or negative (S67). */
 function secondsPerDay() {
   const value = Number(GAME_TIME.gameSecondsPerDay);

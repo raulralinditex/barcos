@@ -19,6 +19,7 @@ import { SINKING } from "./sinking.js";
 import { COMMERCE, MARKETS, YARD_MARKETS } from "./commerce.js";
 import { GAME_TIME } from "./game-time.js";
 import { FORT, FORT_UPGRADE } from "./fort.js";
+import { VOYAGE } from "./voyage.js";
 import { WIND } from "./wind.js";
 import { WORLD } from "./world.js";
 import { TURNING } from "./turning.js";
@@ -133,6 +134,10 @@ export const SETTINGS_FIELDS = [
   // button back. A switch, like the wreck one above.
   { group: "refit", key: "autoSave", label: "settings.refit.autoSave", scale: "factor", min: 0, max: 1, step: 1, control: "switch", target: "refit", targetKey: "autoSave" },
 
+  // S137: whether the shipyard offers the automatic voyage to another yard. Off ships it
+  // hidden; the voyage itself is unchanged, so this is a visibility switch.
+  { group: "voyage", key: "showTravelButton", label: "settings.voyage.showTravelButton", scale: "factor", min: 0, max: 1, step: 1, control: "switch", target: "voyage", targetKey: "showTravelButton" },
+
   // S113/S115: the trade. What a sunk hold still pays, how much an enemy carries, and
   // the two prices of each zone. The spread between a zone's buy and sell is the whole
   // economy, so it is the first thing a player who finds the run too rich will move.
@@ -181,7 +186,7 @@ export const SETTINGS_FIELDS = [
 /** The automatic-fire switch as a live block, so it is a setting like any other (S88). */
 export const AUTOFIRE = { enabled: AUTOFIRE_DEFAULT ? 1 : 0 };
 
-export const SETTINGS_BLOCKS = { wind: WIND, world: WORLD, combat: COMBAT, repair: REPAIR, prices: PRICES, gunnery: GUNNERY, gunners: GUNNERY.gunnersPerGun, zones: ZONE_DAMAGE, loot: LOOT, sales: SALES, time: GAME_TIME, fort: FORT, fortUpgrade: FORT_UPGRADE, start: START, turning: TURNING, escort: ESCORT, trail: TRAIL, bars: BAR_SCALE, autofire: AUTOFIRE, sinking: SINKING, refit: REFIT, commerce: COMMERCE, markets: MARKETS, yardMarkets: YARD_MARKETS };
+export const SETTINGS_BLOCKS = { wind: WIND, world: WORLD, combat: COMBAT, repair: REPAIR, prices: PRICES, gunnery: GUNNERY, gunners: GUNNERY.gunnersPerGun, zones: ZONE_DAMAGE, loot: LOOT, sales: SALES, time: GAME_TIME, fort: FORT, fortUpgrade: FORT_UPGRADE, start: START, turning: TURNING, escort: ESCORT, trail: TRAIL, bars: BAR_SCALE, autofire: AUTOFIRE, sinking: SINKING, refit: REFIT, voyage: VOYAGE, commerce: COMMERCE, markets: MARKETS, yardMarkets: YARD_MARKETS };
 
 /**
  * The design constant blocks S79 promises to expose, by name.

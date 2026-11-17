@@ -77,6 +77,8 @@ await page.addInitScript(
     localStorage.setItem("barcos:lang:v1", "es");
     localStorage.setItem("barcos:fleet:v1", fleetJson);
     localStorage.setItem("barcos:game:v1", JSON.stringify({ gold, ship: { x: 0, y: 0, heading: 0 } }));
+    // S137: the voyage button ships hidden, so this smoke turns it on before offering it.
+    localStorage.setItem("barcos:settings:v1", JSON.stringify({ "voyage.showTravelButton": 1 }));
   },
   [JSON.stringify(fleet), GOLD],
 );
@@ -166,6 +168,34 @@ check(
   (await options()).find((entry) => entry.value === ABYSS)?.label === "Cala del abismo",
   "S133-B: the shipped name must come back",
 );
+
+/* --------------------------------- S137: the button ships hidden, the setting shows it */
+
+const hidden = await browser.newPage({ viewport: { width: 1600, height: 1000 }, locale: "es-AR" });
+hidden.on("pageerror", (error) => errors.push(`pageerror: ${error.message}`));
+await hidden.addInitScript(
+  ([fleetJson, gold]) => {
+    if (localStorage.getItem("barcos:fleet:v1")) return;
+    localStorage.setItem("barcos:lang:v1", "es");
+    localStorage.setItem("barcos:fleet:v1", fleetJson);
+    localStorage.setItem("barcos:game:v1", JSON.stringify({ gold, ship: { x: 0, y: 0, heading: 0 } }));
+  },
+  [JSON.stringify(fleet), GOLD],
+);
+await hidden.goto("http://localhost:8765/index.html", { waitUntil: "networkidle" });
+await hidden.waitForTimeout(400);
+await hidden.click('.screen-tab[data-screen="mercado"]');
+await hidden.selectOption("#yard-select", ABYSS);
+await hidden.waitForTimeout(350);
+check(
+  await hidden.locator("#yard-travel-btn").isHidden(),
+  "S137: the voyage button must be hidden by default",
+);
+check(
+  await hidden.locator("#yard-visit-note").isVisible(),
+  "S137: hiding the button must not hide the reason the visit is read-only",
+);
+await hidden.close();
 
 /* --------------------------------------- S133-D/E: the voyage quotes, then moves the captain */
 

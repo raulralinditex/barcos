@@ -79,7 +79,7 @@ import { GAME_TIME, burnSupply, supplySeconds } from "../model/game-time.js";
 import { currentShipyard, deserializeWorld, shipyardZone } from "../model/world.js";
 import { COMMODITIES, SHIPYARDS, shipyardById } from "../data/naval-data.js";
 // S133: the yard selector of the title bar, the editable names and the automatic voyage.
-import { arriveAt, voyageQuote } from "../model/voyage.js";
+import { arriveAt, voyageButtonVisible, voyageQuote } from "../model/voyage.js";
 import {
   parseYardNames,
   serialiseYardNames,
@@ -1468,7 +1468,9 @@ function renderYardTravel() {
   const target = screenShipyard();
   els.yardVisitNote.classList.toggle("is-hidden", !visiting);
   if (visiting) els.yardVisitNote.textContent = visitReason();
-  els.yardTravelBtn.classList.toggle("is-hidden", !quote);
+  // S137: the voyage button is optional and ships hidden. A hidden button is not a
+  // forbidden voyage: nothing else changes, the visit note still says why actions close.
+  els.yardTravelBtn.classList.toggle("is-hidden", !quote || !voyageButtonVisible());
   if (!quote) {
     quotedVoyageTo = null;
     return;

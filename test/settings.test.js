@@ -268,5 +268,5 @@ test("S117: the wreck switch round-trips 1 and 0 like every other setting", asyn
   // The screen draws a checkbox only for a field that says so, never by guessing.
   const { SETTINGS_FIELDS, fieldId } = await import("../src/model/settings.js");
   const switches = SETTINGS_FIELDS.filter((field) => field.control === "switch").map(fieldId);
-  assert.deepEqual(switches, ["sinking.keepWreck", "refit.autoSave"]);
+  assert.deepEqual(switches, ["sinking.keepWreck", "refit.autoSave", "voyage.showTravelButton"]);
 });

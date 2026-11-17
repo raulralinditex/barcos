@@ -339,6 +339,8 @@ export const es = {
   "settings.group.refit": "Reforma",
   "settings.group.yardMarkets": "Mercado de cada astillero",
   "settings.yardMarkets.row": "{yard} · {good} ({side})",
+  "settings.group.voyage": "Viaje",
+  "settings.voyage.showTravelButton": "Mostrar el botón «Viajar a otro astillero»",
   "settings.group.commerce": "Comercio",
   "settings.group.prices": "Precios",
   "settings.wind.bonus": "Ganancia con viento de popa",

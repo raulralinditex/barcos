@@ -342,6 +342,8 @@ export const en = {
   "settings.group.refit": "Refit",
   "settings.group.yardMarkets": "Each yard's market",
   "settings.yardMarkets.row": "{yard} · {good} ({side})",
+  "settings.group.voyage": "Voyage",
+  "settings.voyage.showTravelButton": "Show the \u201cSail to another shipyard\u201d button",
   "settings.group.commerce": "Trade",
   "settings.group.prices": "Prices",
   "settings.wind.bonus": "Gain with a following wind",
