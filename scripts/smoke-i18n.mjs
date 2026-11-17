@@ -52,14 +52,16 @@ await esPage.waitForTimeout(400);
 
 const text = (page, selector) => page.locator(selector).first().textContent();
 const es = {
-  brand: await text(esPage, "h1"),
+  brand: await text(esPage, "#launch-btn"),
   launch: await text(esPage, "#launch-btn"),
   hulls: await text(esPage, "#hulls-title"),
   selected: await esPage.locator("#lang-select").inputValue(),
   htmlLang: await esPage.evaluate(() => document.documentElement.lang),
   hullNames: await esPage.locator(".hull-card-name").allTextContents(),
 };
-check(es.brand === "Astillero", `Spanish brand should be Astillero, got ${es.brand}`);
+check(/añadir|flota/i.test(es.brand), `Spanish controls should read Spanish, the add button reads "${es.brand}"`);
+// S134: the heading names the yard on screen, not the app.
+check(!/^Astillero$/.test(await text(esPage, "h1")), `the heading must name a yard, it reads "${await text(esPage, "h1")}"`);
 check(es.selected === "es", `Spanish browser should select es, got ${es.selected}`);
 check(es.htmlLang === "es", `html lang should be es, got ${es.htmlLang}`);
 
@@ -68,7 +70,7 @@ await esPage.selectOption("#lang-select", "en");
 await esPage.waitForTimeout(400);
 
 const en = {
-  brand: await text(esPage, "h1"),
+  brand: await text(esPage, "#launch-btn"),
   launch: await text(esPage, "#launch-btn"),
   hulls: await text(esPage, "#hulls-title"),
   hullNames: await esPage.locator(".hull-card-name").allTextContents(),
@@ -76,7 +78,7 @@ const en = {
   stored: await esPage.evaluate(() => localStorage.getItem("barcos:lang:v1")),
   url: esPage.url(),
 };
-check(en.brand === "Shipyard", `English brand should be Shipyard, got ${en.brand}`);
+check(/add|fleet/i.test(en.brand), `English controls should read English, the add button reads "${en.brand}"`);
 check(en.launch === "Add to fleet", `English launch button, got ${en.launch}`);
 // Compare the whole list: some hulls keep the same name in both languages
 // (Patache, Jacht, Zabra), but the class names must move.
@@ -95,10 +97,10 @@ check(en.stored === "en", `the choice must persist, stored ${en.stored}`);
 await esPage.reload({ waitUntil: "networkidle" });
 await esPage.waitForTimeout(400);
 const afterReload = {
-  brand: await text(esPage, "h1"),
+  brand: await text(esPage, "#launch-btn"),
   selected: await esPage.locator("#lang-select").inputValue(),
 };
-check(afterReload.brand === "Shipyard", "the stored choice must survive a reload");
+check(/add|fleet/i.test(afterReload.brand), `the stored choice must survive a reload, the add button reads "${afterReload.brand}"`);
 check(afterReload.selected === "en", `selector should read en after reload, got ${afterReload.selected}`);
 
 /* ---------------------------------------------------------------- English browser */
@@ -107,11 +109,11 @@ attach(enPage);
 await enPage.goto("http://localhost:8765/index.html", { waitUntil: "networkidle" });
 await enPage.waitForTimeout(400);
 const freshEn = {
-  brand: await text(enPage, "h1"),
+  brand: await text(enPage, "#launch-btn"),
   selected: await enPage.locator("#lang-select").inputValue(),
 };
 check(freshEn.selected === "en", `an English browser should start in English, got ${freshEn.selected}`);
-check(freshEn.brand === "Shipyard", `an English browser should render English, got ${freshEn.brand}`);
+check(/add|fleet/i.test(freshEn.brand), `an English browser should render English, the add button reads "${freshEn.brand}"`);
 
 /* ---------------------------------------------------------------- French browser */
 const frPage = await browser.newPage({ viewport: { width: 1500, height: 1000 }, locale: "fr-FR" });
@@ -119,11 +121,11 @@ attach(frPage);
 await frPage.goto("http://localhost:8765/index.html", { waitUntil: "networkidle" });
 await frPage.waitForTimeout(400);
 const freshFr = {
-  brand: await text(frPage, "h1"),
+  brand: await text(frPage, "#launch-btn"),
   selected: await frPage.locator("#lang-select").inputValue(),
 };
 check(freshFr.selected === "es", `an unsupported locale falls back to Spanish, got ${freshFr.selected}`);
-check(freshFr.brand === "Astillero", `an unsupported locale should render Spanish, got ${freshFr.brand}`);
+check(/añadir|flota/i.test(freshFr.brand), `an unsupported locale should render Spanish, the add button reads "${freshFr.brand}"`);
 
 
 /* ---------------------------------------------------------------- the sea screen */

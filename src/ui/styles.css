@@ -2470,6 +2470,25 @@ input[type="number"] {
   color: var(--navy);
 }
 
+/* S136: the sale side, on the sell price: green where they pay the most, red the least. */
+.market-price.is-best {
+  color: #1f7a45;
+  font-weight: 600;
+}
+
+.market-price.is-worst {
+  color: #a13c2c;
+}
+
+/* S135: green where the good is the cheapest of our markets, red where it is the dearest. */
+.market-name.is-cheaper {
+  color: #1f7a45;
+}
+
+.market-name.is-dearer {
+  color: #a13c2c;
+}
+
 .market-kg,
 .market-stock {
   color: var(--ink-soft);

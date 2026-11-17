@@ -66,6 +66,8 @@ import {
   bindGameTime,
   buyCargo,
   marketBoardNow,
+  priceStanding,
+  sellStanding,
   tradedHere,
   normaliseMarkets,
   sellCargo,
@@ -246,6 +248,8 @@ const els = {
   eraseConfirm: $("#erase-confirm"),
   langSelect: $("#lang-select"),
   yardSelect: $("#yard-select"),
+  brandYard: $("#brand-yard"),
+  brandWater: $("#brand-water"),
   yardRenameBtn: $("#yard-rename-btn"),
   yardNameInput: $("#yard-name-input"),
   yardTravelBtn: $("#yard-travel-btn"),
@@ -1396,6 +1400,38 @@ function renderYardSelector() {
   els.yardSelect.value = shown?.id ?? "";
   els.yardSelect.title = shown ? yardName(shown) : "";
   if (els.yardRenameBtn) els.yardRenameBtn.disabled = !shown;
+  renderYardTitle(shown);
+}
+
+/**
+ * The title bar names the yard on screen and her water (S134). The app's own name is not
+ * the answer here: this screen is that yard's, so it reads her name, and the line under
+ * it says which water she is in.
+ */
+function renderYardTitle(yard) {
+  if (!yard) return;
+  const zone = shipyardZone(yard);
+  if (els.brandYard) els.brandYard.textContent = yardName(yard);
+  if (els.brandWater) {
+    els.brandWater.textContent = zone
+      ? t("shipyard.yard.water", { zone: t(`zone.${zone.id}.name`) })
+      : t("app.brandSub");
+  }
+}
+
+/**
+ * Repaint every room that reads a yard (S134): the title, the selector, the fleet list and
+ * her panel, the yard's own room, the market and the refit editor. Changing the selector
+ * used to repaint them one by one, which left whichever room was not listed showing the
+ * previous yard's numbers.
+ */
+function renderYardRooms() {
+  renderYardSelector();
+  renderYardTravel();
+  renderFleet();
+  renderFort();
+  renderMarket();
+  render();
 }
 
 /** The captain's live supply, in days, as the shipyard knows it (S133-D). */
@@ -1514,11 +1550,7 @@ function sailToShownYard() {
     days: gold(result.supplyDaysSpent),
     gold: gold(result.goldSpent),
   });
-  renderFleet();
-  renderMarket();
-  renderYardSelector();
-  renderYardTravel();
-  render();
+  renderYardRooms();
   return true;
 }
 
@@ -1529,12 +1561,10 @@ if (els.yardSelect) {
     quotedVoyageTo = null;
     els.purchaseNotice.classList.remove("is-error");
     els.purchaseNotice.textContent = "";
-    renderYardSelector();
-    renderYardTravel();
-    renderFleet();
-    renderFort();
-    renderMarket();
-    render();
+    // The refit editor is a room of the yard on screen: a hull of another yard must not
+    // stay selected, or the panel would edit her from the wrong water.
+    if (refitId && !localFleet().ships.some((ship) => ship.id === refitId)) refitId = null;
+    renderYardRooms();
   });
 }
 
@@ -1799,6 +1829,24 @@ function renderMarket() {
   // captain's presence, and they say so instead of silently failing.
   const visiting = visitingYard();
   const disabled = visiting ? ` disabled title="${visitReason().replace(/"/g, "&quot;")}"` : "";
+  // Where this yard stands on each good, against the rest of her own markets (S135).
+  const standing = (commodityId) => priceStanding(commodityId, yard.id, markets);
+  const standingTitle = (commodityId) => {
+    const state = standing(commodityId);
+    if (state === "even") return "";
+    return t(state === "cheaper" ? "market.standingCheaper" : "market.standingDearer", {
+      name: t(commodityNameKey(commodityId)),
+    });
+  };
+  // The sale side has its own question: where do they pay the most (S136).
+  const saleStanding = (commodityId) => sellStanding(commodityId, yard.id, markets);
+  const saleTitle = (commodityId) => {
+    const state = saleStanding(commodityId);
+    if (state === "even") return "";
+    return t(state === "best" ? "market.saleBest" : "market.saleWorst", {
+      name: t(commodityNameKey(commodityId)),
+    });
+  };
   els.marketBoard.innerHTML = board
     .map((row) => {
       const stock = hold.manifest.filter((entry) => entry.commodityId === row.id).reduce((sum, entry) => sum + entry.units, 0);
@@ -1807,10 +1855,10 @@ function renderMarket() {
         : 0;
       return `
         <li class="market-row" data-commodity="${row.id}">
-          <span class="market-name">${t(row.nameKey)}</span>
+          <span class="market-name is-${standing(row.id)}" title="${standingTitle(row.id)}">${t(row.nameKey)}</span>
           <span class="market-kg">${gold(row.kgPerUnit)} kg</span>
           <span class="market-price">${t("market.buy")} ${gold(row.buy)}</span>
-          <span class="market-price">${t("market.sell")} ${gold(row.sell)}</span>
+          <span class="market-price is-${saleStanding(row.id)}" title="${saleTitle(row.id)}">${t("market.sell")} ${gold(row.sell)}</span>
           <span class="market-stock">${gold(stock)}</span>
           <span class="market-yard-stock">${t("market.yardStock", { units: gold(Math.floor(row.stock)) })}</span>
           <span class="market-actions">

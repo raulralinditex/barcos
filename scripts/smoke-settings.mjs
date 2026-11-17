@@ -134,7 +134,13 @@ const english = {
   groups: await screen.locator(".settings-card h2").allTextContents(),
   bonusLabel: await screen.locator('label[for="field-wind\\.maxSpeedBonus"]').textContent(),
 };
-check(/Settings/i.test(english.title ?? "") || /Astillero|Shipyard/i.test(english.title ?? ""), `the title is not translated: "${english.title}"`);
+// S134: the heading names the yard on screen, so the language is proved by a translated
+// label instead of the title.
+check(/Astillero|Shipyard|port|cala/i.test(english.title ?? ""), `the title must name a yard: "${english.title}"`);
+check(
+  /from .* to /i.test(await screen.locator(".settings-card .settings-range").first().textContent()),
+  "the settings labels must be translated",
+);
 check(
   english.groups.includes("Wind") && english.groups.includes("Combat"),
   `the blocks are not translated: ${english.groups.join(", ")}`,

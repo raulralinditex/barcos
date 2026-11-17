@@ -613,6 +613,7 @@ export const es = {
   "market.capacity": "{kg} kg libres",
   /* ---------------------------------------------------------------- S133: yard selector */
   "shipyard.yard.label": "Astillero",
+  "shipyard.yard.water": "{zone}",
   "shipyard.yard.rename": "Cambiar el nombre del astillero",
   "shipyard.yard.namePlaceholder": "Nombre del astillero",
   "shipyard.yard.renamed": "El astillero ahora se llama {name}.",
@@ -622,6 +623,10 @@ export const es = {
   "shipyard.yard.travelQuote": "Viaje a {name}: {distance} m, {days} días, {supply} días de suministro y {gold} doblones de jornales. Volvé a pulsar para zarpar.",
   "shipyard.yard.travelShort": "No se puede zarpar: faltan {supply} días de suministro y {gold} doblones.",
   "shipyard.yard.arrived": "La capitana está en {name}: {days} días de suministro y {gold} doblones.",
+  "market.standingCheaper": "{name} es lo más barato de tus astilleros.",
+  "market.standingDearer": "{name} es lo más caro de tus astilleros.",
+  "market.saleBest": "En {name} te pagan lo mejor de tus astilleros.",
+  "market.saleWorst": "En {name} te pagan lo peor de tus astilleros.",
   "market.yardStock": "Stock del puerto: {units}",
   "commodity.sal": "Sal",
   "commodity.vino": "Vino",

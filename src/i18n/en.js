@@ -616,6 +616,7 @@ export const en = {
   "market.capacity": "{kg} kg free",
   /* ---------------------------------------------------------------- S133: yard selector */
   "shipyard.yard.label": "Shipyard",
+  "shipyard.yard.water": "{zone}",
   "shipyard.yard.rename": "Rename the shipyard",
   "shipyard.yard.namePlaceholder": "Shipyard name",
   "shipyard.yard.renamed": "The shipyard is now called {name}.",
@@ -625,6 +626,10 @@ export const en = {
   "shipyard.yard.travelQuote": "Voyage to {name}: {distance} m, {days} days, {supply} supply days and {gold} doubloons of wages. Press again to sail.",
   "shipyard.yard.travelShort": "Cannot sail: {supply} supply days and {gold} doubloons short.",
   "shipyard.yard.arrived": "The captain is at {name}: {days} supply days and {gold} doubloons.",
+  "market.standingCheaper": "{name} is the cheapest of your shipyards.",
+  "market.standingDearer": "{name} is the dearest of your shipyards.",
+  "market.saleBest": "{name} sells best at this shipyard.",
+  "market.saleWorst": "{name} sells worst at this shipyard.",
   "market.yardStock": "Port stock: {units}",
   "commodity.sal": "Salt",
   "commodity.vino": "Wine",
