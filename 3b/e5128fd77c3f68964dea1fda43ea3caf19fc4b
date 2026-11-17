@@ -1,0 +1,74 @@
+test/voyage-clock.test.js
+  s_48f93862b4f568::t_5d3d5693036192 1-66
+src/model/voyage-clock.js
+  s_48f93862b4f568::t_f18da43c016f77 28-29
+  s_48f93862b4f568::t_81e041ec2fda2c 1-27,30-46
+scripts/serve.mjs
+  s_48f93862b4f568::t_516fa485d43269 1-49
+src/ui/styles.css
+  s_48f93862b4f568::t_516fa485d43269 1431-1432,1434-1436
+  s_faa63c1c7a769e::t_97496ecc34804f 1433,1437-1443
+  s_9515cd35f88590::t_b63d8a5fcf806b 59-145
+  s_2c3de9184b619c::t_37aa9e4311dd79 1444-1452
+sea.html
+  s_faa63c1c7a769e::t_abf75243fb1f1f 67-70,73-77
+  s_2c3de9184b619c::t_85331b61ffef70 71-72
+scripts/smoke-voyage-panel.mjs
+  s_faa63c1c7a769e::t_086668651f1456 49,58,60,98,103-107,109
+  s_faa63c1c7a769e::t_7b7704926313bb 1-48,50-57,59,61-97,99-102,108,110-116
+test/voyage-panel.test.js
+  s_faa63c1c7a769e::t_3fd02e10326df2 1-70
+src/ui/sea.js
+  s_2c3de9184b619c::t_fc91e761ad2582 2691-2700
+  s_faa63c1c7a769e::t_c6f028c4f54697 68,150-152,179,2447-2449
+  s_2c3de9184b619c::t_52962f8eeadbc3 307,2057-2058,2445
+  s_2c3de9184b619c::t_cf7961d17ff200 1882,1887-1890
+  s_2c3de9184b619c::t_b3997062191cea 2045-2051,2053-2054,2059-2061,2446,2450-2452,2454-2457
+  s_2c3de9184b619c::t_54cd22973fa8f3 1917-1919
+  s_2c3de9184b619c::t_944c8ba21bae90 301-303
+  s_2c3de9184b619c::t_1c63990f990603 2062
+  s_2c3de9184b619c::t_de39ac1df2dd4e 67,69,153-154,253-257,259,304-306
+  s_2c3de9184b619c::t_286e63b0d739da 2434-2440,2453
+  s_2c3de9184b619c::t_2001624398b917 2615-2616
+  s_2c3de9184b619c::t_c66953e8aed0e1 278-282
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.6",
+  "base_commit_sha": "3be5128fd77c3f68964dea1fda43ea3caf19fc4b",
+  "prompts": {},
+  "sessions": {
+    "s_2c3de9184b619c": {
+      "agent_id": {
+        "tool": "pi",
+        "id": "01a1e93a-08a3-7760-83a3-158e9e2e8e70",
+        "model": "deepseek-v4.1-flash"
+      },
+      "human_author": "Raul Ripoll <raulral@ext.inditex.com>"
+    },
+    "s_48f93862b4f568": {
+      "agent_id": {
+        "tool": "pi",
+        "id": "01a1e58e-9669-713e-b888-48e76698935d",
+        "model": "deepseek-v4.1-flash_high"
+      },
+      "human_author": "Raul Ripoll <raulral@ext.inditex.com>"
+    },
+    "s_9515cd35f88590": {
+      "agent_id": {
+        "tool": "pi",
+        "id": "01a1e954-0529-732e-b8a6-138c64b0470f",
+        "model": "deepseek-v4.1-flash"
+      },
+      "human_author": "Raul Ripoll <raulral@ext.inditex.com>"
+    },
+    "s_faa63c1c7a769e": {
+      "agent_id": {
+        "tool": "pi",
+        "id": "01a1e8fd-41a1-70a9-b2af-4af6c725d3eb",
+        "model": "gpt-6.1-terra"
+      },
+      "human_author": "Raul Ripoll <raulral@ext.inditex.com>"
+    }
+  }
+}
