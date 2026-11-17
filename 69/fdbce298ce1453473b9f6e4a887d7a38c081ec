@@ -1,0 +1,40 @@
+src/model/formation.js
+  s_48f93862b4f568::t_2c81acb79a7c08 112-130
+  s_48f93862b4f568::t_1ee5a0ba179d39 111
+scripts/smoke-prize-joins.mjs
+  s_48f93862b4f568::t_38af96537b850f 48
+  s_48f93862b4f568::t_b733dea4d768ba 88-90,112,119-120
+  s_48f93862b4f568::t_84da7793dbb50c 1-47,49-87,91,96-109,111,113-115,117-118,121,125,130,132-137,143-144,147,149-157
+  s_48f93862b4f568::t_04007465b2fd87 92-95,110,116,131,141
+  s_48f93862b4f568::t_8610a77566dce3 122-124,126-129
+  s_48f93862b4f568::t_e0c97bf664c26f 138-140,142,145-146,148
+src/model/world.js
+  s_48f93862b4f568::t_48bee48b28aa92 457-461,470-471,473,500-522
+  s_48f93862b4f568::t_305a6a016c0e27 534-535,572
+src/ui/sea.js
+  s_48f93862b4f568::t_ef90ff4ddad17e 1876-1900,2007-2010
+  s_48f93862b4f568::t_09cd446fc9904c 77
+  s_48f93862b4f568::t_305a6a016c0e27 107,2004-2005,2016
+  s_48f93862b4f568::t_b46e5f898e6c37 1985-1989,2006,2017,2033-2034
+  s_48f93862b4f568::t_45d9f78efc4c99 67
+test/prize-joins-squadron.test.js
+  s_48f93862b4f568::t_edf79e7763069a 1-50
+test/capture-once.test.js
+  s_48f93862b4f568::t_6cbae2ec8e0c21 1-74
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.6",
+  "base_commit_sha": "69fdbce298ce1453473b9f6e4a887d7a38c081ec",
+  "prompts": {},
+  "sessions": {
+    "s_48f93862b4f568": {
+      "agent_id": {
+        "tool": "pi",
+        "id": "01a1e58e-9669-713e-b888-48e76698935d",
+        "model": "deepseek-v4.1-flash_high"
+      },
+      "human_author": "Raul Ripoll <raulral@ext.inditex.com>"
+    }
+  }
+}
