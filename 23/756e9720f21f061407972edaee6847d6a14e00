@@ -1,0 +1,39 @@
+scripts/smoke-tabs.mjs
+  s_48f93862b4f568::t_6f90c29ede87e1 76
+src/ui/app.js
+  s_48f93862b4f568::t_0b00fcb35bce43 82,1471-1473
+src/i18n/en.js
+  s_48f93862b4f568::t_e4c9de71afe14a 345
+  s_48f93862b4f568::t_ff5189f24c8215 346
+scripts/smoke-settings.mjs
+  s_48f93862b4f568::t_6f90c29ede87e1 82
+scripts/smoke-yard-selector.mjs
+  s_48f93862b4f568::t_5ce15b163d7870 80-81
+  s_48f93862b4f568::t_4db7008768941e 172-199
+test/settings.test.js
+  s_48f93862b4f568::t_6f90c29ede87e1 271
+src/i18n/es.js
+  s_48f93862b4f568::t_e4c9de71afe14a 342-343
+test/voyage-button.test.js
+  s_48f93862b4f568::t_c4fe6462368341 1-42
+src/model/settings.js
+  s_48f93862b4f568::t_e4c9de71afe14a 22,137-140,189
+src/model/voyage.js
+  s_48f93862b4f568::t_e4c9de71afe14a 21-33
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.6",
+  "base_commit_sha": "23756e9720f21f061407972edaee6847d6a14e00",
+  "prompts": {},
+  "sessions": {
+    "s_48f93862b4f568": {
+      "agent_id": {
+        "tool": "pi",
+        "id": "01a1e58e-9669-713e-b888-48e76698935d",
+        "model": "deepseek-v4.1-flash_high"
+      },
+      "human_author": "Raul Ripoll <raulral@ext.inditex.com>"
+    }
+  }
+}
