@@ -47,6 +47,7 @@ import {
   deserializeFleet,
   departYard,
   isEmptyFleet,
+  reconcileCaptainPosition,
   serializeFleet,
   shipsAvailableAtYard,
   setCaptain,
@@ -1215,6 +1216,7 @@ const $shipAndRig = () => [document.querySelector(".panel-ship"), document.query
  */
 function showScreen(next) {
   if (!SCREENS.includes(next)) return;
+  if (reconcileSavedCaptain()) renderFleet();
   activeScreen = next;
   for (const tab of document.querySelectorAll(".screen-tab")) {
     const on = tab.dataset.screen === next;
@@ -1281,13 +1283,27 @@ let markets = {};
 let marketQuotes = new Map();
 let quotedYardId = null;
 
-function screenShipyard() {
+function savedCaptainPosition() {
   const game = readFortSave();
-  const ship = (game?.world ? deserializeWorld(game.world)?.ship : null) ?? game?.ship;
+  return (game?.world ? deserializeWorld(game.world)?.ship : null) ?? game?.ship;
+}
+
+function screenShipyard() {
+  const ship = savedCaptainPosition();
   const yard = ship && Number.isFinite(ship.x) && Number.isFinite(ship.y)
     ? currentShipyard({ x: ship.x, y: ship.y })
     : null;
   return yard ?? SHIPYARDS.find((entry) => entry.home) ?? SHIPYARDS[0] ?? null;
+}
+
+/** Persist only a real change, before any room reads its local fleet. */
+function reconcileSavedCaptain() {
+  const next = reconcileCaptainPosition(fleet, savedCaptainPosition());
+  if (next === fleet) return false;
+  fleet = next;
+  if (refitId && !localFleet().ships.some((ship) => ship.id === refitId)) refitId = null;
+  saveFleet();
+  return true;
 }
 
 /**
@@ -2343,6 +2359,7 @@ applyStaticTranslations();
 if (els.langSelect) els.langSelect.value = translator.language;
 loadConfig();
 loadGold();
+reconcileSavedCaptain();
 const captain = captainShip(fleet);
 // The boot fills the editor with the captain but leaves the room to the entry rule
 // below (S109): landing on the fleet was the boot's side effect, not a decision.

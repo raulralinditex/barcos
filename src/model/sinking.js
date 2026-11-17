@@ -11,6 +11,7 @@
  */
 
 import { REPAIR, repairCost } from "./repair.js";
+import { homeShipyard } from "./world.js";
 
 /**
  * The switch (S117). Off by default, which is the game as it was: losing a hull is
@@ -35,13 +36,15 @@ export function isWreck(ship) {
  * A wreck keeps her identity — name, hull, guns, what she cost — because floating her
  * again restores that same ship and not a new one. She loses everything that was afloat
  * in her: her cargo is at the bottom (S116), her crew went with her, and her hull is at
- * zero. She does not sail and she cannot be a captain.
+ * zero. She does not sail and she cannot be a captain. A kept wreck returns to the
+ * home yard, regardless of where the voyage began (S130).
  */
 export function wreckHull(ship, options = SINKING) {
   if (!ship) return null;
   if (!keepsWreck(options)) return null;
   return {
     ...ship,
+    yardId: homeShipyard()?.id ?? null,
     wreck: true,
     sails: false,
     cargoKg: 0,

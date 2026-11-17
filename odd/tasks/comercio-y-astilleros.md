@@ -75,7 +75,9 @@ S122. **Las recámaras de una escolta viajan con ella.** Consecuencia de S121: r
 
 S130. **Los cascos pertenecen al astillero donde quedan amarrados.** Pedido (verbatim): "los astilleros son entidades independientes, si una nave esta en un astillero, no aparece en el otro". Decisión (verbatim): "Al zarpar, las naves marcadas con el check te acompanan (escoltas), como hoy: las que no van con vos se quedan en el astillero y no aparecen en otro. La capitana y sus escoltas navegan, no estan en ningun puerto."
 - Cada entrada de flota guarda `yardId`: un id de astillero o `null` mientras navega. Un guardado anterior o un id desconocido se resuelve al puerto de casa.
+- La posición válida del guardado del mar manda sobre la ubicación guardada de la capitana: al abrir la pantalla y sus salas, se actualiza al astillero donde está o a `null` en aguas abiertas. Los cascos que quedaron en puerto no se mueven.
 - Comprar deja el casco en el astillero actual y lo hace capitana. Al zarpar, la capitana y las escoltas marcadas de ese astillero salen; las no marcadas quedan, y un naufragio no navega.
+- Un casco hundido en el mar que se conserva como naufragio (S117) vuelve al puerto de casa (`puerto-casa`) para reflotarse allí, sin importar de qué astillero zarpó.
 - El mar forma y guarda las escoltas que zarparon. Un guardado anterior sin escoltas abre con la capitana sola.
 - Flota, reparación y selector de mercado muestran los cascos amarrados allí y la escuadra visitante, nunca cascos de otro astillero. El contador y las acciones siguen el mismo alcance.
 
@@ -178,3 +180,5 @@ S128. **Cualquier casco de la escuadra recoge un pecio.** Pedido del usuario (ve
 L17 (pedido, verbatim): "los astilleros son entidades independientes, si una nave esta en un astillero, no aparece en el otro".
 
 L18 (decisión, verbatim): "Al zarpar, las naves marcadas con el check te acompanan (escoltas), como hoy: las que no van con vos se quedan en el astillero y no aparecen en otro. La capitana y sus escoltas navegan, no estan en ningun puerto."
+
+L19 (destino de los naufragios, decisión verbatim): "Al puerto de casa (Recomendada)".

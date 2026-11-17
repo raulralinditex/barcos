@@ -1,5 +1,6 @@
 import { chromium } from "playwright";
 import { buildShip, toRuntimeShip } from "../src/model/shipyard.js";
+import { refloatCost, wreckHull } from "../src/model/sinking.js";
 
 const makeShip = (name, id) => ({
   ...toRuntimeShip(buildShip({
@@ -102,6 +103,91 @@ try {
     const formation = await visit.evaluate(() => JSON.parse(JSON.parse(localStorage.getItem("barcos:game:v1")).world).escorts.map((escort) => escort.id));
     check(JSON.stringify(formation) === JSON.stringify(["spare"]), `S130 E: formation survives reload, got ${JSON.stringify(formation)}`);
   }
+
+  // A sinking in the abyss goes to the home yard, where the refloat action really works.
+  const wreck = wreckHull({ ...spare, yardId: null }, { keepWreck: 1 });
+  const wreckPage = await browser.newPage({ viewport: { width: 1500, height: 1000 }, locale: "es-AR" });
+  wreckPage.on("console", (msg) => { if (msg.type() === "error") errors.push(msg.text()); });
+  wreckPage.on("pageerror", (error) => errors.push(`pageerror: ${error.message}`));
+  await wreckPage.addInitScript(([captain, wreck]) => {
+    if (sessionStorage.getItem("seeded")) return;
+    sessionStorage.setItem("seeded", "1");
+    localStorage.setItem("barcos:lang:v1", "es");
+    localStorage.setItem("barcos:fleet:v1", JSON.stringify({ v: 1, captainId: captain.id, ships: [captain, wreck] }));
+    localStorage.setItem("barcos:game:v1", JSON.stringify({ gold: 50000, ship: { x: 4600, y: 0, heading: 0 } }));
+  }, [{ ...captain, yardId: null }, wreck]);
+  await wreckPage.goto("http://localhost:8765/index.html", { waitUntil: "networkidle" });
+  await wreckPage.click('.screen-tab[data-screen="flota"]');
+  check(await wreckPage.locator('.fleet-item[data-ship-id="spare"]').count() === 0, "S117: the wreck is not at the abyss yard");
+  await wreckPage.evaluate(() => {
+    const game = JSON.parse(localStorage.getItem("barcos:game:v1"));
+    game.ship = { x: 0, y: 0, heading: 0 };
+    localStorage.setItem("barcos:game:v1", JSON.stringify(game));
+  });
+  await wreckPage.reload({ waitUntil: "networkidle" });
+  await wreckPage.click('.screen-tab[data-screen="flota"]');
+  const wreckRow = wreckPage.locator('.fleet-item[data-ship-id="spare"]');
+  check(await wreckRow.count() === 1, "S117: the wreck is listed at home");
+  if (await wreckRow.count()) {
+    await wreckRow.locator("[data-refit]").click();
+    const button = wreckPage.locator("#fleet-repair-btn");
+    check(await button.isEnabled(), "S117: the home yard offers refloating");
+    await button.click();
+    const after = await wreckPage.evaluate(() => ({
+      fleet: JSON.parse(localStorage.getItem("barcos:fleet:v1")),
+      game: JSON.parse(localStorage.getItem("barcos:game:v1")),
+    }));
+    const floated = after.fleet.ships.find((ship) => ship.id === "spare");
+    check(floated?.wreck === false && floated?.yardId === "puerto-casa" && floated?.condition.hull === 100, "S117: refloating restores the wreck at home");
+    check(after.game.gold === 50000 - refloatCost(wreck), "S117: refloating charges the quoted cost");
+  }
+
+  // A stale captain location follows the sea position at boot and on room entry.
+  const stale = await browser.newPage({ viewport: { width: 1500, height: 1000 }, locale: "es-AR" });
+  stale.on("console", (msg) => { if (msg.type() === "error") errors.push(msg.text()); });
+  stale.on("pageerror", (error) => errors.push(`pageerror: ${error.message}`));
+  await stale.addInitScript(([captain, spare]) => {
+    if (sessionStorage.getItem("seeded")) return;
+    sessionStorage.setItem("seeded", "1");
+    localStorage.setItem("barcos:lang:v1", "es");
+    localStorage.setItem("barcos:fleet:v1", JSON.stringify({ v: 1, captainId: captain.id, ships: [captain, { ...spare, sails: false }] }));
+    localStorage.setItem("barcos:game:v1", JSON.stringify({ gold: 50000, ship: { x: 4600, y: 0 } }));
+  }, [captain, spare]);
+  await stale.goto("http://localhost:8765/index.html", { waitUntil: "networkidle" });
+  await stale.click('.screen-tab[data-screen="mercado"]');
+  const staleOptions = () => stale.locator("#market-ship option").evaluateAll((options) => options.map((o) => o.value));
+  const staleYards = () => stale.evaluate(() => JSON.parse(localStorage.getItem("barcos:fleet:v1")).ships.map((ship) => ship.yardId));
+  check(JSON.stringify(await staleOptions()) === JSON.stringify(["captain"]), "S130: the stale captain can trade at her actual yard, but the home hull cannot");
+  check(JSON.stringify(await staleYards()) === JSON.stringify(["cala-del-abismo", "puerto-casa"]), "S130: boot reconciles only the captain");
+  await stale.evaluate(() => {
+    const game = JSON.parse(localStorage.getItem("barcos:game:v1"));
+    game.ship = { x: 0, y: 0 };
+    localStorage.setItem("barcos:game:v1", JSON.stringify(game));
+  });
+  await stale.click('.screen-tab[data-screen="flota"]');
+  check(JSON.stringify(await staleYards()) === JSON.stringify(["puerto-casa", "puerto-casa"]), "S130: opening the fleet room reconciles the position again");
+  check(await stale.locator("#fleet-list .fleet-item").count() === 2, "S130: both hulls appear when the captain comes home");
+  await stale.evaluate(() => {
+    const game = JSON.parse(localStorage.getItem("barcos:game:v1"));
+    game.ship = { x: 1000, y: 1000 };
+    localStorage.setItem("barcos:game:v1", JSON.stringify(game));
+  });
+  await stale.click('.screen-tab[data-screen="mercado"]');
+  check(JSON.stringify(await staleYards()) === JSON.stringify([null, "puerto-casa"]), "S130: open water clears only the captain's yard");
+  await stale.evaluate(() => {
+    const game = JSON.parse(localStorage.getItem("barcos:game:v1"));
+    game.ship = { x: 0, y: 0 };
+    localStorage.setItem("barcos:game:v1", JSON.stringify(game));
+  });
+  await stale.click('.screen-tab[data-screen="flota"]');
+  await stale.locator('.fleet-item[data-ship-id="spare"] [data-refit]').click();
+  await stale.evaluate(() => {
+    const game = JSON.parse(localStorage.getItem("barcos:game:v1"));
+    game.ship = { x: 4600, y: 0 };
+    localStorage.setItem("barcos:game:v1", JSON.stringify(game));
+  });
+  await stale.click('.screen-tab[data-screen="flota"]');
+  check(!(await stale.locator("#refit-mode").textContent()).includes("Queda"), "S130: a formerly selected remote hull is no longer in the refit editor");
 } catch (error) {
   errors.push(error.stack ?? String(error));
 } finally {

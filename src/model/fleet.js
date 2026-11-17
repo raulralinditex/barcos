@@ -10,7 +10,7 @@
  * ship stays in port, keeping the hull, crew and loadout it was bought with.
  */
 
-import { SHIPYARDS, shipyardById } from "../data/naval-data.js";
+import { SHIPYARDS, shipyardAt, shipyardById } from "../data/naval-data.js";
 import { holdOf } from "./commerce.js";
 import { isWreck } from "./sinking.js";
 
@@ -28,6 +28,19 @@ export function withShipYard(fleet, shipId, yardId) {
   if (!ships.some((ship) => ship.id === shipId) || (yardId !== null && !shipyardById(yardId))) return { ...fleet, ships };
   if (shipId === fleet?.captainId && yardId !== null) return { ...fleet, ships };
   return { ...fleet, ships: ships.map((ship) => ship.id === shipId ? { ...ship, yardId } : ship) };
+}
+
+/** The sea's observed position overrides only the captain's saved mooring (S130). */
+export function reconcileCaptainPosition(fleet, position) {
+  if (!Number.isFinite(position?.x) || !Number.isFinite(position?.y)) return fleet;
+  const captain = captainShip(fleet);
+  if (!captain || isWreck(captain)) return fleet;
+  const yardId = shipyardAt(position)?.id ?? null;
+  if (captain.yardId === yardId) return fleet;
+  return {
+    ...fleet,
+    ships: fleet.ships.map((ship) => ship.id === captain.id ? { ...ship, yardId } : ship),
+  };
 }
 
 /** Hulls actually moored at this yard, independent of their sailing checks. */
