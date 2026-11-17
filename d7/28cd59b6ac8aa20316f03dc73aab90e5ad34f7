@@ -1,0 +1,55 @@
+src/ui/app.js
+  s_48f93862b4f568::t_2d9ec5742020a4 70,1841-1849,1861
+  s_48f93862b4f568::t_66e6f0f52b1ef7 69,1832-1840,1858
+scripts/smoke-settings.mjs
+  s_48f93862b4f568::t_58edaf1ef25b14 141
+  s_48f93862b4f568::t_8fd08cd5ab2d33 138-140
+  s_48f93862b4f568::t_2b63eacff35a94 142-143
+src/i18n/es.js
+  s_48f93862b4f568::t_2d9ec5742020a4 628-629
+  s_48f93862b4f568::t_66e6f0f52b1ef7 626-627
+src/i18n/en.js
+  s_48f93862b4f568::t_2d9ec5742020a4 631-632
+  s_48f93862b4f568::t_66e6f0f52b1ef7 629-630
+scripts/smoke-yard-switch.mjs
+  s_48f93862b4f568::t_c64d40443b0404 103,123,127-128,136-137,151-173
+  s_48f93862b4f568::t_d98ebd69b8f410 67,80,83-84,87-88,91,108,111-112,115-116,119,129,132,138,141-142,145-146,149,174-191
+  s_48f93862b4f568::t_f92125d37cb3b3 64-66
+  s_48f93862b4f568::t_424ec63a08698a 68-70,77-79
+  s_48f93862b4f568::t_9277bc45a4bcdd 81-82
+  s_48f93862b4f568::t_c37865e32ed31d 85-86
+  s_48f93862b4f568::t_b70f7e07d52338 89-90
+  s_48f93862b4f568::t_a1fe5b93e43bcf 92-94,100-102
+  s_48f93862b4f568::t_20f618cb90fa0c 104-107
+  s_48f93862b4f568::t_91cffa53cd1ca0 109-110
+  s_48f93862b4f568::t_0e641cd074b831 113-114
+  s_48f93862b4f568::t_9214b5b4703ffa 117-118
+  s_48f93862b4f568::t_4c950583d5f1ac 120-122
+  s_48f93862b4f568::t_ede83b0f56eb33 124-126
+  s_48f93862b4f568::t_c2671beb23b4d8 130-131
+  s_48f93862b4f568::t_6a35b69132c167 133-135
+  s_48f93862b4f568::t_38fe48bac02d84 139-140
+  s_48f93862b4f568::t_b73794aace9f5d 143-144
+  s_48f93862b4f568::t_fe2c61e7098c95 147-148
+  s_48f93862b4f568::t_5d46b9ca655111 150
+  s_48f93862b4f568::t_cf1c3e7e647ec7 192-194
+src/ui/styles.css
+  s_48f93862b4f568::t_2d9ec5742020a4 2473-2482
+  s_48f93862b4f568::t_66e6f0f52b1ef7 2483-2491
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.6",
+  "base_commit_sha": "d728cd59b6ac8aa20316f03dc73aab90e5ad34f7",
+  "prompts": {},
+  "sessions": {
+    "s_48f93862b4f568": {
+      "agent_id": {
+        "tool": "pi",
+        "id": "01a1e58e-9669-713e-b888-48e76698935d",
+        "model": "deepseek-v4.1-flash_high"
+      },
+      "human_author": "Raul Ripoll <raulral@ext.inditex.com>"
+    }
+  }
+}
