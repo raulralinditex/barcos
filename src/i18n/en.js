@@ -214,6 +214,8 @@ export const en = {
   "sea.banner.noTarget": "No target to {side}",
   "sea.banner.reloading": "Reloading the {side} battery…",
   "sea.banner.sunk": "Enemy sunk! Loot the wreck",
+  /* S140: a level was cleared and the next one is seeded. */
+  "sea.banner.level": "Level cleared! The sea is now level {level}",
   "sea.banner.surrendered": "They struck their colours! Loot the wreck",
   "sea.banner.escortFire": "{name} fires to {side}",
   "sea.banner.escortLost": "We lost the {name}! She leaves the fleet",
@@ -420,6 +422,11 @@ export const en = {
   "settings.commerce.sellAbierto": "Selling price in open water",
   "settings.commerce.buyAbismo": "Buying price in the abyss",
   "settings.commerce.sellAbismo": "Selling price in the abyss",
+  "settings.group.levels": "Levels",
+  "settings.levels.baseEnemies": "Enemies in level 1",
+  "settings.levels.growth": "Quota growth per level",
+  "settings.levels.maxEnemies": "Cap on enemies per level",
+  "settings.levels.toughness": "Extra toughness per level",
   "settings.turning.lightLoad": "Minimum load that steers",
   "settings.turning.lightFactor": "Helm with an empty hull",
   "settings.loot.flatGold": "Wreck loot: flat sum",
@@ -618,6 +625,9 @@ export const en = {
   "market.capacity": "{kg} kg free",
   /* ---------------------------------------------------------------- S133: yard selector */
   "shipyard.yard.label": "Shipyard",
+  /* S140: the level chip next to the yard's name. */
+  "shipyard.level": "Level {level}",
+  "shipyard.level.title": "Sea level {level}: sink or capture every enemy to reach the next one",
   "shipyard.yard.water": "{zone}",
   "shipyard.yard.rename": "Rename the shipyard",
   "shipyard.yard.namePlaceholder": "Shipyard name",

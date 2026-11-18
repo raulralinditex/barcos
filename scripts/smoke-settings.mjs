@@ -79,10 +79,20 @@ check(shown.rows >= 20, `the screen shows only ${shown.rows} values`);
 // Fort reinforcement (S100/S102) adds its own block to the settings screen, and the trade
 // brings two more (S113, S117): the sinking switch and the market prices. The automatic
 // refit adds "Reforma" and the yards' own markets add one block of prices per yard.
-check(shown.groups.length === 20, `expected twenty blocks, got ${shown.groups.join(", ")}`);
+// S140 adds the levels block ("Niveles").
+check(shown.groups.length === 21, `expected twenty-one blocks, got ${shown.groups.join(", ")}`);
 check(
   shown.groups.some((name) => /Naufragio/i.test(name)) && shown.groups.some((name) => /Comercio/i.test(name)),
   `the sinking and trade blocks must be on screen, got ${shown.groups.join(", ")}`,
+);
+// S140: the level curve is a block of its own, with its four numbers on screen.
+check(
+  shown.groups.some((name) => /Niveles/i.test(name)),
+  `the levels block must be on screen, got ${shown.groups.join(", ")}`,
+);
+check(
+  (await screen.locator('.settings-row[data-field-id^="levels."]').count()) === 4,
+  `expected four level fields, got ${await screen.locator('.settings-row[data-field-id^="levels."]').count()}`,
 );
 // No group heading may reach the player as a raw key.
 check(!shown.groups.some((name) => /^settings\./.test(name)), `a raw group key is on screen: ${shown.groups.join(", ")}`);

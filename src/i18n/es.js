@@ -211,6 +211,8 @@ export const es = {
   "sea.banner.noTarget": "Sin blanco a {side}",
   "sea.banner.reloading": "Recargando el costado de {side}…",
   "sea.banner.sunk": "¡Enemigo hundido! Saquea el pecio",
+  /* S140: a level was cleared and the next one is seeded. */
+  "sea.banner.level": "¡Nivel superado! Ahora el mar es de nivel {level}",
   "sea.banner.surrendered": "¡Se rindió! Saquea el pecio",
   "sea.banner.escortFire": "{name} dispara por {side}",
   "sea.banner.escortLost": "¡Perdimos el {name}! Sale de la flota",
@@ -417,6 +419,11 @@ export const es = {
   "settings.commerce.sellAbierto": "Precio de venta en mar abierto",
   "settings.commerce.buyAbismo": "Precio de compra en el abismo",
   "settings.commerce.sellAbismo": "Precio de venta en el abismo",
+  "settings.group.levels": "Niveles",
+  "settings.levels.baseEnemies": "Enemigos del nivel 1",
+  "settings.levels.growth": "Crecimiento de la cantidad por nivel",
+  "settings.levels.maxEnemies": "Tope de enemigos por nivel",
+  "settings.levels.toughness": "Aguante extra por nivel",
   "settings.turning.lightLoad": "Carga mínima que gobierna",
   "settings.turning.lightFactor": "Timón con el casco vacío",
   "settings.loot.flatGold": "Botín de un pecio: suma fija",
@@ -615,6 +622,9 @@ export const es = {
   "market.capacity": "{kg} kg libres",
   /* ---------------------------------------------------------------- S133: yard selector */
   "shipyard.yard.label": "Astillero",
+  /* S140: the level chip next to the yard's name. */
+  "shipyard.level": "Nivel {level}",
+  "shipyard.level.title": "Nivel {level} del mar: hundí o capturá a todos sus enemigos para pasar al siguiente",
   "shipyard.yard.water": "{zone}",
   "shipyard.yard.rename": "Cambiar el nombre del astillero",
   "shipyard.yard.namePlaceholder": "Nombre del astillero",

@@ -17,7 +17,13 @@
           <!-- S134: the title bar names the yard on screen (S133), not the app: this screen
                is that yard's. The line under it names her water. Both are painted by the
                screen, so a renamed yard reads with her new name everywhere. -->
-          <h1 id="brand-yard">Astillero</h1>
+          <div class="brand-title">
+            <h1 id="brand-yard">Astillero</h1>
+            <!-- S140: the level the sea is on, next to the yard's name and visible in every
+                 tab. It reads the sea save, so a restart (which clears the saves) is
+                 level 1. -->
+            <span id="brand-level" class="brand-level"></span>
+          </div>
           <p class="brand-sub" id="brand-water">Un barco a partir de un presupuesto</p>
         </div>
       </div>

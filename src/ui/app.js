@@ -79,6 +79,7 @@ import {
 } from "../model/commerce.js";
 import { GAME_TIME, burnSupply, supplySeconds } from "../model/game-time.js";
 import { currentShipyard, deserializeWorld, shipyardZone } from "../model/world.js";
+import { levelFromGameSave } from "../model/levels.js";
 import { COMMODITIES, SHIPYARDS, shipyardById } from "../data/naval-data.js";
 // S133: the yard selector of the title bar, the editable names and the automatic voyage.
 import { arriveAt, voyageButtonVisible, voyageQuote } from "../model/voyage.js";
@@ -251,6 +252,7 @@ const els = {
   langSelect: $("#lang-select"),
   yardSelect: $("#yard-select"),
   brandYard: $("#brand-yard"),
+  brandLevel: $("#brand-level"),
   brandWater: $("#brand-water"),
   yardRenameBtn: $("#yard-rename-btn"),
   yardNameInput: $("#yard-name-input"),
@@ -1419,6 +1421,20 @@ function renderYardTitle(yard) {
       ? t("shipyard.yard.water", { zone: t(`zone.${zone.id}.name`) })
       : t("app.brandSub");
   }
+  renderLevelChip();
+}
+
+/**
+ * The level the sea is on, in the title bar (S140-E). The shipyard does not run the levels:
+ * it reads the sea save, and no save means level 1, which is also what a restart shows
+ * because Reiniciar clears the saves. The chip lives next to the yard's name, so it is on
+ * screen in every tab.
+ */
+function renderLevelChip() {
+  if (!els.brandLevel) return;
+  const level = levelFromGameSave(readFortSave());
+  els.brandLevel.textContent = t("shipyard.level", { level });
+  els.brandLevel.title = t("shipyard.level.title", { level });
 }
 
 /**

@@ -1,6 +1,8 @@
 import test from "node:test";
 import assert from "node:assert/strict";
 
+import { enemiesForLevel } from "../src/model/levels.js";
+
 import {
   KN_TO_MS,
   WORLD,
@@ -50,9 +52,14 @@ test("S9: the same seed always produces the same sea", () => {
 test("S9: the starting sea has the coastal zone density", () => {
   const world = createWorld(7, testShip);
   const band = ZONE_BANDS[0];
-  assert.equal(world.encounters.length, band.encounters);
+  // S140: the level owns the enemy quota, so the coastal band no longer decides how many
+  // hostiles there are. Level 1 is the starting level, and the treasures keep their share,
+  // which is the half of this rule that still holds.
   const enemies = world.encounters.filter((e) => e.type === "enemy").length;
-  assert.equal(enemies, Math.round(band.encounters * band.enemyShare));
+  assert.equal(enemies, enemiesForLevel(world.level ?? 1));
+  const treasures = world.encounters.filter((e) => e.type === "treasure").length;
+  assert.ok(treasures > 0, "the starting sea must still carry treasure");
+  assert.equal(band.id, "costera");
 });
 
 test("mulberry32 is deterministic and advances state", () => {

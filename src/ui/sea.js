@@ -111,6 +111,7 @@ import {
   zoneAtRadius,
   currentShipyard,
 } from "../model/world.js";
+import { toughnessForLevel } from "../model/levels.js";
 
 const SHIP_KEY = "barcos:current-ship:v1";
 const FLEET_KEY = "barcos:fleet:v1";
@@ -275,6 +276,10 @@ let gameOverShown = false;
 const fx = [];
 // The initial position is seeded at boot, so only movement into port counts.
 let wasInPort = false;
+/** The level the sea is showing, so a clear is announced once (S140-G). */
+let announcedLevel = 1;
+/** A cleared level whose banner is waiting for the current one to finish (S140-G). */
+let pendingLevel = null;
 
 /** The provision days the shipyard sheet gives one hull (S132). */
 function shipDays(shipId) {
@@ -1501,7 +1506,15 @@ function currentZone() {
 /** Lazily build an enemy's combat entity; keeps its own heading separate from drift. */
 function ensureEnemyCombat(encounter) {
   if (!encounter.combat) {
-    encounter.combat = createEnemyCombatant(encounter, currentZone(), world.seed);
+    // The level of the sail decides how tough she is (S140-D): the hull she was seeded
+    // with, or the sea's level when she was seeded before levels existed.
+    const level = Number.isFinite(encounter.level) ? encounter.level : world.level;
+    encounter.combat = createEnemyCombatant(
+      encounter,
+      currentZone(),
+      world.seed,
+      toughnessForLevel(level),
+    );
     encounter.heading = encounter.heading ?? encounter.drift?.heading ?? 0;
     encounter.currentSpeedKn = 0;
     // from now on the combat AI owns this hull's movement, not the drift step
@@ -2557,6 +2570,13 @@ function frame(now) {
     // The captain's combat state rides along, so her shredded rig slows her (S89).
     const previousTime = world.timeS;
     world = updateWorld(world, gameOver ? {} : { ...readInput(), rigging: playerCombat }, dt);
+    // A level was cleared (S140-G): say which level the sea is on now, once. The banner is
+    // queued instead of written here, so it never stomps a more specific message of the
+    // same moment (a capture, a wreck): it waits for that banner to finish.
+    if (Number.isFinite(world.level) && world.level > announcedLevel) {
+      announcedLevel = world.level;
+      pendingLevel = world.level;
+    }
     markets = recoverMarkets(markets, world.timeS - previousTime);
     // The voyage eats the crew's reserve (S67). It runs on the world clock, so a
     // fast-forward burns it faster, exactly like everything else the sea does.
@@ -2572,6 +2592,12 @@ function frame(now) {
     tickFx(dt);
   }
   goldEarned = world.gold;
+  // The level banner waits its turn, so the capture or the wreck of the same moment is
+  // read first (S140-G).
+  if (pendingLevel !== null && now >= ui.bannerUntil) {
+    showBanner(t("sea.banner.level", { level: pendingLevel }), "gold", 4500);
+    pendingLevel = null;
+  }
   if (goldEarned > before) {
     gold += goldEarned - before;
     showBanner(t("sea.banner.treasure", { gold: fmtInt.format(goldEarned - before) }), "gold");
@@ -2797,6 +2823,8 @@ function boot() {
   window.addEventListener("resize", resizeCanvas);
   resizeCanvas();
   updateHud();
+  announcedLevel = Number.isFinite(world.level) ? world.level : 1;
+  pendingLevel = null;
   if (!handedOver) showBanner(t("sea.banner.depart", { name: runtimeShip.name }), "info", 2800);
   requestAnimationFrame(frame);
 }

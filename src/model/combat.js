@@ -19,6 +19,7 @@
 import { AMMO, ammoById, hullById, pieceById } from "../data/naval-data.js";
 import { referenceSpeedKn } from "./ship-model.js";
 import { mulberry32, stepHull } from "./world.js";
+import { LEVELS } from "./levels.js";
 import { hullTurnFactor } from "./turning.js";
 import { crewedPieces, reloadBonus } from "./gunnery.js";
 
@@ -145,6 +146,17 @@ export function hullToughness(hull) {
   return Math.max(0.2, arqueo / COMBAT.referenceArqueo);
 }
 
+/**
+ * A level's toughness factor, read safely (S140): junk, a missing factor or anything below
+ * 1 means the enemy the game was tuned with, and nothing exceeds the declared cap.
+ */
+export function toughnessFactor(value) {
+  const cap = Number(LEVELS.maxToughness);
+  const safeCap = Number.isFinite(cap) && cap >= 1 ? cap : 1;
+  if (typeof value !== "number" || !Number.isFinite(value) || value < 1) return 1;
+  return Math.min(safeCap, value);
+}
+
 /* ---------------------------------------------------------------- combatants */
 
 function totalPeople(crew) {
@@ -228,8 +240,13 @@ function gunShareForZone(zoneId) {
  * Build an enemy's combat entity deterministically from the encounter id and the
  * world seed: same sea, same adversary. Both the number and the weight of its
  * guns grow with the zone, so coastal water is survivable and the abyss is not.
+ *
+ * `toughness` is the level's factor (S140): it scales the enemy's hull and her crew, so a
+ * level 5 sail is clearly harder than a level 1 one. It defaults to 1, which is the enemy
+ * every caller written before levels keeps, and it is capped at `LEVELS.maxToughness`.
+ * The guns do not change: the level makes a hull tougher, not better armed.
  */
-export function createEnemyCombatant(encounter, zone, worldSeed) {
+export function createEnemyCombatant(encounter, zone, worldSeed, toughness = 1) {
   let rngState = (encounter.id * 2654435761) ^ (worldSeed >>> 0);
   const rnd = () => {
     const r = mulberry32(rngState);
@@ -239,6 +256,7 @@ export function createEnemyCombatant(encounter, zone, worldSeed) {
 
   const hull = hullById(encounter.hullId);
   if (!hull) return null;
+  const factor = toughnessFactor(toughness);
 
   const zoneId = zone?.id ?? encounter.zoneId ?? "costera";
   const perSide = clamp(
@@ -261,8 +279,8 @@ export function createEnemyCombatant(encounter, zone, worldSeed) {
     }
   }
 
-  const marino = Math.round(hull.crewMin * (1.3 + 0.4 * rnd()));
-  const artillero = Math.max(1, Math.ceil((perSide * 2) / 2));
+  const marino = Math.round(hull.crewMin * (1.3 + 0.4 * rnd()) * factor);
+  const artillero = Math.max(1, Math.round(Math.ceil((perSide * 2) / 2) * factor));
   const soldado = Math.round(marino * 0.5);
   const crew = { marino, artillero, soldado };
 
@@ -274,7 +292,7 @@ export function createEnemyCombatant(encounter, zone, worldSeed) {
     initialCrew: Math.max(1, totalPeople(crew)),
     crewMin: hull.crewMin,
     maxSpeedKn: referenceSpeedKn(hull),
-    hullToughness: hullToughness(hull),
+    hullToughness: hullToughness(hull) * factor,
     condition: { hull: 100, rigging: 100, crew: 100, morale: 100 },
     crewDamagePool: 0,
     damageDealt: { babor: 0, estribor: 0 },

@@ -27,6 +27,7 @@ import { ESCORT } from "./formation.js";
 import { TRAIL } from "./damage-trail.js";
 import { BAR_SCALE } from "./sea-hud.js";
 import { AUTOFIRE_DEFAULT } from "./autofire.js";
+import { LEVELS } from "./levels.js";
 
 /**
  * The editable fields, grouped by the block they belong to.
@@ -180,13 +181,21 @@ export const SETTINGS_FIELDS = [
   { group: "fortUpgrade", key: "gunCost", label: "settings.fortUpgrade.gunCost", scale: "gold", min: 0, max: 5000, step: 50, target: "fortUpgrade", targetKey: "gunCost" },
   { group: "fortUpgrade", key: "maxPerSide", label: "settings.fortUpgrade.maxPerSide", scale: "factor", min: 0, max: 30, step: 1, target: "fortUpgrade", targetKey: "maxPerSide" },
   { group: "fortUpgrade", key: "repairPinch", label: "settings.fortUpgrade.repairPinch", scale: "gold", min: 0, max: 20000, step: 50, target: "fortUpgrade", targetKey: "repairPinch" },
+
+  // S140: the level curve. How many enemies a level owns, how fast the quota grows, where
+  // it stops and how much tougher each level's hulls are. The player asked for levels; the
+  // numbers of a level are design numbers like any other, so they are tunable here.
+  { group: "levels", key: "baseEnemies", label: "settings.levels.baseEnemies", scale: "factor", min: 1, max: 30, step: 1, target: "levels", targetKey: "baseEnemies" },
+  { group: "levels", key: "growth", label: "settings.levels.growth", scale: "factor", min: 1, max: 3, step: 0.05, target: "levels", targetKey: "growth" },
+  { group: "levels", key: "maxEnemies", label: "settings.levels.maxEnemies", scale: "factor", min: 1, max: 200, step: 1, target: "levels", targetKey: "maxEnemies" },
+  { group: "levels", key: "toughnessPerLevel", label: "settings.levels.toughness", scale: "percent", min: 0, max: 0.5, step: 0.01, target: "levels", targetKey: "toughnessPerLevel" },
 ];
 
 /** The live constant blocks, so a group id resolves to the object it writes to. */
 /** The automatic-fire switch as a live block, so it is a setting like any other (S88). */
 export const AUTOFIRE = { enabled: AUTOFIRE_DEFAULT ? 1 : 0 };
 
-export const SETTINGS_BLOCKS = { wind: WIND, world: WORLD, combat: COMBAT, repair: REPAIR, prices: PRICES, gunnery: GUNNERY, gunners: GUNNERY.gunnersPerGun, zones: ZONE_DAMAGE, loot: LOOT, sales: SALES, time: GAME_TIME, fort: FORT, fortUpgrade: FORT_UPGRADE, start: START, turning: TURNING, escort: ESCORT, trail: TRAIL, bars: BAR_SCALE, autofire: AUTOFIRE, sinking: SINKING, refit: REFIT, voyage: VOYAGE, commerce: COMMERCE, markets: MARKETS, yardMarkets: YARD_MARKETS };
+export const SETTINGS_BLOCKS = { wind: WIND, world: WORLD, combat: COMBAT, repair: REPAIR, prices: PRICES, gunnery: GUNNERY, gunners: GUNNERY.gunnersPerGun, zones: ZONE_DAMAGE, loot: LOOT, sales: SALES, time: GAME_TIME, fort: FORT, fortUpgrade: FORT_UPGRADE, start: START, turning: TURNING, escort: ESCORT, trail: TRAIL, bars: BAR_SCALE, autofire: AUTOFIRE, sinking: SINKING, refit: REFIT, voyage: VOYAGE, commerce: COMMERCE, markets: MARKETS, yardMarkets: YARD_MARKETS, levels: LEVELS };
 
 /**
  * The design constant blocks S79 promises to expose, by name.

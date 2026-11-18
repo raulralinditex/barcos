@@ -10,6 +10,7 @@
  */
 
 import { ZONES, HULLS, SHIPYARDS, shipyardAt } from "../data/naval-data.js";
+import { enemiesForLevel, normaliseLevel } from "./levels.js";
 import { createEscort, escortStation, stepEscort } from "./formation.js";
 import { shipsSailingAtSea } from "./fleet.js";
 import { referenceSpeedKn } from "./ship-model.js";
@@ -343,11 +344,16 @@ export function createWorld(seed, ship, gold = 0, fleet = null) {
     /** The rest of the fleet, in formation behind the captain (S36). */
     escorts: [],
     encounters: [],
+    /** The level the sea is on, and the ids of the sails that level owns (S140). */
+    level: 1,
+    levelEnemies: [],
   };
   world.escorts = shipsSailingAtSea(fleet)
     .filter((entry) => entry.id !== (fleet?.captainId ?? ship.id))
     .map((entry, index) => createEscort(entry, world.ship, index));
-  return updateWorld(world, {}, 0);
+  // The first level is seeded here, because the level is the only source of enemies
+  // (S140): a fresh sea holds exactly the level 1 quota.
+  return updateWorld(seedLevel(world, 1), {}, 0);
 }
 
 /**
@@ -383,6 +389,18 @@ export function updateWorld(world, input = {}, dt = 0) {
 
   let gold = world.gold;
   let collected = 0;
+  // The level the sea is on and the sails it owns (S140). A save or a test that knows
+  // nothing about levels sails the level it has, which is level 1. A save written before
+  // levels existed has no quota record: the sails already afloat become that record, so
+  // opening an old save does not seed a second quota on top of it.
+  const level = normaliseLevel(world.level);
+  let levelEnemies = Array.isArray(world.levelEnemies) ? [...world.levelEnemies] : [];
+  if (levelEnemies.length === 0) {
+    levelEnemies = world.encounters
+      .filter((encounter) => encounter.type === "enemy")
+      .map((encounter) => encounter.id)
+      .filter((id) => Number.isFinite(id));
+  }
 
   // move enemy sails, bounce them off the world's edge. An engaged enemy is under
   // its own combat AI, so the drift step hands control over and stays out of the way.
@@ -459,26 +477,84 @@ export function updateWorld(world, input = {}, dt = 0) {
   // every id this sea has already finished.
   const finished = defeatedEnemyIds(world);
 
-  // keep density matched to the current zone
+  // The level owns the enemy quota (S140): the zone's density is no longer a spawner, so
+  // nothing here tops the hostiles back up. Treasures keep their top-up.
   const zone = zoneAtRadius(Math.hypot(ship.x, ship.y));
-  const wantEnemies = Math.round(zone.encounters * zone.enemyShare);
-  const wantTreasures = zone.encounters - wantEnemies;
-  const haveEnemies = encounters.filter((e) => e.type === "enemy").length;
+  const wantTreasures = Math.max(0, zone.encounters - enemiesForLevel(level));
   const haveTreasures = encounters.filter((e) => e.type === "treasure").length;
 
-  for (let i = haveEnemies; i < wantEnemies; i += 1) {
-    // Never reuse an id this sea already defeated (S139).
-    while (finished.has(nextId)) nextId += 1;
-    encounters.push(spawnOne(rnd, ship, "enemy", zone, nextId));
-    finished.add(nextId);
-    nextId += 1;
-  }
   for (let i = haveTreasures; i < wantTreasures; i += 1) {
     encounters.push(spawnOne(rnd, ship, "treasure", zone, nextId));
     nextId += 1;
   }
 
-  return { ...world, ship, escorts, gold, encounters, rngState, nextId, collected, timeS };
+  const next = { ...world, ship, escorts, gold, encounters, rngState, nextId, collected, timeS, level, levelEnemies };
+
+  // Clearing a level advances it, once (S140-C): the next quota is seeded and the level
+  // record is moved, so a second tick cannot advance it again. A sea with no level record
+  // (a save written before levels, a test that seeds its own sails) has nothing to clear
+  // and simply adopts what it has: it must not jump a level on its first tick.
+  if (levelEnemies.length > 0 && levelRemaining(next) === 0) return seedLevel(next, level + 1);
+  return next;
+}
+
+/**
+ * Seed exactly the quota of `level` (S140-B): the level is the only source of enemies.
+ *
+ * Every seeded sail is remembered by id in `levelEnemies`, which is what
+ * `levelRemaining` counts, so a sail that drifts out of range is still part of the level
+ * she belongs to. Anything already afloat that is not part of the new level's quota is
+ * dropped: a new level starts on a clean slate instead of inheriting the old sails.
+ */
+export function seedLevel(world, level) {
+  const base = world && typeof world === "object" ? world : {};
+  const nextLevel = normaliseLevel(level);
+  const quota = enemiesForLevel(nextLevel);
+  const zone = zoneAtRadius(Math.hypot(base.ship?.x ?? 0, base.ship?.y ?? 0));
+  let rngState = Number.isFinite(base.rngState) ? base.rngState : 1;
+  let nextId = Number.isFinite(base.nextId) ? base.nextId : 1;
+  const rnd = () => {
+    const r = mulberry32(rngState);
+    rngState = r.state;
+    return r.value;
+  };
+
+  const finished = defeatedEnemyIds(base);
+  // The sails of the previous level are not part of this one.
+  const encounters = (base.encounters ?? []).filter((entry) => entry.type !== "enemy");
+  const levelEnemies = [];
+  const ship = base.ship ?? { x: 0, y: 0 };
+  for (let i = 0; i < quota; i += 1) {
+    // Never reuse an id this sea already defeated (S139).
+    while (finished.has(nextId)) nextId += 1;
+    const id = nextId;
+    encounters.push({ ...spawnOne(rnd, ship, "enemy", zone, id), level: nextLevel });
+    levelEnemies.push(id);
+    finished.add(id);
+    nextId += 1;
+  }
+
+  return { ...base, level: nextLevel, levelEnemies, encounters, rngState, nextId };
+}
+
+/**
+ * How many of the current level's enemies are still afloat (S140-B). An id the sea has
+ * already defeated counts as done, whether or not the hull is still in `encounters`.
+ * A sea with no level record has nothing left to clear, so it reads 0 and never throws.
+ */
+export function levelRemaining(world) {
+  const ids = world?.levelEnemies;
+  if (!Array.isArray(ids)) return 0;
+  const finished = defeatedEnemyIds(world);
+  const afloat = new Set((world?.encounters ?? []).filter((e) => e.type === "enemy").map((e) => e.id));
+  let remaining = 0;
+  for (const id of ids) {
+    if (!Number.isFinite(id)) continue;
+    if (finished.has(id)) continue;
+    if (!afloat.has(id)) continue;
+    remaining += 1;
+  }
+  return remaining;
 }
 
 /** Nearest encounter of a type, for HUD warnings and minimap blips. */
@@ -533,6 +609,11 @@ export function serializeWorld(world) {
     encounters: world.encounters,
     // The fights this sea has finished (S139): without them a defeated enemy comes back.
     defeated: [...defeatedEnemyIds(world)],
+    // The level and the sails it owns (S140).
+    level: normaliseLevel(world.level),
+    levelEnemies: Array.isArray(world.levelEnemies)
+      ? world.levelEnemies.filter((id) => Number.isFinite(id))
+      : [],
   });
 }
 
@@ -570,6 +651,12 @@ export function deserializeWorld(json) {
         : [],
       encounters: data.encounters,
       defeated: Array.isArray(data.defeated) ? data.defeated.filter((id) => Number.isFinite(id)) : [],
+      // A save written before levels existed opens at level 1 with no quota record, and
+      // the sea adopts the sails she already has; a broken level opens at level 1 too.
+      level: normaliseLevel(data.level),
+      levelEnemies: Array.isArray(data.levelEnemies)
+        ? data.levelEnemies.filter((id) => Number.isFinite(id))
+        : [],
     };
   } catch {
     return null;

@@ -171,6 +171,31 @@ h3 {
   color: var(--navy);
 }
 
+/* S140: the level chip, next to the yard's name. The player asked for it as a chip
+   ("Chip junto al título"), so it reads as a badge and not as a second title. */
+.brand-title {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.brand-level {
+  padding: 2px 8px;
+  border: 1px solid rgba(169, 149, 95, 0.55);
+  border-radius: 999px;
+  background: rgba(169, 149, 95, 0.16);
+  color: var(--navy);
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  white-space: nowrap;
+}
+
+.brand-level:empty {
+  display: none;
+}
+
 .brand-sub {
   margin: 0;
   color: var(--ink-soft);
