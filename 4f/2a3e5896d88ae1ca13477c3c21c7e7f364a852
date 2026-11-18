@@ -1,0 +1,28 @@
+test/duel-panel.test.js
+  s_3b8cfd9114970b::t_b42891ea567aa0 12,156-183
+src/i18n/en.js
+  s_3b8cfd9114970b::t_b42891ea567aa0 255
+src/model/duel-panel.js
+  s_3b8cfd9114970b::t_b42891ea567aa0 89-106
+  s_3b8cfd9114970b::t_4083b23797a2a8 88
+src/ui/sea.js
+  s_3b8cfd9114970b::t_b42891ea567aa0 82,880-883,2329-2331,2334-2336
+src/i18n/es.js
+  s_3b8cfd9114970b::t_b42891ea567aa0 252
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.6",
+  "base_commit_sha": "4f2a3e5896d88ae1ca13477c3c21c7e7f364a852",
+  "prompts": {},
+  "sessions": {
+    "s_3b8cfd9114970b": {
+      "agent_id": {
+        "tool": "pi",
+        "id": "01a1eee4-d2f8-75be-afa7-639663c5b3e5",
+        "model": "deepseek-v4.1-flash_high"
+      },
+      "human_author": "Raul Ripoll <raulral@ext.inditex.com>"
+    }
+  }
+}
