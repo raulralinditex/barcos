@@ -9,7 +9,7 @@
 import test from "node:test";
 import assert from "node:assert/strict";
 
-import { conditionShare, duelRoster, duelVisible } from "../src/model/duel-panel.js";
+import { conditionShare, dangerLabel, duelRoster, duelVisible } from "../src/model/duel-panel.js";
 
 const fighting = (condition) => ({ status: "fighting", condition });
 const hull = (id, x, y, condition = { hull: 100, rigging: 100, crew: 100 }, status = "fighting") => ({
@@ -152,4 +152,32 @@ test("S73: a broken share is clamped instead of painting a broken bar", () => {
     const share = conditionShare(broken);
     assert.ok(Number.isFinite(share) && share >= 0 && share <= 1, `value ${String(broken)} gave ${share}`);
   }
+});
+
+/* ---------------------------------------------------------------- the danger label (S142) */
+
+test("S142: a danger number is painted as a whole number", () => {
+  assert.equal(dangerLabel(0), 0);
+  assert.equal(dangerLabel(396), 396);
+  assert.equal(dangerLabel(395.6), 396);
+});
+
+test("S142: a number that cannot be read is no number, never NaN", () => {
+  // The panel paints `dangerLabel(...)` straight into the row. A module served from cache
+  // that predates the number, or a hand-edited save, must leave the cell empty instead of
+  // writing "NaN" next to the player's ship.
+  for (const broken of [undefined, null, NaN, "abc", {}, [], -1, -0.5, Infinity, -Infinity]) {
+    assert.equal(dangerLabel(broken), null, `value ${String(broken)} must not be painted`);
+  }
+});
+
+test("S142: the roster carries a danger number the label accepts for every hull", () => {
+  const roster = duelRoster({
+    ours: [{ id: "a", name: "A", x: 0, y: 0, combat: { status: "fighting", condition: { hull: 80, rigging: 70, crew: 60 } } }],
+    theirs: [],
+    engageRadiusM: 1000,
+    ship: { x: 0, y: 0 },
+  });
+  assert.equal(roster.length, 1);
+  assert.equal(dangerLabel(roster[0].danger), roster[0].danger, "the roster must hand over a paintable number");
 });

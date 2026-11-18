@@ -249,6 +249,7 @@ export const es = {
   /* S142: the danger number of a hull, next to her name and over her at sea. */
   "sea.danger.title": "Peligro {danger}",
   "sea.danger.aria": "Peligro {danger}",
+  "sea.danger.unknown": "Peligro sin calcular",
   "sea.target.captain": "Tu capitana",
   "sea.target.hostileSail": "Vela hostil",
   "sea.sides.babor": "babor",

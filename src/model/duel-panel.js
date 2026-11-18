@@ -86,6 +86,25 @@ export function duelVisible(roster) {
 }
 
 /**
+ * The danger number as the panel paints it (S142). A value the model could not produce — a
+ * module served from cache that predates the number, a hand-edited save — is shown as a
+ * dash, never as `NaN`: a hull whose number cannot be read has no number, she is not an
+ * error message.
+ */
+export function dangerLabel(danger) {
+  // Only a number is a number: `Number(null)` is 0, `Number([])` is 0 and `Number("")` is
+  // 0, and a hull that has no reading must not be painted as a harmless ship. A string
+  // that spells a number is read as one, because that is what a dataset carries.
+  const numeric =
+    typeof danger === "number"
+      ? danger
+      : typeof danger === "string" && danger.trim() !== ""
+        ? Number(danger)
+        : NaN;
+  return Number.isFinite(numeric) && numeric >= 0 ? Math.round(numeric) : null;
+}
+
+/**
  * One condition row as a share of its track, clamped to 0..1 (S73). A broken or missing
  * value reads as empty instead of painting a bar of NaN wide.
  */

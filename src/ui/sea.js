@@ -79,7 +79,7 @@ import { createEscort, prizeJoiningSquadron } from "../model/formation.js";
 import { hasEnemyInGunshot, hullBarShare, timeScaleOnEngage } from "../model/sea-hud.js";
 import { flagColours, flagFor, yardFlag } from "../model/flag.js";
 import { normaliseCountry } from "../model/country.js";
-import { conditionShare, duelRoster, duelVisible } from "../model/duel-panel.js";
+import { conditionShare, dangerLabel, duelRoster, duelVisible } from "../model/duel-panel.js";
 import {
   canAssaultFort,
   createFortCombatant,
@@ -877,9 +877,10 @@ function dangerVisible() {
  * scale for every ship, so two hulls can be compared at a glance.
  */
 function drawDangerBadge(ctx, centreX, centreY, rowCount, danger) {
-  const value = Math.round(Number(danger));
-  if (!Number.isFinite(value)) return;
-  const text = fmtInt.format(Math.max(0, value));
+  // The badge is a label: an unreadable number paints nothing instead of a NaN (S142).
+  const value = dangerLabel(danger);
+  if (value === null) return;
+  const text = fmtInt.format(value);
   ctx.save();
   ctx.font = "600 11px ui-sans-serif, system-ui, sans-serif";
   ctx.textAlign = "center";
@@ -2325,11 +2326,14 @@ function updateDuelPanel() {
     // so the player compares two ships without leaving the panel. It is a label: the
     // fight does not read it (S142-B).
     if (dangerVisible()) {
+      // A number the model could not produce reads as a dash, never as `NaN` (S142): a
+      // stale module served from cache must not turn the panel into an error message.
+      const label = dangerLabel(entry.danger);
       const danger = document.createElement("span");
       danger.className = "duel-danger";
-      danger.dataset.danger = String(entry.danger);
-      danger.title = t("sea.danger.title", { danger: fmtInt.format(entry.danger) });
-      danger.textContent = fmtInt.format(entry.danger);
+      danger.dataset.danger = label === null ? "" : String(label);
+      danger.title = label === null ? t("sea.danger.unknown") : t("sea.danger.title", { danger: fmtInt.format(label) });
+      danger.textContent = label === null ? "—" : fmtInt.format(label);
       head.append(danger);
     }
     const distance = document.createElement("span");
