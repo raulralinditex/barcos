@@ -1,0 +1,74 @@
+test/levels.test.js
+  s_1d7785b5f4b5bb::t_e46cf0d5dd9e35 1-81
+odd/tasks/comercio-y-astilleros.md
+  s_1d7785b5f4b5bb::t_91b3e9e46c5d43 222-238
+test/world.test.js
+  s_48f93862b4f568::t_5f3abf15deb9fd 4-5,55-57,59-62
+src/ui/sea.js
+  s_1d7785b5f4b5bb::t_5884ad1362c329 281-282,2573-2575,2578,2595-2600,2827
+  s_1d7785b5f4b5bb::t_7a1dedd685e6b0 114,1509-1517
+  s_1d7785b5f4b5bb::t_032f17f503261e 2576-2577,2579
+  s_1d7785b5f4b5bb::t_d38eaefc43b2cc 279-280
+  s_1d7785b5f4b5bb::t_0b1dd9e0fdda48 2826
+scripts/smoke-tabs.mjs
+  s_1d7785b5f4b5bb::t_5efad6f5565de5 76-77
+src/i18n/es.js
+  s_1d7785b5f4b5bb::t_014a1b466938a9 422-426
+  s_1d7785b5f4b5bb::t_93c793dea6aa42 625-627
+  s_1d7785b5f4b5bb::t_31e0f588feadc1 214-215
+src/model/world.js
+  s_1d7785b5f4b5bb::t_df0d9fec847a41 354-356,393-395,397-403
+  s_1d7785b5f4b5bb::t_e09deca24c5075 494-497
+  s_1d7785b5f4b5bb::t_fdb2e70df19d01 13,347-349,392,396,480-481,483,491-493,498-557,612-616,654-659
+scripts/smoke-levels.mjs
+  s_1d7785b5f4b5bb::t_6c440852477cde 183-194
+  s_1d7785b5f4b5bb::t_0d2f66940e7e69 1-182,195-230
+src/ui/styles.css
+  s_1d7785b5f4b5bb::t_be7a22e572475c 174-198
+test/level-quota.test.js
+  s_1d7785b5f4b5bb::t_5f20289f6bc4e3 1-56,58,64,70-137,142-145,147-148,151-167
+  s_1d7785b5f4b5bb::t_f92ef764c7eba3 57,59-63,65-69,138-141,146,149-150
+src/i18n/en.js
+  s_1d7785b5f4b5bb::t_92b9768c27a5d7 628-630
+  s_1d7785b5f4b5bb::t_09dd82d69deb06 425-429
+  s_1d7785b5f4b5bb::t_4cff1344ab15b8 217-218
+src/model/settings.js
+  s_1d7785b5f4b5bb::t_f9859bd185b7b2 30,184-191,198
+src/model/levels.js
+  s_1d7785b5f4b5bb::t_e473752579ba35 1-105
+scripts/smoke-settings.mjs
+  s_1d7785b5f4b5bb::t_8c4d27a71bf8ed 82-83,88-96
+src/model/combat.js
+  s_1d7785b5f4b5bb::t_f7f3f5216fe5de 22,149-159,243-247,249,259,282,295
+  s_1d7785b5f4b5bb::t_53fe8dc23ad11b 283
+test/enemy-toughness.test.js
+  s_1d7785b5f4b5bb::t_342781536140f4 1-67
+index.html
+  s_1d7785b5f4b5bb::t_eb77ad8462561c 20-26
+src/ui/app.js
+  s_1d7785b5f4b5bb::t_7763c7acbdb2f9 82,255,1424-1437
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.6",
+  "base_commit_sha": "ee8b6c072f8a8e3e4196ff41cf83d67707b72d7b",
+  "prompts": {},
+  "sessions": {
+    "s_1d7785b5f4b5bb": {
+      "agent_id": {
+        "tool": "pi",
+        "id": "01a1eba8-2fd4-7395-b738-33f383f700e3",
+        "model": "deepseek-v4.1-flash"
+      },
+      "human_author": "Raul Ripoll <raulral@ext.inditex.com>"
+    },
+    "s_48f93862b4f568": {
+      "agent_id": {
+        "tool": "pi",
+        "id": "01a1e58e-9669-713e-b888-48e76698935d",
+        "model": "deepseek-v4.1-flash_high"
+      },
+      "human_author": "Raul Ripoll <raulral@ext.inditex.com>"
+    }
+  }
+}
