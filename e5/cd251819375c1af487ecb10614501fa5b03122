@@ -1,0 +1,19 @@
+odd/tasks/comercio-y-astilleros.md
+  s_3b8cfd9114970b::t_42753db94531e5 284-292
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.6",
+  "base_commit_sha": "e5cd251819375c1af487ecb10614501fa5b03122",
+  "prompts": {},
+  "sessions": {
+    "s_3b8cfd9114970b": {
+      "agent_id": {
+        "tool": "pi",
+        "id": "01a1eee4-d2f8-75be-afa7-639663c5b3e5",
+        "model": "deepseek-v4.1-flash_high"
+      },
+      "human_author": "Raul Ripoll <raulral@ext.inditex.com>"
+    }
+  }
+}
