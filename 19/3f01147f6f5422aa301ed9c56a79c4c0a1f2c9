@@ -1,0 +1,22 @@
+scripts/smoke-yard-rooms.mjs
+  s_3b8cfd9114970b::t_7c433a0faf7c9e 82-86,95
+  s_3b8cfd9114970b::t_13f0da1f07d821 1-81,87-94,96-107
+src/ui/app.js
+  s_3b8cfd9114970b::t_36129cf0c4699a 1290-1292
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.6",
+  "base_commit_sha": "193f01147f6f5422aa301ed9c56a79c4c0a1f2c9",
+  "prompts": {},
+  "sessions": {
+    "s_3b8cfd9114970b": {
+      "agent_id": {
+        "tool": "pi",
+        "id": "01a1eee4-d2f8-75be-afa7-639663c5b3e5",
+        "model": "deepseek-v4.1-flash_high"
+      },
+      "human_author": "Raul Ripoll <raulral@ext.inditex.com>"
+    }
+  }
+}
