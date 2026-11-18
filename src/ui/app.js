@@ -206,6 +206,14 @@ const els = {
   statCargoRoom: $("#stat-cargo-room"),
   statPeople: $("#stat-people"),
   statUpkeep: $("#stat-upkeep"),
+  // S141: the hull's own sheet, back on the panel of the ship.
+  hullSheet: $("#hull-sheet"),
+  sheetHull: $("#sheet-hull"),
+  sheetCountry: $("#sheet-country"),
+  sheetLength: $("#sheet-length"),
+  sheetDisplacement: $("#sheet-displacement"),
+  sheetSupply: $("#sheet-supply"),
+  sheetCargo: $("#sheet-cargo"),
   pieceSelect: $("#piece-select"),
   addBattery: $("#add-battery"),
   batteryList: $("#battery-list"),
@@ -704,6 +712,26 @@ function renderStats(ship) {
   els.statUpkeep.textContent = t("shipyard.upkeepPerDay", { value: fmtOne.format(ship.upkeep) });
 }
 
+/**
+ * S141: the hull's own sheet, back on screen after S46 removed the launch dialog that
+ * used to hold it. Only the six facts nothing else on this panel shows, so the sheet
+ * completes the screen instead of repeating it.
+ *
+ * The numbers come from the hull being built or refitted, and the supply and cargo come
+ * from the editor's own state: the sheet is a live read of what the ship would be, not a
+ * snapshot taken at boot. The hull is read through `localisedHull`, so the country is
+ * named in the active language like every other label of the shipyard.
+ */
+function renderHullSheet(ship) {
+  const hull = localisedHull(ship.hull, t);
+  els.sheetHull.textContent = hull.name ?? "—";
+  els.sheetCountry.textContent = hull.country ?? "—";
+  els.sheetLength.textContent = t("shipyard.metres", { value: fmtOne.format(ship.hull.lengthM) });
+  els.sheetDisplacement.textContent = kg(ship.hull.displacementKg);
+  els.sheetSupply.textContent = t("shipyard.daysAboard", { value: fmtInt.format(state.days) });
+  els.sheetCargo.textContent = kg(state.cargoKg);
+}
+
 function renderGuns(ship) {
   els.gunsBabor.textContent = String(ship.guns.sides.babor);
   els.gunsEstribor.textContent = String(ship.guns.sides.estribor);
@@ -1042,6 +1070,7 @@ function render() {
   renderGuns(ship);
   renderMassBar(ship);
   renderStats(ship);
+  renderHullSheet(ship);
   renderVerdict(ship);
   renderPrice(ship, quote);
   renderBatteries();

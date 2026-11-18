@@ -81,6 +81,12 @@ export const en = {
   "shipyard.cargoRoom": "Room for cargo",
   "shipyard.people": "Crew",
   "shipyard.upkeep": "Upkeep",
+  /* S141: the hull's own sheet on the panel of the ship. */
+  "shipyard.sheet": "Hull's sheet",
+  "shipyard.length": "Length",
+  "shipyard.displacement": "Displacement",
+  "shipyard.metres": "{value} m",
+  "shipyard.daysAboard": "{value} days",
 
   /* ---------------------------------------------------------------- shipyard: mass segments */
   "mass.light": "Empty hull",

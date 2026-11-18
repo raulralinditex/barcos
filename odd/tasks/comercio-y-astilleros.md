@@ -1,6 +1,6 @@
 # Juego de barcos — comercio y astilleros por zona
 
-Estado: cerrada S112-S122, sin pendientes. Rama: `feat/comercio-y-astilleros` (se crea desde `feat/t7-combate-costados` antes del primer commit). Cierra el pendiente grande de `pendientes.md`: la carga deja de ser castigo puro y pasa a producir dinero.
+Estado: cerrada S112-S122, sin pendientes. Cerradas además S123-S141 (ver `## Log`). Rama: `feat/comercio-y-astilleros` (se crea desde `feat/t7-combate-costados` antes del primer commit). Cierra el pendiente grande de `pendientes.md`: la carga deja de ser castigo puro y pasa a producir dinero.
 
 ## Specs
 
@@ -230,9 +230,24 @@ S140. **Niveles: el nivel manda cuántos enemigos hay, y cada nivel superado los
 - **S140-G, el avance se anuncia.** Cuando el nivel cambia, el mar muestra el banner `sea.banner.level` nombrando el nivel nuevo, una sola vez por nivel.
 
 - T21 — S140: `src/model/levels.js` (curva pura), cuota del nivel en `world.js` (`seedLevel`, `levelRemaining`, sin relleno de enemigos, avance una vez, persistencia), factor de aguante en `combat.js`, chip `#brand-level` en la cabecera, bloque «Niveles» en Configuración, banner de avance, i18n es/en, tests nuevos (`test/levels.test.js`, `test/level-quota.test.js`, `test/enemy-toughness.test.js`) y smoke `scripts/smoke-levels.mjs`. Ruta: worker con contrato cerrado.
+- T22 — S141: el bloque «Ficha del casco» en el panel del buque (`#hull-sheet`), `renderHullSheet` en `src/ui/app.js`, cinco claves i18n nuevas en es/en, estilos del bloque y smoke `scripts/smoke-hull-sheet.mjs`. Ruta: inline.
 
 L26 (pedido de S140, verbatim): "vamos a hacer niveles, cuando se reinicia, aparecen una serie de enemigos, cuando conseguimos undir o capturar todos, pasamos al siguiente nivel y aparecen mas barcos enemigos que la primera vez, el nivel aparece en el header de los astilleros".
 
 L27 (decisiones de S140, verbatim): "Sin reposición, el nivel manda (Recomendada)" para el relleno, "Crece 1,5× por nivel" para la curva, "Más cantidad y algo más duros" para el efecto de cada nivel y "Chip junto al título (Recomendada)" para dónde se lee el nivel.
 
 L28 (S140, secuencia medida y límite reportado): la cuota real de los niveles 1 a 6 es **3, 5, 7, 10, 15, 23**. `test/world.test.js` («S9: the starting sea has the coastal zone density») sigue fijando la densidad vieja de la costera (2 enemigos de 10 encuentros al 15 %), que es exactamente la regla que S140-B retira: ahora el nivel 1 siembra 3. No se tocó ese test porque no hay permiso para editar tests existentes; queda reportado al orquestador.
+
+S141. **La ficha del casco vuelve a estar en pantalla, sin un clic.** Pedido del jugador (verbatim, elegido entre los pendientes de `pendientes.md`): "Recuperar la ficha de estadísticas del casco". Sus dos decisiones (verbatim): "En el panel del buque, siempre a la vista" y "Sólo lo que hoy no se ve".
+- **Qué se perdió y dónde estaba**: la ficha vivía dentro del diálogo Botadura, y S46 quitó ese diálogo entero (`estado-flota-y-reparacion-parcial.md`, L14, que lo dejó declarado como "petición aparte"). Desde entonces no había en ninguna parte el casco, el país, la eslora, el desplazamiento, las provisiones ni la mercancía.
+- **S141-A, dónde vive**: un bloque `#hull-sheet` en el panel del buque (`index.html`), debajo del balance de masa y encima de la fila de estadísticas. Es el mismo DOM que las tres pantallas re-parentan (Comprar, Flota, Astillero), así que la ficha aparece en las tres sin trabajo extra.
+- **S141-B, qué muestra**: exactamente las seis cosas que ningún otro bloque de esa pantalla muestra — casco, país, eslora, desplazamiento, provisiones y mercancía. El calado, la velocidad, la fracción de carga, el hueco, la dotación, el mantenimiento, la artillería y el coste ya están en la fila de estadísticas, el resumen de cañones o el pie: repetirlos sería ruido, no información.
+- **S141-C, es una lectura viva**: `renderHullSheet` lee el casco que se está armando o reformando y el `state` del editor, así que las provisiones y la mercancía siguen a los campos de la pestaña Carga y elegir otro casco cambia la ficha en el acto. No es una copia tomada al arrancar.
+- **S141-D, se lee en el idioma activo**: el casco y el país pasan por `localisedHull`, como el resto de la pantalla, y las unidades tienen sus propias claves (`shipyard.metres`, `shipyard.daysAboard`). En inglés la ficha dice "Hull's sheet", "Length", "Displacement", "England" y "45 days".
+- **S141-E, no cambia ningún número**: la ficha no calcula nada, no escribe nada y no toca el guardado. Es una vista más sobre datos que ya existían; por eso la suite de modelo sigue en 845 sin un solo test nuevo de modelo.
+
+L29 (pedido de S141, verbatim): "Recuperar la ficha de estadísticas del casco".
+
+L30 (decisiones de S141, verbatim): "En el panel del buque, siempre a la vista" para el lugar y "Sólo lo que hoy no se ve" para las filas.
+
+L31 (cierre de S141): `npm test` **845/845** (sin tests nuevos de modelo: la ficha no calcula nada). RED observado dos veces: sin el bloque en `index.html`, `scripts/smoke-hull-sheet.mjs` muere esperando `#hull-sheet-title`, y restaurando la base y repitiendo, el mismo error vuelve. Verde con el bloque puesto: la ficha se ve sin clic, tiene exactamente 6 filas, nombra el casco y el país, da eslora (25 m) y desplazamiento (250.000 kg), provisiones (45 días) y mercancía (6000 kg), y sigue al editor al cambiar los días a 60 y la carga a 5000. En inglés: "Hull's sheet" / "England" / "45 days". Trece smokes vecinos en 0: ui, shipyard-layout, refit, tabs, settings, fleet, buy-hull, market, market-ship, catalogue, i18n, images. `smoke-formation` falla **también en la base** (comprobado con `git stash` de este trabajo): es un fallo previo, ajeno a S141, y no se tocó.

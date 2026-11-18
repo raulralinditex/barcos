@@ -27,7 +27,7 @@ Estado: las peticiones anteriores están cerradas. Lo que sigue abierto es lo de
 
 ### La ficha de estadísticas de la nave desapareció
 
-Al quitar el diálogo de botadura (S46) se perdió la ficha que mostraba casco, eslora, desplazamiento, velocidad, dotación, artillería y coste antes de zarpar. Si se quiere, se puede mostrar en el panel del buque del Astillero.
+**Cerrado por S141** (`comercio-y-astilleros.md`). Al quitar el diálogo de botadura (S46) se perdió la ficha que mostraba casco, eslora, desplazamiento, velocidad, dotación, artillería y coste antes de zarpar. Ahora el panel del buque muestra las seis cosas que no se veían en ningún otro lado —casco, país, eslora, desplazamiento, provisiones y mercancía— en el bloque «Ficha del casco» (`#hull-sheet`), siempre a la vista en las tres pantallas que comparten el constructor.
 
 ### Ajustar la maniobra de los cascos pesados
 

@@ -661,6 +661,53 @@ h3 {
   margin: 12px 0;
 }
 
+/* S141: the hull's own sheet. A quiet block between the mass balance and the stats row:
+   it reads as reference data, not as a warning, so it carries no accent colour. */
+.hull-sheet {
+  margin: 12px 0;
+}
+
+.hull-sheet h3 {
+  font-size: 13px;
+  text-transform: uppercase;
+  letter-spacing: 0.07em;
+  color: var(--navy);
+  margin-bottom: 6px;
+}
+
+.hull-sheet-rows {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 6px 14px;
+  margin: 0;
+  padding: 10px 12px;
+  border: 1px solid var(--line);
+  border-radius: 7px;
+  background: var(--paper);
+}
+
+.hull-sheet-rows div {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 10px;
+}
+
+.hull-sheet-rows dt {
+  font-size: 10px;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--ink-soft);
+}
+
+.hull-sheet-rows dd {
+  margin: 0;
+  font-size: 13px;
+  font-variant-numeric: tabular-nums;
+  color: var(--navy);
+  text-align: right;
+}
+
 .mass-head {
   display: flex;
   align-items: baseline;

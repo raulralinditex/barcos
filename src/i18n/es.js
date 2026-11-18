@@ -79,6 +79,12 @@ export const es = {
   "shipyard.cargoRoom": "Hueco para carga",
   "shipyard.people": "Dotación",
   "shipyard.upkeep": "Mantenimiento",
+  /* S141: the hull's own sheet on the panel of the ship. */
+  "shipyard.sheet": "Ficha del casco",
+  "shipyard.length": "Eslora",
+  "shipyard.displacement": "Desplazamiento",
+  "shipyard.metres": "{value} m",
+  "shipyard.daysAboard": "{value} días",
 
   /* ---------------------------------------------------------------- shipyard: mass segments */
   "mass.light": "Casco vacío",

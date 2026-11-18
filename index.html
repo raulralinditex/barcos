@@ -132,6 +132,22 @@
               <div class="mass-legend" id="mass-legend"></div>
             </div>
 
+            <!-- S141: the hull's own sheet, back after S46 removed the launch dialog that
+                 held it. Only the facts no other block on this screen shows: the hull, her
+                 country, her length, her displacement, the supply aboard and the cargo.
+                 Everything else already lives in the stats row and the mass balance. -->
+            <div class="hull-sheet" id="hull-sheet">
+              <h3 id="hull-sheet-title" data-i18n="shipyard.sheet">Ficha del casco</h3>
+              <dl class="hull-sheet-rows">
+                <div><dt data-i18n="shipyard.hulls">Casco</dt><dd id="sheet-hull">—</dd></div>
+                <div><dt data-i18n="shipyard.country.label">País</dt><dd id="sheet-country">—</dd></div>
+                <div><dt data-i18n="shipyard.length">Eslora</dt><dd id="sheet-length">—</dd></div>
+                <div><dt data-i18n="shipyard.displacement">Desplazamiento</dt><dd id="sheet-displacement">—</dd></div>
+                <div><dt data-i18n="shipyard.supplies">Provisiones</dt><dd id="sheet-supply">—</dd></div>
+                <div><dt data-i18n="shipyard.cargo">Carga</dt><dd id="sheet-cargo">—</dd></div>
+              </dl>
+            </div>
+
             <dl class="stats">
               <div><dt data-i18n="shipyard.draft">Calado</dt><dd id="stat-draft">—</dd></div>
               <div><dt data-i18n="shipyard.speed">Velocidad</dt><dd id="stat-speed">—</dd></div>
