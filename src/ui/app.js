@@ -1907,9 +1907,9 @@ function renderMarket() {
         : 0;
       return `
         <li class="market-row" data-commodity="${row.id}">
-          <span class="market-name is-${standing(row.id)}" title="${standingTitle(row.id)}">${t(row.nameKey)}</span>
+          <span class="market-name">${t(row.nameKey)}</span>
           <span class="market-kg">${gold(row.kgPerUnit)} kg</span>
-          <span class="market-price">${t("market.buy")} ${gold(row.buy)}</span>
+          <span class="market-price is-${standing(row.id)}" title="${standingTitle(row.id)}">${t("market.buy")} ${gold(row.buy)}</span>
           <span class="market-price is-${saleStanding(row.id)}" title="${saleTitle(row.id)}">${t("market.sell")} ${gold(row.sell)}</span>
           <span class="market-stock">${gold(stock)}</span>
           <span class="market-yard-stock">${t("market.yardStock", { units: gold(Math.floor(row.stock)) })}</span>

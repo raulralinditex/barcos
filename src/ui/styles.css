@@ -2692,12 +2692,15 @@ input[type="number"] {
   color: #a13c2c;
 }
 
-/* S135: green where the good is the cheapest of our markets, red where it is the dearest. */
-.market-name.is-cheaper {
+/* S135: green where the good is the cheapest of our markets, red where it is the dearest.
+   S148: the colour rides the word Comprar, on the buy price, exactly as S136 already did
+   for Vender on the sell price. The good's name is a name, not a signal. */
+.market-price.is-cheaper {
   color: #1f7a45;
+  font-weight: 600;
 }
 
-.market-name.is-dearer {
+.market-price.is-dearer {
   color: #a13c2c;
 }
 

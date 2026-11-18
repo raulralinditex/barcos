@@ -150,25 +150,40 @@ check(
 
 
 /* ------------------------------------------- S135: the board colours where a good stands */
+// S148: the buy colour rides the word Comprar, not the good's name. The rule S135 proves is
+// the same one — the cheapest of our markets reads green and the dearest red — so the smoke
+// reads it off the buy price now, which is where the player sees it.
 
 await page.selectOption("#yard-select", HOME);
 await page.waitForTimeout(400);
 await page.click('.screen-tab[data-screen="mercado"]');
 await page.waitForTimeout(300);
-const coloured = await page.locator("#market-board .market-name").evaluateAll((names) =>
-  names.map((name) => ({ id: name.closest("[data-commodity]").dataset.commodity, cls: name.className, colour: getComputedStyle(name).color })),
+const coloured = await page.locator("#market-board .market-price").evaluateAll((prices) =>
+  prices
+    .filter((price) => /Comprar|Buy/i.test(price.textContent))
+    .map((price) => ({
+      id: price.closest("[data-commodity]").dataset.commodity,
+      cls: price.className,
+      colour: getComputedStyle(price).color,
+      title: price.getAttribute("title") ?? "",
+    })),
 );
 check(coloured.length > 0, "S135: the board must paint her goods");
 const green = coloured.filter((entry) => entry.cls.includes("is-cheaper"));
 const red = coloured.filter((entry) => entry.cls.includes("is-dearer"));
 check(green.length > 0, "S135: some good must be the cheapest of our markets and read green");
 check(red.length > 0, "S135: some good must be the dearest of our markets and read red");
-const greenColour = green[0] ? await page.locator(`#market-board [data-commodity="${green[0].id}"] .market-name`).evaluate((n) => getComputedStyle(n).color) : "";
-const redColour = red[0] ? await page.locator(`#market-board [data-commodity="${red[0].id}"] .market-name`).evaluate((n) => getComputedStyle(n).color) : "";
+const greenColour = green[0]?.colour ?? "";
+const redColour = red[0]?.colour ?? "";
 check(greenColour !== redColour, `S135: green and red must be different colours, both are ${greenColour}`);
+check(green[0]?.title?.length > 0, "S135: a coloured buy must say why");
+// S148: the good's name is a name, not a signal: it must not carry the colour any more.
+const namedColours = await page.locator("#market-board .market-name").evaluateAll((names) =>
+  names.map((name) => name.className),
+);
 check(
-  (await page.locator(`#market-board [data-commodity="${green[0].id}"] .market-name`).getAttribute("title"))?.length > 0,
-  "S135: a coloured good must say why",
+  namedColours.every((cls) => !/is-cheaper|is-dearer/.test(cls)),
+  `S148: the good's name must not be coloured, got ${JSON.stringify(namedColours)}`,
 );
 
 
