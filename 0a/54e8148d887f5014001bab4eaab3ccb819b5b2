@@ -1,0 +1,30 @@
+test/settings.test.js
+  s_3b8cfd9114970b::t_d6931e0c595fe5 87,89
+test/wind.test.js
+  s_3b8cfd9114970b::t_5c081de18524b9 11,14
+  s_3b8cfd9114970b::t_7c6f85441ceb2b 180-255,264,267-286
+  s_3b8cfd9114970b::t_9e13767f8d76e9 58-62
+  s_3b8cfd9114970b::t_59587506709395 256-263,265-266
+scripts/smoke-settings.mjs
+  s_3b8cfd9114970b::t_a819ddfc8bcfd5 87,122,202
+src/model/wind.js
+  s_3b8cfd9114970b::t_fd8584c13388f3 24-25
+  s_3b8cfd9114970b::t_55d1598d23cdf5 9-18,65,74-85,90-93,97,116-130
+  s_3b8cfd9114970b::t_6f6783814f0cbb 131-133
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.6",
+  "base_commit_sha": "0a54e8148d887f5014001bab4eaab3ccb819b5b2",
+  "prompts": {},
+  "sessions": {
+    "s_3b8cfd9114970b": {
+      "agent_id": {
+        "tool": "pi",
+        "id": "01a1eee4-d2f8-75be-afa7-639663c5b3e5",
+        "model": "deepseek-v4.1-flash_high"
+      },
+      "human_author": "Raul Ripoll <raulral@ext.inditex.com>"
+    }
+  }
+}
