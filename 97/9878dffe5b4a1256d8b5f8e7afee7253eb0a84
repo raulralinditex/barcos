@@ -1,0 +1,47 @@
+scripts/smoke-settings-menu.mjs
+  s_788b7761ce461b::t_ea80bf6e3d40ad 1-184,196-199,202-208,216-247
+  s_788b7761ce461b::t_01cf43761c7f6b 209-215
+  s_788b7761ce461b::t_762706c4ffdaac 185-195,200-201
+src/i18n/en.js
+  s_3b8cfd9114970b::t_8eef50875cb403 437-444
+src/ui/styles.css
+  s_3b8cfd9114970b::t_b42891ea567aa0 1629-1631,1633,1638,1642-1649,2124-2237
+  s_3b8cfd9114970b::t_8d80b7e39a6bdc 2238
+src/ui/settings-tab.js
+  s_3b8cfd9114970b::t_b42891ea567aa0 25,40,48-78,185,192-194,208-334,384,410-414
+src/i18n/es.js
+  s_3b8cfd9114970b::t_8eef50875cb403 434-441
+index.html
+  s_3b8cfd9114970b::t_b42891ea567aa0 279-287
+scripts/smoke-settings.mjs
+  s_3b8cfd9114970b::t_22b1ffc94a722e 72-82,124-130,132-136
+test/settings-branches.test.js
+  s_788b7761ce461b::t_e1e559dd0db67a 1-95
+src/model/settings-branches.js
+  s_788b7761ce461b::t_6d5de8fdd0a2b4 6-9,57-59,62,64-66,71,79-82
+  s_788b7761ce461b::t_ed1b1418f74423 1-5,10-56,60-61,63,67-70,72-78,83
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.6",
+  "base_commit_sha": "979878dffe5b4a1256d8b5f8e7afee7253eb0a84",
+  "prompts": {},
+  "sessions": {
+    "s_3b8cfd9114970b": {
+      "agent_id": {
+        "tool": "pi",
+        "id": "01a1eee4-d2f8-75be-afa7-639663c5b3e5",
+        "model": "deepseek-v4.1-flash_high"
+      },
+      "human_author": "Raul Ripoll <raulral@ext.inditex.com>"
+    },
+    "s_788b7761ce461b": {
+      "agent_id": {
+        "tool": "pi",
+        "id": "01a1ee9a-ebaa-73ff-bb67-482e913ee58d",
+        "model": "deepseek-v4.1-flash_high"
+      },
+      "human_author": "Raul Ripoll <raulral@ext.inditex.com>"
+    }
+  }
+}
