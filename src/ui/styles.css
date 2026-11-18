@@ -1626,13 +1626,25 @@ input[type="number"] {
   border-left: 3px solid transparent;
 }
 
-/* Our hulls read as ours, theirs as theirs, without having to read the name. */
+/* Our hulls read as ours, theirs as theirs, without having to read the name. The two
+   sides carry a whole colour, not just an edge: the row, its edge and its name, so a
+   glance at the panel tells whose ship is falling (S73). */
 .duel-row.is-ours {
+  background: rgba(84, 148, 208, 0.16);
   border-left-color: #8fd0ff;
 }
 
 .duel-row.is-theirs {
+  background: rgba(178, 68, 52, 0.18);
   border-left-color: #a13c2c;
+}
+
+.duel-row.is-ours .duel-name {
+  color: #b9e0ff;
+}
+
+.duel-row.is-theirs .duel-name {
+  color: #f0b4a6;
 }
 
 .duel-head {
@@ -2107,6 +2119,121 @@ input[type="number"] {
 
 .settings-lead {
   max-width: 70ch;
+}
+
+/* S143: the menu owns the left column and the blocks live in the right one. The grid
+   keeps every card mounted; `hidden` is what the selection toggles, so the screen still
+   reads and saves as a whole. */
+.settings-shell {
+  display: grid;
+  grid-template-columns: 210px minmax(0, 1fr);
+  gap: 16px;
+  align-items: start;
+}
+
+.settings-body {
+  display: grid;
+  gap: 12px;
+  min-width: 0;
+}
+
+.settings-menu {
+  position: sticky;
+  top: 12px;
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  background: #fffdf8;
+  box-shadow: var(--shadow);
+  padding: 10px 8px;
+  max-height: calc(100vh - 40px);
+  overflow-y: auto;
+}
+
+.settings-menu-list,
+.settings-menu-groups {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+
+.settings-menu-groups {
+  margin: 2px 0 6px 10px;
+  display: none;
+  gap: 1px;
+}
+
+.settings-menu-branch.is-open > .settings-menu-groups {
+  display: grid;
+}
+
+.settings-menu-head {
+  display: flex;
+  align-items: center;
+  gap: 2px;
+}
+
+.settings-menu button {
+  font: inherit;
+  background: none;
+  border: 0;
+  cursor: pointer;
+  text-align: left;
+  border-radius: 6px;
+  color: var(--ink);
+}
+
+.settings-menu-toggle {
+  width: 20px;
+  padding: 2px 0;
+  text-align: center;
+  color: var(--ink-soft);
+  font-size: 11px;
+}
+
+.settings-menu-toggle:hover {
+  color: var(--navy);
+}
+
+.settings-menu-branch-pick {
+  flex: 1;
+  padding: 6px 6px;
+  font-size: 12.5px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--navy);
+}
+
+.settings-menu-group {
+  width: 100%;
+  padding: 4px 8px;
+  font-size: 12.5px;
+}
+
+.settings-menu-branch-pick:hover,
+.settings-menu-group:hover {
+  background: rgba(31, 55, 90, 0.07);
+}
+
+.settings-menu-branch-pick[aria-current="true"],
+.settings-menu-group[aria-current="true"] {
+  background: rgba(31, 55, 90, 0.12);
+  box-shadow: inset 2px 0 0 var(--gold-bright);
+}
+
+.settings-menu-group[aria-current="true"] {
+  font-weight: 600;
+}
+
+@media (max-width: 900px) {
+  .settings-shell {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .settings-menu {
+    position: static;
+    max-height: none;
+  }
 }
 
 .settings-groups {

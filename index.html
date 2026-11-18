@@ -276,8 +276,15 @@
           Cada valor tiene un mínimo y un máximo: lo que quede fuera se ajusta al límite. Los
           cambios entran al cargar el mar o el astillero.
         </p>
-        <div id="settings-groups" class="settings-groups"></div>
-        <div id="settings-catalogue" class="settings-catalogue"></div>
+        <!-- S143: the menu owns the left column; the blocks of one branch show on the right.
+             Every block is still rendered, so the screen reads and saves as it always did. -->
+        <div class="settings-shell">
+          <nav id="settings-menu" class="settings-menu" data-i18n-aria="settings.menu.aria"></nav>
+          <div class="settings-body">
+            <div id="settings-groups" class="settings-groups"></div>
+            <div id="settings-catalogue" class="settings-catalogue"></div>
+          </div>
+        </div>
         <p class="settings-status" id="settings-status" aria-live="polite"></p>
         <div class="settings-actions">
           <button id="settings-reset" class="btn btn-erase" type="button" data-i18n="settings.reset">

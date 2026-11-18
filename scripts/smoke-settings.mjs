@@ -69,6 +69,17 @@ attach(screen);
 await screen.goto("http://localhost:8765/config.html", { waitUntil: "networkidle" });
 await screen.waitForTimeout(400);
 
+/**
+ * Choose a branch of the menu (S143), the way the player reaches a block.
+ *
+ * Since S143 only the chosen branch is on screen, so a block is typed into only after its
+ * branch is picked. Every block stays mounted, which is why reading it does not need this.
+ */
+const pickBranch = async (id) => {
+  await screen.click(`[data-branch-pick="${id}"]`);
+  await screen.waitForTimeout(120);
+};
+
 const shown = {
   groups: await screen.locator(".settings-card h2").allTextContents(),
   rows: await screen.locator(".settings-row").count(),
@@ -110,8 +121,19 @@ check(marketRows === 8, `expected eight trade fields, got ${marketRows}`);
 check(shown.bonus === "60", `the wind bonus must open at 60 %, got "${shown.bonus}"`);
 check(shown.segment === "12", `the wind segment must open at 12 s, got "${shown.segment}"`);
 
-// Out of range on both sides: the box must be pulled back to the limit.
+// Out of range on both sides: the box must be pulled back to the limit. The two fields live
+// in two different branches (S143), so the smoke walks the menu to each of them.
+await pickBranch("sea");
+check(
+  await screen.locator("#field-wind\\.maxSpeedBonus").isVisible(),
+  "S143: the sea branch must put the wind block on screen",
+);
 await screen.fill("#field-wind\\.maxSpeedBonus", "500");
+await pickBranch("yard");
+check(
+  await screen.locator("#field-repair\\.shareOfPrice").isVisible(),
+  "S143: the shipyard branch must put the repair block on screen",
+);
 await screen.fill("#field-repair\\.shareOfPrice", "-300");
 await screen.click("#settings-apply");
 await screen.waitForTimeout(200);
