@@ -1,0 +1,23 @@
+src/ui/styles.css
+  s_3b8cfd9114970b::t_edad04b0724575 2695-2698,2700,2703
+src/ui/app.js
+  s_3b8cfd9114970b::t_201ef34d45ff83 1910,1912
+scripts/smoke-yard-switch.mjs
+  s_3b8cfd9114970b::t_ec1932dcdaf347 153-155,161-169,176-177,179-183,185-186
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.6",
+  "base_commit_sha": "d201c1a0bf2e7b33b4a8e38244ba6a97f25f9248",
+  "prompts": {},
+  "sessions": {
+    "s_3b8cfd9114970b": {
+      "agent_id": {
+        "tool": "pi",
+        "id": "01a1eee4-d2f8-75be-afa7-639663c5b3e5",
+        "model": "deepseek-v4.1-flash_high"
+      },
+      "human_author": "Raul Ripoll <raulral@ext.inditex.com>"
+    }
+  }
+}
