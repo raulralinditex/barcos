@@ -41,7 +41,6 @@ export const SETTINGS_FIELDS = [
   { group: "wind", key: "maxSpeedBonus", label: "settings.wind.bonus", scale: "percent", min: 0, max: 2, step: 0.05 },
   { group: "wind", key: "maxSpeedPenalty", label: "settings.wind.penalty", scale: "percent", min: 0, max: 0.9, step: 0.05 },
   { group: "wind", key: "driftFactor", label: "settings.wind.drift", scale: "percent", min: 0, max: 1, step: 0.05 },
-  { group: "wind", key: "segmentS", label: "settings.wind.segment", scale: "seconds", min: 2, max: 120, step: 1 },
   { group: "wind", key: "forecastS", label: "settings.wind.forecast", scale: "seconds", min: 1, max: 60, step: 1 },
   { group: "wind", key: "minStrengthKn", label: "settings.wind.minStrength", scale: "knots", min: 0, max: 20, step: 0.5 },
   { group: "wind", key: "maxStrengthKn", label: "settings.wind.maxStrength", scale: "knots", min: 5, max: 60, step: 0.5 },

@@ -361,7 +361,6 @@ export const en = {
   "settings.wind.bonus": "Gain with a following wind",
   "settings.wind.penalty": "Loss with a head wind",
   "settings.wind.drift": "Sideways drift",
-  "settings.wind.segment": "How often the wind changes",
   "settings.wind.forecast": "Forecast horizon",
   "settings.wind.minStrength": "Weakest wind",
   "settings.wind.maxStrength": "Strongest wind",

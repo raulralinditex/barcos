@@ -6,18 +6,24 @@
  * `windAt(seed, t)` computes any moment of a voyage, past or future, without state.
  *
  * Shape of the curve: the wind is a smooth interpolation between control points
- * spaced `SEGMENT_S` apart. Both the angle (shortest way round) and the strength
- * are interpolated with a smoothstep, so the needle glides instead of snapping
- * (S16). Control points come from a hash of (seed, segment), so the same sea always
- * blows the same way.
+ * spaced one game day apart (S146). Both the angle (shortest way round) and the strength
+ * are interpolated with a smoothstep, so the needle glides instead of snapping (S16), and
+ * the wind of a day drifts towards the day's own heading instead of jumping at midnight.
+ * Control points come from a hash of (seed, day), so the same sea always blows the same
+ * way.
+ *
+ * The player asked for it (verbatim): "vamos a hacer que el viento cambie cada dia,
+ * eliminamos el valor de cambio de viento, y ponemos que una vez al dia de juego(segundos
+ * configurables) cambie el tiempo" and "cada dia cambia el la direccion de futuro del
+ * viento y durante el dia va cambiando lentamente acercandose a ese valor".
  *
  * Angles follow the world convention: 0 points east, growing clockwise on screen.
  * `direction` is where the wind blows TOWARDS (the way the arrow points).
  */
 
+import { GAME_TIME } from "./game-time.js";
+
 export const WIND = {
-  /** Seconds between control points. */
-  segmentS: 12,
   /** Wind never dies completely and never becomes a hurricane. */
   minStrengthKn: 3,
   maxStrengthKn: 22,
@@ -56,7 +62,7 @@ function hash01(seed, index) {
   return (h >>> 0) / 4294967296;
 }
 
-/** Control point for one segment: a heading and a strength. */
+/** Control point for one day: a heading and a strength. */
 function controlPoint(seed, index) {
   return {
     angle: hash01(seed, index * 2) * Math.PI * 2,
@@ -66,13 +72,29 @@ function controlPoint(seed, index) {
 }
 
 /**
+ * The length of one game day in seconds, read live (S67/S146).
+ *
+ * The wind no longer owns a segment length: a day is the unit, and the day is already a
+ * design number on the settings screen (`time.gameSecondsPerDay`). One number, one owner.
+ * A broken or missing day falls back to 100 s, the same default the rest of the game uses.
+ */
+function secondsPerDay() {
+  const value = Number(GAME_TIME.gameSecondsPerDay);
+  return Number.isFinite(value) && value > 0 ? value : 100;
+}
+
+/**
  * The wind at `timeS` seconds into a voyage. Pure: same inputs, same wind.
  * Returns the angle it blows towards, its strength in knots, and a 0..1 factor
  * the UI can use to size the arrow.
+ *
+ * One control point per game day (S146): at the start of the day the wind leaves where
+ * yesterday left it, and across the day it drifts towards today's own heading. That is
+ * exactly the shape the player asked for.
  */
 export function windAt(seed, timeS) {
   const t = Number.isFinite(timeS) ? timeS : 0;
-  const position = t / WIND.segmentS;
+  const position = t / secondsPerDay();
   const index = Math.floor(position);
   const frac = smoothstep(position - index);
 
@@ -88,6 +110,24 @@ export function windAt(seed, timeS) {
     strengthKn,
     /** 0 at the calmest wind, 1 at the strongest: what the arrow length shows. */
     strength: strengthFraction(strengthKn),
+  };
+}
+
+/**
+ * The wind a game day is heading for (S146): today's target, which the day drifts to.
+ *
+ * The HUD can name it, and it is the value the day's curve is closing on. A broken time
+ * reads as the first day, so a missing clock never throws.
+ */
+export function windTargetOfDay(seed, timeS) {
+  const t = Number.isFinite(timeS) ? timeS : 0;
+  const day = Math.floor(t / secondsPerDay());
+  const point = controlPoint(seed, day + 1);
+  return {
+    day,
+    direction: normalizeAngle(point.angle),
+    strengthKn: point.strengthKn,
+    strength: strengthFraction(point.strengthKn),
   };
 }
 

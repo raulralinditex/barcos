@@ -84,9 +84,9 @@ test("S33: a broken value falls back to the shipped default", () => {
 });
 
 test("S33: a blank input falls back to the shipped default", () => {
-  const applied = applySettings({ "wind.segmentS": "", "wind.forecastS": "   " });
-  assert.equal(applied["wind.segmentS"], SETTINGS_DEFAULTS["wind.segmentS"]);
+  const applied = applySettings({ "wind.forecastS": "", "world.radiusM": "   " });
   assert.equal(applied["wind.forecastS"], SETTINGS_DEFAULTS["wind.forecastS"]);
+  assert.equal(applied["world.radiusM"], SETTINGS_DEFAULTS["world.radiusM"]);
 });
 
 test("S33: a numeric string is accepted, because that is what an input hands back", () => {
@@ -135,7 +135,6 @@ test("S33: applying settings always leaves a playable world", () => {
   for (const field of SETTINGS_FIELDS) extremes[fieldId(field)] = field.max;
   applySettings(extremes);
   assert.ok(WORLD.radiusM > 0 && Number.isFinite(WORLD.radiusM));
-  assert.ok(WIND.segmentS > 0);
   assert.ok(WIND.maxStrengthKn > WIND.minStrengthKn);
   assert.ok(COMBAT.timeScale >= 1, "a reload clock of zero would never finish");
   assert.ok(REPAIR.shareOfPrice >= 0);

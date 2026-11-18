@@ -358,7 +358,6 @@ export const es = {
   "settings.wind.bonus": "Ganancia con viento de popa",
   "settings.wind.penalty": "Pérdida con viento de proa",
   "settings.wind.drift": "Deriva de costado",
-  "settings.wind.segment": "Cada cuánto cambia el viento",
   "settings.wind.forecast": "Horizonte de la predicción",
   "settings.wind.minStrength": "Fuerza mínima del viento",
   "settings.wind.maxStrength": "Fuerza máxima del viento",

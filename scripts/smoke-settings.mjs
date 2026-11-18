@@ -84,7 +84,7 @@ const shown = {
   groups: await screen.locator(".settings-card h2").allTextContents(),
   rows: await screen.locator(".settings-row").count(),
   bonus: await screen.locator("#field-wind\\.maxSpeedBonus").inputValue(),
-  segment: await screen.locator("#field-wind\\.segmentS").inputValue(),
+  day: await screen.locator("#field-time\\.gameSecondsPerDay").inputValue(),
 };
 check(shown.rows >= 20, `the screen shows only ${shown.rows} values`);
 // Fort reinforcement (S100/S102) adds its own block to the settings screen, and the trade
@@ -119,7 +119,7 @@ check(
 const marketRows = await screen.locator('.settings-row[data-field-id^="commerce."]').count();
 check(marketRows === 8, `expected eight trade fields, got ${marketRows}`);
 check(shown.bonus === "60", `the wind bonus must open at 60 %, got "${shown.bonus}"`);
-check(shown.segment === "12", `the wind segment must open at 12 s, got "${shown.segment}"`);
+check(shown.day === "100", `a game day must open at 100 s, got "${shown.day}"`);
 
 // Out of range on both sides: the box must be pulled back to the limit. The two fields live
 // in two different branches (S143), so the smoke walks the menu to each of them.
@@ -199,7 +199,7 @@ async function sail(bonus) {
       // the bonus under test. This is the feature being used to make the test honest.
       localStorage.setItem(
         "barcos:settings:v1",
-        JSON.stringify({ "wind.maxSpeedBonus": bonusValue, "wind.segmentS": 300 }),
+        JSON.stringify({ "wind.maxSpeedBonus": bonusValue, "time.gameSecondsPerDay": 300 }),
       );
     },
     [JSON.stringify(runtime), JSON.stringify(world(HEADING)), bonus],

@@ -8,8 +8,10 @@ import {
   windAt,
   windEffect,
   windForecast,
+  windTargetOfDay,
   windVector,
 } from "../src/model/wind.js";
+import { GAME_TIME } from "../src/model/game-time.js";
 
 const SEED = 424242;
 
@@ -53,9 +55,11 @@ test("S16: the wind is continuous, never jumping between frames", () => {
 });
 
 test("S16: the wind is continuous across control-point boundaries", () => {
-  // Exactly at a segment edge the two neighbouring curves must agree.
-  for (let segment = 0; segment < 5; segment += 1) {
-    const edge = segment * WIND.segmentS;
+  // Exactly at a day's edge the two neighbouring curves must agree (S146: the control
+  // points are one game day apart, not one `segmentS`).
+  const day = GAME_TIME.gameSecondsPerDay;
+  for (let dayIndex = 0; dayIndex < 5; dayIndex += 1) {
+    const edge = dayIndex * day;
     const before = windAt(SEED, edge - 0.001);
     const after = windAt(SEED, edge + 0.001);
     assert.ok(Math.abs(before.strengthKn - after.strengthKn) < 0.01);
@@ -172,4 +176,111 @@ test("compassPoint names the cardinal sectors", () => {
   assert.equal(compassPoint(Math.PI / 2), "S");
   assert.equal(compassPoint(Math.PI), "O");
   assert.equal(compassPoint((Math.PI * 3) / 2), "N");
+});
+
+/* ---------------------------------------------------------------- S146: the wind turns once a day */
+
+const degreesBetween = (a, b) => {
+  const delta = Math.abs(((a - b + Math.PI * 3) % (Math.PI * 2)) - Math.PI);
+  return (delta * 180) / Math.PI;
+};
+
+test("S146: the wind no longer carries a segment of its own", () => {
+  // "eliminamos el valor de cambio de viento": a day is the unit, and the day already has
+  // an owner on the settings screen (`time.gameSecondsPerDay`). One number, one owner.
+  assert.equal(WIND.segmentS, undefined, "the wind must not keep a segment length of its own");
+});
+
+test("S146: the day's target is the wind the day is closing on", () => {
+  const day = GAME_TIME.gameSecondsPerDay;
+  for (const dayIndex of [0, 1, 7]) {
+    const start = dayIndex * day;
+    const target = windTargetOfDay(SEED, start);
+    assert.equal(target.day, dayIndex, `the target of day ${dayIndex} must be that day`);
+    // At the end of the day the wind has arrived at the target it was given.
+    const end = windAt(SEED, start + day * 0.999);
+    assert.ok(
+      degreesBetween(end.direction, target.direction) < 1,
+      `day ${dayIndex}: the wind must arrive at its target, off by ${degreesBetween(end.direction, target.direction).toFixed(2)}°`,
+    );
+  }
+});
+
+test("S146: across the day the wind drifts towards the target, it does not jump", () => {
+  // "durante el dia va cambiando lentamente acercandose a ese valor": the distance to the
+  // day's target must shrink as the day goes on, and never grow.
+  const day = GAME_TIME.gameSecondsPerDay;
+  const target = windTargetOfDay(SEED, 0).direction;
+  let previous = degreesBetween(windAt(SEED, 0).direction, target);
+  for (let step = 1; step <= 20; step += 1) {
+    const distance = degreesBetween(windAt(SEED, (step / 20) * day).direction, target);
+    assert.ok(
+      distance <= previous + 1e-9,
+      `the wind must close on the target: step ${step} went from ${previous.toFixed(2)}° to ${distance.toFixed(2)}°`,
+    );
+    previous = distance;
+  }
+  assert.ok(previous < 1, `by the end of the day the wind must be at its target, off by ${previous.toFixed(2)}°`);
+});
+
+test("S146: a new day leaves from where the last one ended", () => {
+  // No midnight jump: the wind at the last instant of a day and the first instant of the
+  // next are the same wind, which is what makes the change a drift instead of a snap.
+  const day = GAME_TIME.gameSecondsPerDay;
+  for (const dayIndex of [0, 1, 2, 5]) {
+    const end = windAt(SEED, (dayIndex + 1) * day - 0.001);
+    const start = windAt(SEED, (dayIndex + 1) * day + 0.001);
+    assert.ok(
+      degreesBetween(end.direction, start.direction) < 0.01,
+      `day ${dayIndex + 1} must start where day ${dayIndex} ended`,
+    );
+    assert.ok(Math.abs(end.strengthKn - start.strengthKn) < 0.01, "the strength must not jump either");
+  }
+});
+
+test("S146: the length of a day is the setting's, read live", () => {
+  // The player asked for the change to happen "una vez al dia de juego(segundos
+  // configurables)": moving the day on the screen must move the wind with it.
+  const saved = GAME_TIME.gameSecondsPerDay;
+  try {
+    GAME_TIME.gameSecondsPerDay = 40;
+    const shortDay = windTargetOfDay(SEED, 0);
+    const shortEnd = windAt(SEED, 40 * 0.999);
+    assert.ok(degreesBetween(shortEnd.direction, shortDay.direction) < 1, "a 40 s day must close on its target");
+
+    GAME_TIME.gameSecondsPerDay = 300;
+    const longDay = windTargetOfDay(SEED, 0);
+    const longEnd = windAt(SEED, 300 * 0.999);
+    assert.ok(degreesBetween(longEnd.direction, longDay.direction) < 1, "a 300 s day must close on its target");
+
+    // At t = 100 s a 40 s day is already on day 2 and a 300 s day is still on day 0, so
+    // the two are closing on different targets: the length really is being read.
+    GAME_TIME.gameSecondsPerDay = 40;
+    const shortDayLater = windTargetOfDay(SEED, 100);
+    GAME_TIME.gameSecondsPerDay = 300;
+    const longDayLater = windTargetOfDay(SEED, 100);
+    assert.equal(shortDayLater.day, 2, "a 40 s day must be on day 2 after 100 s");
+    assert.equal(longDayLater.day, 0, "a 300 s day must still be on day 0 after 100 s");
+    assert.notEqual(
+      Math.round(shortDayLater.direction * 1000),
+      Math.round(longDayLater.direction * 1000),
+      "the day length must change which target the wind is closing on",
+    );
+  } finally {
+    GAME_TIME.gameSecondsPerDay = saved;
+  }
+});
+
+test("S146: a broken day length falls back to the shipped one, never a NaN", () => {
+  const saved = GAME_TIME.gameSecondsPerDay;
+  try {
+    for (const broken of [0, -10, NaN, "abc", undefined, null]) {
+      GAME_TIME.gameSecondsPerDay = broken;
+      const wind = windAt(SEED, 50);
+      assert.ok(Number.isFinite(wind.direction), `a day of ${String(broken)} broke the direction`);
+      assert.ok(Number.isFinite(wind.strengthKn), `a day of ${String(broken)} broke the strength`);
+    }
+  } finally {
+    GAME_TIME.gameSecondsPerDay = saved;
+  }
 });
