@@ -1,0 +1,37 @@
+src/ui/app.js
+  s_bffce09ad28062::t_8d6e95b8082d00 209-216,715-734,1073
+scripts/smoke-hull-sheet.mjs
+  s_bffce09ad28062::t_62de04df3dee2e 1-65,67-71,73,83-85,90,92-120
+  s_bffce09ad28062::t_27aae758f35554 66,72,74-76,79-82,86-89,91
+  s_bffce09ad28062::t_1ac285e2bf6f9c 77-78
+index.html
+  s_bffce09ad28062::t_8d6e95b8082d00 135-150
+src/i18n/es.js
+  s_bffce09ad28062::t_8d6e95b8082d00 82-87
+src/ui/styles.css
+  s_bffce09ad28062::t_8d6e95b8082d00 664-710
+src/i18n/en.js
+  s_bffce09ad28062::t_8d6e95b8082d00 84-89
+odd/tasks/comercio-y-astilleros.md
+  s_bffce09ad28062::t_823601d661e77d 3
+  s_bffce09ad28062::t_80da1db2a0daab 240-253
+  s_bffce09ad28062::t_16d837a306e249 233
+odd/tasks/pendientes.md
+  s_bffce09ad28062::t_0466567e2bca84 30
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.6",
+  "base_commit_sha": "12522ddcc3021bd791fe8d8397df843eda2a6cbc",
+  "prompts": {},
+  "sessions": {
+    "s_bffce09ad28062": {
+      "agent_id": {
+        "tool": "pi",
+        "id": "01a1ee2f-7b21-71e8-928a-370ae6700c14",
+        "model": "deepseek-v4.1-flash_high"
+      },
+      "human_author": "Raul Ripoll <raulral@ext.inditex.com>"
+    }
+  }
+}
