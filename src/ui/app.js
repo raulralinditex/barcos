@@ -1287,7 +1287,9 @@ function showScreen(next) {
   // The ship+rig panels stand in every build-like room (S105): buying, refitting, the
   // fleet room and the yard room all read like the original three-column screen, with
   // only the left column swapped. In pure-reading rooms they still render.
-  const standIn = next !== "configuracion";
+  // The yard room is one of them (S145): the player reads her fort and her repairs there,
+  // never the hull or the rig, so her panels do not stand in it.
+  const standIn = next !== "configuracion" && next !== "astillero";
   for (const node of $shipAndRig()) node.toggleAttribute("hidden", !standIn);
   const slot = document.getElementById(standIn ? `${next}-builder-slot` : null);
   if (standIn && slot) {
