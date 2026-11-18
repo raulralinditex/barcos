@@ -206,6 +206,9 @@ export const SETTINGS_FIELDS = [
   { group: "danger", key: "referenceKn", label: "settings.danger.referenceKn", scale: "knots", min: 1, max: 30, step: 0.5, target: "danger", targetKey: "referenceKn" },
   { group: "danger", key: "speed", label: "settings.danger.speed", scale: "factor", min: 0, max: 200, step: 10, target: "danger", targetKey: "speed" },
   { group: "danger", key: "manoeuvre", label: "settings.danger.manoeuvre", scale: "factor", min: 0, max: 200, step: 10, target: "danger", targetKey: "manoeuvre" },
+  // S144: what each level adds to the number, as a share of it. The player asked to make
+  // the climb tunable ("que sea modificable como va aumentando los puntos de batalla").
+  { group: "danger", key: "level", label: "settings.danger.level", scale: "percent", min: 0, max: 0.5, step: 0.01, target: "danger", targetKey: "level" },
 ];
 
 /** The live constant blocks, so a group id resolves to the object it writes to. */

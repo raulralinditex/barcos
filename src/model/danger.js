@@ -20,6 +20,7 @@
 
 import { CONVENTIONS, pieceById } from "../data/naval-data.js";
 import { COMBAT } from "./combat.js";
+import { normaliseLevel } from "./levels.js";
 import { TURNING, turnRateFactor } from "./turning.js";
 
 /**
@@ -56,6 +57,15 @@ export const DANGER = {
   speed: 40,
   /** How well she answers the helm, worth this much at the reference turn rate. */
   manoeuvre: 30,
+  /**
+   * What each level adds to the number, as a share of it (S144).
+   *
+   * The level makes an enemy harder to sink (S140-D), so a number that compares hulls has
+   * to climb with it, or it tells the player a level 6 sail is worth what a level 1 sail
+   * is worth. The climb is `1 + level * (nivel - 1)`, the same shape as the level's own
+   * toughness, so the number and the durability grow together. Zero flattens it.
+   */
+  level: 0.08,
 };
 
 /** A finite number or `null`, so a broken field is skipped instead of poisoning the sum. */
@@ -121,8 +131,23 @@ function gunsOf(combatant, side) {
  *
  * Never throws and never writes: a broken input is worth 0, and a hull that has sunk or
  * struck her colours is worth 0 too, because she is not a ship to compare any more.
+ *
+ * The level is read from the combatant (`combatant.level`), which is what the sea stamps on
+ * an enemy when it builds her (S144). A combatant built before levels existed, or by a
+ * caller that never set one, is level 1: exactly the number the game was tuned with.
  */
 export function dangerValue(combatant) {
+  return dangerValueFor(combatant, combatant?.level);
+}
+
+/**
+ * The same number, with the level handed in instead of read (S144).
+ *
+ * The sea knows the level of the sail she built even when the combatant does not carry it,
+ * so the roster and the badge pass it. `dangerValue` is this with the combatant's own
+ * level, which keeps every caller written before S144 on the same path.
+ */
+export function dangerValueFor(combatant, level) {
   if (!combatant || typeof combatant !== "object") return 0;
   if (combatant.status && combatant.status !== "fighting") return 0;
 
@@ -169,5 +194,11 @@ export function dangerValue(combatant) {
 
   const total = live + gunnery + hull;
   if (!Number.isFinite(total) || total <= 0) return 0;
-  return Math.round(total);
+  // The level is the last factor and it only ever multiplies: level 1 is the number the
+  // hull is worth on her own, and every level above it makes her worth more (S144). A
+  // weight of zero, or a broken one, leaves the sum exactly as it was.
+  const levelShare = weight("level") * (normaliseLevel(level) - 1);
+  const scaled = total * (1 + Math.max(0, levelShare));
+  if (!Number.isFinite(scaled) || scaled <= 0) return Math.round(total);
+  return Math.round(scaled);
 }

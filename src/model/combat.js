@@ -287,6 +287,10 @@ export function createEnemyCombatant(encounter, zone, worldSeed, toughness = 1) 
   return {
     kind: "enemy",
     name: hull.name,
+    // The level she was seeded at (S140), stamped on the combatant so anything that reads
+    // her whole — the danger number of S144, a panel, a save — knows how hard she is
+    // without having to ask the world.
+    level: encounter.level,
     pieces,
     crew,
     initialCrew: Math.max(1, totalPeople(crew)),

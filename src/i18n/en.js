@@ -455,6 +455,7 @@ export const en = {
   "settings.danger.referenceKn": "Reference speed",
   "settings.danger.speed": "Weight of the speed",
   "settings.danger.manoeuvre": "Weight of the manoeuvre",
+  "settings.danger.level": "What each level adds",
   "settings.levels.baseEnemies": "Enemies in level 1",
   "settings.levels.growth": "Quota growth per level",
   "settings.levels.maxEnemies": "Cap on enemies per level",
