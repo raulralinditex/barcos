@@ -80,7 +80,7 @@ check(shown.rows >= 20, `the screen shows only ${shown.rows} values`);
 // brings two more (S113, S117): the sinking switch and the market prices. The automatic
 // refit adds "Reforma" and the yards' own markets add one block of prices per yard.
 // S140 adds the levels block ("Niveles").
-check(shown.groups.length === 21, `expected twenty-one blocks, got ${shown.groups.join(", ")}`);
+check(shown.groups.length === 22, `expected twenty-two blocks, got ${shown.groups.join(", ")}`);
 check(
   shown.groups.some((name) => /Naufragio/i.test(name)) && shown.groups.some((name) => /Comercio/i.test(name)),
   `the sinking and trade blocks must be on screen, got ${shown.groups.join(", ")}`,

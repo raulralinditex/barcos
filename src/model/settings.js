@@ -28,6 +28,7 @@ import { TRAIL } from "./damage-trail.js";
 import { BAR_SCALE } from "./sea-hud.js";
 import { AUTOFIRE_DEFAULT } from "./autofire.js";
 import { LEVELS } from "./levels.js";
+import { DANGER } from "./danger.js";
 
 /**
  * The editable fields, grouped by the block they belong to.
@@ -189,13 +190,29 @@ export const SETTINGS_FIELDS = [
   { group: "levels", key: "growth", label: "settings.levels.growth", scale: "factor", min: 1, max: 3, step: 0.05, target: "levels", targetKey: "growth" },
   { group: "levels", key: "maxEnemies", label: "settings.levels.maxEnemies", scale: "factor", min: 1, max: 200, step: 1, target: "levels", targetKey: "maxEnemies" },
   { group: "levels", key: "toughnessPerLevel", label: "settings.levels.toughness", scale: "percent", min: 0, max: 0.5, step: 0.01, target: "levels", targetKey: "toughnessPerLevel" },
+
+  // S142: the danger number of a hull, informational only. Whether it is painted on the
+  // sea is a switch; every weight of the sum is a design number like any other (S79).
+  { group: "danger", key: "show", label: "settings.danger.show", scale: "factor", min: 0, max: 1, step: 1, control: "switch", target: "danger", targetKey: "show" },
+  { group: "danger", key: "hull", label: "settings.danger.hull", scale: "factor", min: 0, max: 200, step: 5, target: "danger", targetKey: "hull" },
+  { group: "danger", key: "rigging", label: "settings.danger.rigging", scale: "factor", min: 0, max: 200, step: 5, target: "danger", targetKey: "rigging" },
+  { group: "danger", key: "crew", label: "settings.danger.crew", scale: "factor", min: 0, max: 200, step: 5, target: "danger", targetKey: "crew" },
+  { group: "danger", key: "gun", label: "settings.danger.gun", scale: "factor", min: 0, max: 50, step: 1, target: "danger", targetKey: "gun" },
+  { group: "danger", key: "calibre", label: "settings.danger.calibre", scale: "factor", min: 0, max: 50, step: 1, target: "danger", targetKey: "calibre" },
+  { group: "danger", key: "rounds", label: "settings.danger.rounds", scale: "factor", min: 0, max: 100, step: 5, target: "danger", targetKey: "rounds" },
+  { group: "danger", key: "roundsFull", label: "settings.danger.roundsFull", scale: "factor", min: 1, max: 200, step: 5, target: "danger", targetKey: "roundsFull" },
+  { group: "danger", key: "referenceKg", label: "settings.danger.referenceKg", scale: "factor", min: 10_000, max: 2_000_000, step: 10_000, target: "danger", targetKey: "referenceKg" },
+  { group: "danger", key: "displacement", label: "settings.danger.displacement", scale: "factor", min: 0, max: 300, step: 10, target: "danger", targetKey: "displacement" },
+  { group: "danger", key: "referenceKn", label: "settings.danger.referenceKn", scale: "knots", min: 1, max: 30, step: 0.5, target: "danger", targetKey: "referenceKn" },
+  { group: "danger", key: "speed", label: "settings.danger.speed", scale: "factor", min: 0, max: 200, step: 10, target: "danger", targetKey: "speed" },
+  { group: "danger", key: "manoeuvre", label: "settings.danger.manoeuvre", scale: "factor", min: 0, max: 200, step: 10, target: "danger", targetKey: "manoeuvre" },
 ];
 
 /** The live constant blocks, so a group id resolves to the object it writes to. */
 /** The automatic-fire switch as a live block, so it is a setting like any other (S88). */
 export const AUTOFIRE = { enabled: AUTOFIRE_DEFAULT ? 1 : 0 };
 
-export const SETTINGS_BLOCKS = { wind: WIND, world: WORLD, combat: COMBAT, repair: REPAIR, prices: PRICES, gunnery: GUNNERY, gunners: GUNNERY.gunnersPerGun, zones: ZONE_DAMAGE, loot: LOOT, sales: SALES, time: GAME_TIME, fort: FORT, fortUpgrade: FORT_UPGRADE, start: START, turning: TURNING, escort: ESCORT, trail: TRAIL, bars: BAR_SCALE, autofire: AUTOFIRE, sinking: SINKING, refit: REFIT, voyage: VOYAGE, commerce: COMMERCE, markets: MARKETS, yardMarkets: YARD_MARKETS, levels: LEVELS };
+export const SETTINGS_BLOCKS = { wind: WIND, world: WORLD, combat: COMBAT, repair: REPAIR, prices: PRICES, gunnery: GUNNERY, gunners: GUNNERY.gunnersPerGun, zones: ZONE_DAMAGE, loot: LOOT, sales: SALES, time: GAME_TIME, fort: FORT, fortUpgrade: FORT_UPGRADE, start: START, turning: TURNING, escort: ESCORT, trail: TRAIL, bars: BAR_SCALE, autofire: AUTOFIRE, sinking: SINKING, refit: REFIT, voyage: VOYAGE, commerce: COMMERCE, markets: MARKETS, yardMarkets: YARD_MARKETS, levels: LEVELS, danger: DANGER };
 
 /**
  * The design constant blocks S79 promises to expose, by name.
@@ -220,6 +237,8 @@ export const DESIGN_BLOCKS = {
   escort: ESCORT,
   trail: TRAIL,
   bars: BAR_SCALE,
+  // S142: the danger number and its weights are design numbers too.
+  danger: DANGER,
 };
 const targetOf = (field) => SETTINGS_BLOCKS[field.target ?? field.group];
 /**

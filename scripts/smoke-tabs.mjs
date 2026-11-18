@@ -73,8 +73,8 @@ check(String(await page.$eval("#purchase-notice", (n) => n.textContent)).include
 
 // --- Configuración: the settings screen is in the room --------------------------------
 await page.click('.screen-tab[data-screen="configuracion"]');
-// 21 since S140 added the levels block ("Niveles").
-check((await page.locator(".settings-card").count()) === 21, `the settings tab mounts every block, got ${await page.locator(".settings-card").count()}`);
+// 22 since S142 added the danger block ("Peligro").
+check((await page.locator(".settings-card").count()) === 22, `the settings tab mounts every block, got ${await page.locator(".settings-card").count()}`);
 await page.fill("#field-wind\\.maxSpeedBonus", "500");
 await page.click("#settings-apply");
 await page.waitForTimeout(200);

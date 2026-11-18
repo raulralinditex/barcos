@@ -9,6 +9,8 @@
  * Pure and UI-free, like the rest of the sea rules: the sea screen only paints it.
  */
 
+import { dangerValue } from "./danger.js";
+
 /**
  * The hulls in the fight (S73).
  *
@@ -47,6 +49,9 @@ export function duelRoster(input) {
       id: hull.id,
       name: hull.name ?? "",
       side: "ours",
+      // The danger number (S142): the same scale for every hull, so the player can
+      // compare her own ship with the enemy's in the same panel.
+      danger: dangerValue(hull.combat),
       hull: share(hull.combat.condition?.hull),
       rigging: share(hull.combat.condition?.rigging),
       crew: share(hull.combat.condition?.crew),
@@ -61,6 +66,7 @@ export function duelRoster(input) {
       name: hull.name ?? "",
       hullId: hull.hullId ?? null,
       side: "theirs",
+      danger: dangerValue(hull.combat),
       hull: share(hull.combat.condition?.hull),
       rigging: share(hull.combat.condition?.rigging),
       crew: share(hull.combat.condition?.crew),

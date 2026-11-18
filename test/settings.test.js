@@ -268,5 +268,7 @@ test("S117: the wreck switch round-trips 1 and 0 like every other setting", asyn
   // The screen draws a checkbox only for a field that says so, never by guessing.
   const { SETTINGS_FIELDS, fieldId } = await import("../src/model/settings.js");
   const switches = SETTINGS_FIELDS.filter((field) => field.control === "switch").map(fieldId);
-  assert.deepEqual(switches, ["sinking.keepWreck", "refit.autoSave", "voyage.showTravelButton"]);
+  // S142 adds the danger switch: the number is painted at sea or it is not, so it is a
+  // check like these three and not a 0..1 number like `combat.autofire`.
+  assert.deepEqual(switches, ["sinking.keepWreck", "refit.autoSave", "voyage.showTravelButton", "danger.show"]);
 });

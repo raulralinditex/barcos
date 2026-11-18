@@ -64,6 +64,7 @@ import { isOutOfAmmo } from "../model/rearm.js";
 import { bootSettings } from "../model/settings-storage.js";
 import { bootCatalogue } from "../model/catalogue-storage.js";
 import { AUTOFIRE } from "../model/settings.js";
+import { DANGER, dangerValue } from "../model/danger.js";
 import { GAME_TIME, supplySeconds } from "../model/game-time.js";
 import { voyageClock } from "../model/voyage-clock.js";
 import { buildReserves, burnReserves, squadronSupply, wagesFor } from "../model/supply.js";
@@ -860,7 +861,43 @@ const BAR = {
   reload: "#9fc7e8",
   track: "rgba(10,18,28,0.62)",
   frame: "rgba(244,239,228,0.22)",
+  /** The danger number over the condition block (S142): a calm sand, not a warning red. */
+  danger: "#bfe3c9",
+  dangerBack: "rgba(8,14,22,0.72)",
 };
+
+/** Whether the danger number is painted at all (S142-D): the player's switch, read live. */
+function dangerVisible() {
+  return Number(DANGER.show) > 0;
+}
+
+/**
+ * The danger badge of one hull (S142-C): the number, in screen space, centred over the
+ * condition block of the hull. It is a label like the bars are, painted with the same
+ * scale for every ship, so two hulls can be compared at a glance.
+ */
+function drawDangerBadge(ctx, centreX, centreY, rowCount, danger) {
+  const value = Math.round(Number(danger));
+  if (!Number.isFinite(value)) return;
+  const text = fmtInt.format(Math.max(0, value));
+  ctx.save();
+  ctx.font = "600 11px ui-sans-serif, system-ui, sans-serif";
+  ctx.textAlign = "center";
+  ctx.textBaseline = "middle";
+  const width = ctx.measureText(text).width + 10;
+  const height = 14;
+  const blockHeight = rowCount * (BAR.height + BAR.gap) + BAR.padding * 2 - BAR.gap;
+  // Just above the block, so it never covers the bars it belongs to.
+  const y = centreY - blockHeight / 2 - height / 2 - 2;
+  ctx.fillStyle = BAR.dangerBack;
+  ctx.fillRect(centreX - width / 2, y - height / 2, width, height);
+  ctx.strokeStyle = BAR.frame;
+  ctx.lineWidth = 1;
+  ctx.strokeRect(centreX - width / 2 + 0.5, y - height / 2 + 0.5, width - 1, height - 1);
+  ctx.fillStyle = BAR.danger;
+  ctx.fillText(text, centreX, y);
+  ctx.restore();
+}
 
 /** World metres to screen pixels, without the camera translation. */
 function toScreen(x, y) {
@@ -971,8 +1008,12 @@ function trailFor(combatant, key, share) {
  * they are instead of as one stack. Every block turns with the hull, because a
  * beam is a place on the ship, not a place on the screen. Condition sits on the
  * keel and the beams on the perpendicular, so the three never overlap.
+ *
+ * `danger` is the informational danger number of the hull (S142-C): it is painted as a
+ * badge on the condition block, next to the bars, so every ship at sea carries it.
+ * It is painted, never read back: no rule of the fight sees it (S142-B).
  */
-function drawBarsFor(ctx, combatant, x, y, distanceM, heading, scale, widthShare = 1) {
+function drawBarsFor(ctx, combatant, x, y, distanceM, heading, scale, widthShare = 1, danger = 0) {
   if (!combatant) return;
   // A tougher hull is drawn with longer condition bars than a light one (S59).
   const conditionWidth = Math.round(BAR.width * widthShare);
@@ -984,6 +1025,7 @@ function drawBarsFor(ctx, combatant, x, y, distanceM, heading, scale, widthShare
   ].map((row) => ({ ...row, trail: trailFor(combatant, row.key, row.share) }));
   const stern = blockCentre(x, y, heading + Math.PI, blockSize(conditionRows.length, conditionWidth));
   drawBlock(ctx, conditionRows, stern.x, stern.y, conditionWidth);
+  if (dangerVisible()) drawDangerBadge(ctx, stern.x, stern.y, conditionRows.length, danger);
 
   // One scale for every hull on screen (`scale`, in `sideCapacity` units): a bar is a
   // share of the strongest beam in view, not of its own ship, so a patache's
@@ -1099,6 +1141,9 @@ function drawShipBars(ctx) {
       ship.heading,
       scale,
       hullBarShare(ship.toughness, referenceToughness),
+      // The danger number is painted over the bars of every hull in view (S142-C),
+      // ours and theirs, in the same scale, so two ships read side by side.
+      dangerValue(ship.combatant),
     );
   }
 }
@@ -2259,8 +2304,8 @@ function updateDuelPanel() {
   els.duelPanel.classList.remove("is-hidden");
 
   const signature = roster
-    .map((entry) => `${entry.id}:${Math.round(entry.hull)}:${Math.round(entry.rigging)}:${Math.round(entry.crew)}:${entry.side}`)
-    .join("|");
+    .map((entry) => `${entry.id}:${Math.round(entry.hull)}:${Math.round(entry.rigging)}:${Math.round(entry.crew)}:${entry.danger}:${entry.side}`)
+    .join("|") + `:${dangerVisible() ? 1 : 0}`;
   if (signature === duelSignature) return;
   duelSignature = signature;
 
@@ -2275,12 +2320,24 @@ function updateDuelPanel() {
     const name = document.createElement("span");
     name.className = "duel-name";
     name.textContent = entry.name;
+    head.append(name);
+    // The danger number sits next to the name (S142-C), own hulls and enemies alike,
+    // so the player compares two ships without leaving the panel. It is a label: the
+    // fight does not read it (S142-B).
+    if (dangerVisible()) {
+      const danger = document.createElement("span");
+      danger.className = "duel-danger";
+      danger.dataset.danger = String(entry.danger);
+      danger.title = t("sea.danger.title", { danger: fmtInt.format(entry.danger) });
+      danger.textContent = fmtInt.format(entry.danger);
+      head.append(danger);
+    }
     const distance = document.createElement("span");
     distance.className = "duel-distance";
     distance.textContent = Number.isFinite(entry.distanceM)
       ? t("sea.duel.distance", { distance: fmtInt.format(Math.round(entry.distanceM)) })
       : "";
-    head.append(name, distance);
+    head.append(distance);
 
     const bars = document.createElement("div");
     bars.className = "duel-bars";
