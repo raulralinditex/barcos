@@ -1284,12 +1284,13 @@ function showScreen(next) {
   // The hull shelf belongs to the buy room alone: the fleet and the yard rooms hold
   // their own column in its place (S105).
   document.querySelector(".panel-hulls").toggleAttribute("hidden", next !== "comprar");
-  // The ship+rig panels stand in every build-like room (S105): buying, refitting, the
-  // fleet room and the yard room all read like the original three-column screen, with
-  // only the left column swapped. In pure-reading rooms they still render.
-  // The yard room is one of them (S145): the player reads her fort and her repairs there,
-  // never the hull or the rig, so her panels do not stand in it.
-  const standIn = next !== "configuracion" && next !== "astillero";
+  // The ship+rig panels stand in every build-like room (S105): buying, refitting and the
+  // fleet room all read like the original three-column screen, with only the left column
+  // swapped. In pure-reading rooms they still render.
+  // Two rooms are reading rooms and do not take them (S145/S147): the yard, where the
+  // player reads her fort and her repairs, and the market, which trades goods and has no
+  // business showing a shipbuilder beside the board.
+  const standIn = next !== "configuracion" && next !== "astillero" && next !== "mercado";
   for (const node of $shipAndRig()) node.toggleAttribute("hidden", !standIn);
   const slot = document.getElementById(standIn ? `${next}-builder-slot` : null);
   if (standIn && slot) {
