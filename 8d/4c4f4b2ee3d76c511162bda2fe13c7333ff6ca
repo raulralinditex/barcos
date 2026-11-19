@@ -1,0 +1,34 @@
+src/i18n/en.js
+  s_f0a363535db2a0::t_a5702320fe3a93 44-47
+src/i18n/es.js
+  s_f0a363535db2a0::t_a5702320fe3a93 42-45
+src/ui/app.js
+  s_f0a363535db2a0::t_744e9687aa21af 2227-2238,2240-2243,2253,2268-2283,2289-2293,2295-2303
+  s_f0a363535db2a0::t_ff2da1b30992eb 55,57
+  s_f0a363535db2a0::t_29cfcdcaeda265 2218-2225
+  s_f0a363535db2a0::t_cc9ef0b0d1abf2 2284-2288,2294
+  s_f0a363535db2a0::t_9cba88233f6db4 2657-2674
+  s_f0a363535db2a0::t_3fb7a54dab5141 2239,2244-2252,2266
+  s_f0a363535db2a0::t_1366d6ff17247d 2267
+scripts/smoke-fleet-squadrons.mjs
+  s_f0a363535db2a0::t_a879294affe23c 1-129,134-155
+  s_f0a363535db2a0::t_912c8fdc95c746 130-133
+src/ui/styles.css
+  s_f0a363535db2a0::t_a89066f630cc69 326-378
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.6",
+  "base_commit_sha": "8d4c4f4b2ee3d76c511162bda2fe13c7333ff6ca",
+  "prompts": {},
+  "sessions": {
+    "s_f0a363535db2a0": {
+      "agent_id": {
+        "tool": "pi",
+        "id": "01a1f481-398c-75ea-a49b-8fb241e4a403",
+        "model": "deepseek-v4.1-flash_high"
+      },
+      "human_author": "Raul Ripoll <raulral@ext.inditex.com>"
+    }
+  }
+}
