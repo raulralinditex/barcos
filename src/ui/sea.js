@@ -3138,7 +3138,11 @@ function updateHud() {
   }
   els.zone.textContent = localisedZone(zone, t).name;
   els.zone.style.color = zone.id === "abismo" ? "#c9a9ff" : zone.id === "abierto" ? "#9fc7e8" : "#bfe3c9";
-  els.throttle.textContent = `${fmtInt.format(ui.throttle * 100)} %`;
+  // While an order is steering (S155-F/G) the sail on screen is the one the order carries, not
+  // the last the player set by hand: a hull making 6 kn under orders with the HUD reading 0 %
+  // of sail is the screen lying about the sea.
+  const sailShown = activeOrder ? 1 : ui.throttle;
+  els.throttle.textContent = `${fmtInt.format(sailShown * 100)} %`;
   els.speed.textContent = `${fmtOne.format(world.ship.currentSpeedKn)} kn`;
   const degrees = ((world.ship.heading * 180) / Math.PI + 360) % 360;
   els.heading.textContent = `${String(Math.round(degrees)).padStart(3, "0")}°`;
