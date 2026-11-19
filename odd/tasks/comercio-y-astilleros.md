@@ -1,6 +1,6 @@
 # Juego de barcos — comercio y astilleros por zona
 
-Estado: cerrada S112-S122, sin pendientes. Cerradas además S123-S141, S143-S151, S154 y S156 (ver `## Log`). Abiertas: S152 (paneles del mar flotantes, T33), S153 (doce mercancías nuevas, T34) y S155 (varias capitanas, T35). Rama: `feat/comercio-y-astilleros` (se crea desde `feat/t7-combate-costados` antes del primer commit). Cierra el pendiente grande de `pendientes.md`: la carga deja de ser castigo puro y pasa a producir dinero.
+Estado: cerrada S112-S122, sin pendientes. Cerradas además S123-S141, S143-S151, S154 y S156 (ver `## Log`). Abiertas: S152 (paneles del mar flotantes, T33) y S155 (varias capitanas, T35). S153 cerrada en T34. Rama: `feat/comercio-y-astilleros` (se crea desde `feat/t7-combate-costados` antes del primer commit). Cierra el pendiente grande de `pendientes.md`: la carga deja de ser castigo puro y pasa a producir dinero.
 
 ## Specs
 
@@ -126,7 +126,8 @@ S152. **Los paneles del mar son flotantes: se arrastran y se pliegan.** Pedido d
 S153. **El mercado tiene doce mercancías más, repartidas por origen y demanda.** Pedido del jugador (verbatim): "añade 10 o 12 mercancias mas al mercado".
 - **S153-A, doce bienes nuevos en datos**: `COMMODITIES` en `src/data/naval-data.js` pasa de 5 a 17 entradas. Cada una declara `id`, `nameKey`, `kgPerUnit` y `baseGold`, como las cinco que ya están.
 - **S153-B, el peso y el precio cubren la escala entera**: desde un bien voluminoso y barato (maderas, 640 kg/unidad, ~9 doblones) hasta uno pequeño y carísimo (diamantes, 4 kg/unidad, ~1400 doblones). Los doce se ordenan por densidad de valor, así que el jugador elige entre bodega y bolsa, no entre bienes equivalentes.
-- **S153-C, cada astillero gana entre tres y cuatro bienes propios.** El mercado de cada uno se extiende manteniendo la regla que ya existe: un bien es barato donde se produce y caro donde falta. Ningún astillero lista el catálogo entero (el smoke de S119 lo exige y sigue valiendo).
+- **S153-C, cada astillero gana ocho bienes propios, hasta doce.** El mercado de cada uno se extiende manteniendo la regla que ya existe: un bien es barato donde se produce y caro donde falta. Ningún astillero lista el catálogo entero (el smoke de S119 lo exige y sigue valiendo).
+  - La letra original pedía «entre tres y cuatro bienes propios» por astillero, y **es aritméticamente incompatible** con S153-D y con el test que ya existía «every good is traded in at least two yards»: 17 bienes piden 34 huecos de mercado y tres astilleros con ocho dan 24. El jugador eligió la salida que mantiene los dos invariantes: «Ampliar mercados a 11-12 bienes por astillero» (L57). La intención no cambió; el número, sí.
 - **S153-D, la regla del viaje sigue pagando**: para cada uno de los diecisiete bienes, comprar en la costera y vender en el abismo sigue dando al menos el triple. Es el test de S113 y no se relaja.
 - **S153-E, la ganancia por viaje se mantiene en rango**: el margen de los doce nuevos no rompe el equilibrio de los cinco que ya estaban; ningún bien nuevo paga menos de 3× ni más de 12× en el viaje largo.
 - **S153-F, i18n es/en** de los doce nombres nuevos.
@@ -180,7 +181,7 @@ S156. **Nueve imágenes históricas más para los cascos, de dominio público.**
 
 - T32 — S151: `mergeSeaFleet(stored, live, { removed, holdsChanged })` en `src/model/fleet.js`, el autoguardado del mar cableado a él (`src/ui/sea.js`), `test/sea-fleet-merge.test.js` y el smoke `scripts/smoke-sea-save-merge.mjs`. Ruta: worker con contrato cerrado. Commit: `40d1948`.
 - T33 — S152: `src/model/sea-panels.js` (posición acotada, plegado, normalización del diseño guardado) + `test/sea-panels.test.js`, el arrastre y el plegado en `src/ui/sea.js`, las asas y el botón de ordenar en `sea.html`, estilos, i18n es/en y el smoke `scripts/smoke-sea-panels.mjs`. Ruta: worker con contrato cerrado.
-- T34 — S153: doce entradas nuevas en `COMMODITIES` y sus mercados en `SHIPYARDS` (`src/data/naval-data.js`), los doce nombres en `src/i18n/es.js` y `src/i18n/en.js`, y un test nuevo `test/commodity-catalogue.test.js` que fija el reparto por astillero y el margen del viaje. Ruta: inline.
+- T34 — S153: doce entradas nuevas en `COMMODITIES` y sus mercados en `SHIPYARDS` (`src/data/naval-data.js`), los doce nombres en `src/i18n/es.js` y `src/i18n/en.js`, y un test nuevo `test/commodity-catalogue.test.js` que fija el reparto por astillero y el margen del viaje. Ruta: inline. Commit: ver L57.
 - T35 — S154: la regla de entrada en `src/ui/app.js` y el smoke `scripts/smoke-yard-entry.mjs`. Ruta: inline. Commit: `96bfef6`.
 - T36 — S155-A/B: el modelo de escuadras en `src/model/fleet.js` (`squadrons`, `squadronOf`, `withShipCommand`, `seaSquadrons`, compatibilidad del guardado viejo) y `test/squadrons.test.js`. Ruta: worker con contrato cerrado. Commit: `bda8c2b`.
 - T37 — S155-C/D/E: el mar con varias escuadras (`src/model/world.js`: `afloatSquadrons`, `withActiveSquadron`, `nearestSquadron`, lista de escuadras con su formación y sus órdenes de gobierno, serialización con compatibilidad), `test/sea-squadrons.test.js` (9 tests), la pantalla con todas las escuadras dibujadas, el clic y la tecla `C` para elegir capitana, el combate por escuadra y el minimapa. Ruta: inline. Commits: `bb654a1` (modelo) y `c46b8e7` (pantalla).
@@ -434,3 +435,24 @@ L49 (cierre de T37, T38 y T40 — S155 completa). `npm test` **931/931** (920 pr
 **Dos smokes que fallan también en la base y que llevan rotos desde antes de S155**, medidos en `89f9297` (cierre de S150): `smoke-formation` («expected exactly the marked escort at sea, got none») y `smoke-escort-hud`. No se tocaron. `smoke-buy-hull` falla también en la base (`waiting for .hull-card[data-hull-id="galeon-guerra"]`). `smoke-duel-panel` es el flaky conocido de L32.
 
 **Límites conocidos de S155**: (a) las escuadras adicionales se dibujan, navegan con sus órdenes de gobierno y pelean, pero la orden de destino y la recogida de doblones sólo se le pueden dar a la escuadra activa — dar órdenes a una capitana sin tomar su timón no estaba pedido y no se implementó; (b) el jugador no tiene todavía una pantalla para **crear** una capitana nueva: el modelo la soporta (`addCaptain`) y el panel del astillero permite pasar cascos entre capitanas existentes, pero una capitana nace sólo con un guardado que ya la trae o comprando un casco en un astillero distinto, y esa pantalla queda como punto abierto; (c) el aviso de la orden de destino al llegar usa el texto de «llegó a su destino» también para la recogida terminada.
+
+L57 (pedido del jugador, verbatim): "en el mercado, dijimos de aumentar el tipo de mercancias, pero no las veo". Era cierto: S153 se había especificado en L44 ("añade 10 o 12 mercancias mas al mercado") pero **T34 nunca se ejecutó**, así que `COMMODITIES` seguía con las cinco de S113.
+
+**Contradicción hallada en la ficha, y la decisión que la cerró.** S153-C pedía «cada astillero gana entre tres y cuatro bienes propios» (7-8 por yarda, 24 huecos entre las tres) mientras S153-D y el test ya existente `every good is traded in at least two yards` piden 17 bienes × 2 yardas = 34 huecos. Las dos cosas no pueden ser. Preguntado el jugador, eligió (verbatim de la opción): «Ampliar mercados a 11-12 bienes por astillero». S153-C se reescribió con ese número y la intención intacta; S153-D y su test no se tocaron.
+
+**Cierre de S153 / T34, commit `5d1c0d7`.** `npm test` **980/980** (974 + 6 en `test/commodity-catalogue.test.js`).
+
+| Spec | Qué quedó |
+|---|---|
+| S153-A | `COMMODITIES` pasa de **5 a 17** bienes; los cinco viejos conservan id, kg y precio |
+| S153-B | De `maderas` (640 kg, 9 doblones) a `diamantes` (4 kg, 1400): **17 densidades de valor distintas**, ordenadas de menor a mayor |
+| S153-C | 12 bienes por astillero, los tres con lista propia y ninguno con el catálogo entero; los 17 se comercian en al menos dos yardas |
+| S153-D | Comprar en la costera y vender en el abismo paga entre **5,19× y 5,80×** para los diecisiete (el mínimo exigido es 3×) |
+| S153-E | Ningún bien por debajo de 3× ni por encima de 12× |
+| S153-F | Los doce nombres nuevos en es y en: maderas/timber, carbón/coal, hierro/iron, lana/wool, cuero/leather, brea/pitch, cobre/copper, café/coffee, azúcar/sugar, canela/cinnamon, seda/silk, diamantes/diamonds |
+
+**Evidencia de RED**: sobre la base, `test/commodity-catalogue.test.js` falla S153-A («the catalogue must hold 17 goods, it holds 5»), S153-B (`maderas` y `diamantes` no existen) y S153-C («puerto-casa must trade at least seven goods, she trades 4»). Verde con los datos puestos.
+
+**Dos smokes se corrigieron con esto, y no eran cosméticos**: `smoke-market` y `smoke-hold-buy` compraban `COMMODITIES[0]` pero buscaban el literal `"sal"` en el manifiesto. Funcionaba sólo porque la sal era la primera del catálogo; con `maderas` delante, la suposición quedó a la vista. Los dos pasan a usar el id de la mercancía que realmente compran.
+
+**Cinco smokes fallan también en la base** (comprobado con `git stash` de este trabajo) y no se tocaron: `smoke-market-hold`, `smoke-refit-autosave`, `smoke-sale` («S63: the prize should be in the fleet»), `smoke-catalogue`, `smoke-escort-racks`, `smoke-tabs` («got 23») y `smoke-settings-menu` («found 23»). Los dos últimos cuentan un número fijo de bloques de Configuración, que crece con cada bloque nuevo; el de S63 es un fallo de captura de presa ajeno al comercio.
