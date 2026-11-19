@@ -1,0 +1,23 @@
+scripts/smoke-yard-escape.mjs
+  s_f0a363535db2a0::t_86a151e1a0096a 1-116
+src/ui/app.js
+  s_f0a363535db2a0::t_f8a1ad10e5ed59 2081-2104
+  s_f0a363535db2a0::t_c7bb6f31009ac9 2032-2040,2042,2064-2078
+  s_f0a363535db2a0::t_37ffe61c44299a 2079-2080
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.6",
+  "base_commit_sha": "168477d3ba5f9ef59fe37d8cd48855ad267365fb",
+  "prompts": {},
+  "sessions": {
+    "s_f0a363535db2a0": {
+      "agent_id": {
+        "tool": "pi",
+        "id": "01a1f481-398c-75ea-a49b-8fb241e4a403",
+        "model": "deepseek-v4.1-flash_high"
+      },
+      "human_author": "Raul Ripoll <raulral@ext.inditex.com>"
+    }
+  }
+}
