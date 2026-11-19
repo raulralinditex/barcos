@@ -1,0 +1,24 @@
+scripts/smoke-sea-squadrons.mjs
+  s_f0a363535db2a0::t_d59dae7bcaed44 166-172
+  s_f0a363535db2a0::t_ae17040909b08e 103
+  s_f0a363535db2a0::t_6ffe059571b7e8 1-79,91-102,104-165,173-203
+  s_f0a363535db2a0::t_d53747d0606fcc 80-90
+src/ui/sea.js
+  s_f0a363535db2a0::t_8b9bb5bcb065fe 3141-3145
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.6",
+  "base_commit_sha": "2be661b6e06fa220fa892d18ea3c857ede799947",
+  "prompts": {},
+  "sessions": {
+    "s_f0a363535db2a0": {
+      "agent_id": {
+        "tool": "pi",
+        "id": "01a1f481-398c-75ea-a49b-8fb241e4a403",
+        "model": "deepseek-v4.1-flash_high"
+      },
+      "human_author": "Raul Ripoll <raulral@ext.inditex.com>"
+    }
+  }
+}
