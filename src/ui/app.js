@@ -2029,13 +2029,17 @@ els.marketBoard?.addEventListener("pointerdown", (event) => {
 // The automatic-fire switch moved to the settings screen (S88), where every other
 // design number lives. Nothing on this screen owns it any more.
 
-els.setSailBtn.addEventListener("click", () => {
+/**
+ * Put to sea from the shipyard: the one way out of the yard to the water.
+ *
+ * The button and the Escape key both call this, so they cannot drift apart. It keeps every
+ * guard the button had: a visit does not sail (S133-C), and a yard in enemy hands closes the
+ * repairs but not the sailing (S92), because from inside the shipyard there was no other way
+ * out and blocking it locked the whole save.
+ */
+function sailOut() {
   // A visit does not sail (S133-C): the voyage to that yard is the travel button's job.
-  if (refuseVisit()) return;
-  // A yard in enemy hands closes the repairs, not the sailing (S92). The player has to be
-  // able to put to sea to go and take her back; blocking the departure is what used to
-  // lock the whole save, because from inside the shipyard there was no other way out.
-  // The warning still shows, so nobody sails without knowing the port is closed to them.
+  if (refuseVisit()) return false;
   const game = (() => {
     try {
       return JSON.parse(localStorage.getItem(GAME_KEY) ?? "null");
@@ -2057,6 +2061,47 @@ els.setSailBtn.addEventListener("click", () => {
   saveFleet();
   saveConfig();
   window.location.href = "./sea.html";
+  return true;
+}
+
+/**
+ * Whether the yard can put to sea right now: the same condition the button is enabled by.
+ * Escape must not do what the button would refuse, so both read this one rule.
+ */
+function canSailOut() {
+  const captain = captainShip(fleet);
+  const local = localFleet();
+  return !visitingYard() && local.ships.some((ship) => ship.id === captain?.id && !isWreck(ship));
+}
+
+els.setSailBtn.addEventListener("click", () => {
+  sailOut();
+});
+
+/**
+ * Escape in the shipyard (S157).
+ *
+ * The player asked for it in those words (verbatim): "si estas en el astillero y le das a la
+ * tecla esc vuelves al mar". Escape is the way back to the sea, with the same guards the
+ * Sail button has, so the key can never do what the button would refuse.
+ *
+ * It is also the key that dismisses whatever is open in front of the player, and that has to
+ * win: the zoomed hull picture, the yard's rename field, and the two dialogs. Without this
+ * order, Escape would sail the player out in the middle of closing a dialog.
+ */
+document.addEventListener("keydown", (event) => {
+  if (event.key !== "Escape") return;
+  if (event.defaultPrevented) return;
+  // A field being typed in owns the key: Escape there is the field's, not the screen's.
+  const active = document.activeElement;
+  if (active && (active.tagName === "INPUT" || active.tagName === "TEXTAREA" || active.tagName === "SELECT")) return;
+  // A dialog on top is dismissed by Escape, and dismissing it is not sailing.
+  if (els.eraseDialog?.open) return;
+  if (els.dockDialog && !els.dockDialog.classList.contains("is-hidden")) return;
+  // The zoomed picture is closed by its own handler, which runs before this one.
+  if (els.shipFigure?.classList.contains("is-zoomed")) return;
+  if (!canSailOut()) return;
+  sailOut();
 });
 
 /* ---------------------------------------------------------------- fleet (S7) */
