@@ -39,6 +39,10 @@ export const es = {
   "fleet.count.none": "sin naves",
   "fleet.empty": "Todavía no tenés naves. Construí la primera y añadila a la flota.",
   "fleet.captain": "capitana",
+  /* S155-H: la flota del astillero, agrupada por capitana. */
+  "fleet.captain.hulls": "{count} cascos",
+  "fleet.move": "Pasar el {name} a otra capitana",
+  "fleet.move.placeholder": "Pasar a…",
   "fleet.promote": "Capitanea esta nave",
   "fleet.isCaptain": "Capitana de la flota",
   "fleet.sails": "Zarpa con la capitana: {name}",

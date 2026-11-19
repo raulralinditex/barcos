@@ -323,6 +323,59 @@ h3 {
   font-style: italic;
 }
 
+/* S155-H: the yard's fleet grouped by captain. Each block is one command; her hulls sit
+   under it, so the player reads who answers to whom before handing a hull over. */
+.fleet-captain-block {
+  list-style: none;
+  margin: 0 0 10px;
+  padding: 6px 8px 4px;
+  border: 1px solid rgba(169, 149, 95, 0.35);
+  border-radius: 8px;
+  background: rgba(169, 149, 95, 0.06);
+}
+
+.fleet-captain-head {
+  display: flex;
+  align-items: baseline;
+  gap: 6px;
+  padding-bottom: 4px;
+  margin-bottom: 4px;
+  border-bottom: 1px solid rgba(169, 149, 95, 0.25);
+  font-size: 11.5px;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--ink-soft);
+}
+
+.fleet-captain-mark {
+  color: #a9955f;
+}
+
+.fleet-captain-name {
+  flex: 1;
+  color: var(--ink);
+  text-transform: none;
+  letter-spacing: 0;
+  font-size: 12.5px;
+}
+
+.fleet-captain-hulls {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+
+.fleet-move {
+  font: inherit;
+  font-size: 10.5px;
+  max-width: 92px;
+  padding: 1px 2px;
+  border: 1px solid rgba(169, 149, 95, 0.4);
+  border-radius: 5px;
+  background: transparent;
+  color: var(--ink-soft);
+}
+
 .fleet-item {
   display: flex;
   align-items: center;

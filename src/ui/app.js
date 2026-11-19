@@ -52,7 +52,9 @@ import {
   serializeFleet,
   shipsAvailableAtYard,
   setCaptain,
+  squadrons,
   tradingShip,
+  withShipCommand,
 } from "../model/fleet.js";
 import { conditionOf, damagedShips, priceWithPurse, repairCost, repairFleetShip, repairReport } from "../model/repair.js";
 import { buildShip, toRuntimeShip } from "../model/shipyard.js";
@@ -2213,13 +2215,42 @@ function renderFleet() {
     return;
   }
 
+  // More than one captain in this yard groups the list by command (S155-H); a single one
+  // keeps the flat list the room always had (S155-I).
+  if (squadrons(local).length > 1) {
+    renderFleetByCaptain(local);
+    renderFleetDetail();
+    return;
+  }
+
   els.fleetList.innerHTML = local.ships
-    .map((ship) => {
-      const isCaptain = ship.id === captain?.id;
-      // The captain always sails; every other hull sails if its check is on (S35).
-      const sails = isCaptain || ship.sails !== false;
-      const wreck = isWreck(ship);
-      return `
+    .map((ship) => fleetRow(ship, captain))
+    .join("");
+
+  renderFleetDetail();
+}
+
+/**
+ * One hull's row in the fleet list (S108), with her sailing check, her name and her actions.
+ *
+ * It is a function of its own because the list is now drawn twice: flat when one captain
+ * holds the whole yard, and grouped by captain when there is more than one (S155-H).
+ */
+function fleetRow(ship, captain, otherCaptains = []) {
+  const isCaptain = ship.id === captain?.id;
+  // The captain always sails; every other hull sails if its check is on (S35).
+  const sails = isCaptain || ship.sails !== false;
+  const wreck = isWreck(ship);
+  // A hull can be handed to another captain of this same yard (S155-B/H): only one that is
+  // here, and never herself. With nobody to hand her to, there is no control at all.
+  const targets = otherCaptains.filter((entry) => entry && entry.id !== captain?.id && !isWreck(entry));
+  const handover = !isCaptain && targets.length > 0
+    ? `<select class="fleet-move" data-move="${ship.id}" aria-label="${t("fleet.move", { name: ship.name })}" title="${t("fleet.move", { name: ship.name })}">
+            <option value="">${t("fleet.move.placeholder")}</option>
+            ${targets.map((entry) => `<option value="${entry.id}">${entry.name}</option>`).join("")}
+          </select>`
+    : "";
+  return `
         <li class="fleet-item${isCaptain ? " is-captain" : ""}${sails ? " is-sailing" : ""}${ship.id === refitId ? " is-refitting" : ""}${wreck ? " is-wreck" : ""}" data-ship-id="${ship.id}">
           <input class="fleet-check" type="checkbox" data-sail="${ship.id}"
             ${sails ? "checked" : ""} ${isCaptain ? "disabled" : ""}
@@ -2232,11 +2263,47 @@ function renderFleet() {
             ${wreck ? `<span class="fleet-tag fleet-tag-wreck" title="${t("fleet.wreckHint")}">${t("fleet.wreck")}</span>` : ""}
           </button>
           ${isCaptain ? `<span class="fleet-tag" title="${t("fleet.isCaptain")}">${t("fleet.captain")}</span>` : `<button class="fleet-captain-button" type="button" data-captain="${ship.id}" title="${t("fleet.promote")}">${t("shipyard.refit.captain")}</button>`}
+          ${handover}
+        </li>`;
+}
+
+/**
+ * The fleet of a yard that holds more than one captain, grouped by command (S155-H).
+ *
+ * The player asked for it in those words (verbatim): "un panel de \"tu flota\" por capitana,
+ * puedes mover los barcos entre los paneles". Each captain gets her own block and her own
+ * hulls; a hull that is not her own can be handed to another captain of this same yard, and
+ * only to one of them, because a hull does not cross the sea by herself (S155-B).
+ *
+ * With a single captain the room keeps the flat list it always had (S155-I).
+ */
+function renderFleetByCaptain(local) {
+  const blocks = squadrons(local);
+  // The captains of this yard, which is the only place a hull can be handed over to.
+  const here = blocks.map((squadron) => squadron.captain).filter(Boolean);
+  // The fleet's own captain is who the player sails, and that is not the same thing as the
+  // captain of a squadron (S155-A): a yard can hold several captains, and any of them can be
+  // the one the player takes to sea. The rows read `captain` as "the fleet's captain", so
+  // every other captain keeps the control that makes her the fleet's.
+  const leading = captainShip(fleet);
+  els.fleetList.innerHTML = blocks
+    .map((squadron) => {
+      const own = new Set(squadron.ships.map((ship) => ship.id));
+      const rows = local.ships
+        .filter((ship) => own.has(ship.id))
+        .map((ship) => fleetRow(ship, leading, here))
+        .join("");
+      return `
+        <li class="fleet-captain-block" data-captain-block="${squadron.captain.id}">
+          <div class="fleet-captain-head">
+            <span class="fleet-captain-mark">⚓</span>
+            <span class="fleet-captain-name">${squadron.captain.name}</span>
+            <span class="fleet-captain-count">${t("fleet.captain.hulls", { count: squadron.ships.length })}</span>
+          </div>
+          <ul class="fleet-captain-hulls">${rows}</ul>
         </li>`;
     })
     .join("");
-
-  renderFleetDetail();
 }
 
 /**
@@ -2587,6 +2654,24 @@ els.fortGunBtn.addEventListener("click", () => {
  * checks existed sails with everything, which is what it used to do.
  */
 els.fleetList.addEventListener("change", (event) => {
+  // Handing a hull to another captain of the same yard (S155-H). The model refuses the move
+  // when the two are not in the same place, so an illegal request leaves the fleet untouched.
+  const move = event.target.closest("[data-move]");
+  if (move) {
+    const shipId = move.dataset.move;
+    const captainId = move.value;
+    if (!shipId || !captainId) return;
+    const before = fleet;
+    fleet = withShipCommand(fleet, shipId, captainId);
+    if (fleet === before) {
+      // The model refused it: the panel goes back to the truth instead of showing a move.
+      move.value = "";
+      return;
+    }
+    saveFleet();
+    renderFleet();
+    return;
+  }
   const check = event.target.closest("[data-sail]");
   if (!check) return;
   const shipId = check.dataset.sail;

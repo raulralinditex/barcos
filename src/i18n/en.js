@@ -41,6 +41,10 @@ export const en = {
   "fleet.count.none": "no ships",
   "fleet.empty": "You own no ships yet. Build the first one and add it to the fleet.",
   "fleet.captain": "flagship",
+  /* S155-H: the yard's fleet, grouped by captain. */
+  "fleet.captain.hulls": "{count} hulls",
+  "fleet.move": "Hand the {name} to another captain",
+  "fleet.move.placeholder": "Hand to…",
   "fleet.promote": "Sail this ship",
   "fleet.isCaptain": "Fleet flagship",
   "fleet.sails": "Sails with the captain: {name}",
