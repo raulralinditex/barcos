@@ -2682,6 +2682,11 @@ input[type="number"] {
   color: var(--navy);
 }
 
+/* Start the buy and sell prices on the line below the good and its weight. */
+.market-kg + .market-price {
+  grid-column: 1;
+}
+
 /* S136: the sale side, on the sell price: green where they pay the most, red the least. */
 .market-price.is-best {
   color: #1f7a45;
