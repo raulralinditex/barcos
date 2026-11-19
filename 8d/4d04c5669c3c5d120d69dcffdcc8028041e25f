@@ -1,0 +1,21 @@
+scripts/smoke-market-price-line.mjs
+  s_a3e7d1ac4d2a8f::t_c6368d3740af00 1-31
+src/ui/styles.css
+  s_a3e7d1ac4d2a8f::t_02fa4cf7bb6be9 2685-2689
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.6",
+  "base_commit_sha": "8d4d04c5669c3c5d120d69dcffdcc8028041e25f",
+  "prompts": {},
+  "sessions": {
+    "s_a3e7d1ac4d2a8f": {
+      "agent_id": {
+        "tool": "pi",
+        "id": "01a1ef9e-2351-71d8-acaa-37c522c10151",
+        "model": "gpt-6.1-terra"
+      },
+      "human_author": "Raul Ripoll <raulral@ext.inditex.com>"
+    }
+  }
+}
