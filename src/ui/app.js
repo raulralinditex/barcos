@@ -2905,10 +2905,12 @@ renderHulls();
 renderPieceSelect();
 if (state.shipName) els.shipName.value = state.shipName;
 render();
-// The yard opens on the fleet (S97); the builder waits in the Comprar slot until a refit
-// or the buy tab asks for it.
+// The yard opens on the fleet (S97, restored by S154): a captain with hulls comes back
+// to look at her squadron, not at the shelf she buys from. Only a brand-new save, which
+// has no fleet to show, opens on Comprar. An explicit room in the URL always wins, which
+// is what the sea relies on when she lands the player back on the buy room (S109).
 // Old settings links land on their room too: config.html now redirects with the hash.
-const entryScreen = "comprar";
+const entryScreen = captain ? "flota" : "comprar";
 const targetScreen = SCREENS.includes(window.location.hash.slice(1)) ? window.location.hash.slice(1) : entryScreen;
 showScreen(targetScreen);
 try {

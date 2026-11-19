@@ -1,6 +1,6 @@
 # Juego de barcos — comercio y astilleros por zona
 
-Estado: cerrada S112-S122, sin pendientes. Cerradas además S123-S141 (ver `## Log`). Rama: `feat/comercio-y-astilleros` (se crea desde `feat/t7-combate-costados` antes del primer commit). Cierra el pendiente grande de `pendientes.md`: la carga deja de ser castigo puro y pasa a producir dinero.
+Estado: cerrada S112-S122, sin pendientes. Cerradas además S123-S141, S143-S151 y S154 (ver `## Log`). Abiertas: S152 (paneles del mar flotantes, T33), S153 (doce mercancías nuevas, T34) y S155 (varias capitanas, T35). Rama: `feat/comercio-y-astilleros` (se crea desde `feat/t7-combate-costados` antes del primer commit). Cierra el pendiente grande de `pendientes.md`: la carga deja de ser castigo puro y pasa a producir dinero.
 
 ## Specs
 
@@ -113,6 +113,30 @@ S151. **El mar guarda lo suyo, no la flota entera.** Reporte del jugador (verbat
 - **El puerto sigue leyendo lo que el mar guardó**: la condición, el `yardId` y las bajas se conservan, que es para lo que el mar guardaba la flota.
 - **Medido**: `scripts/smoke-sea-save-merge.mjs` — con la carga comprada y el mar vivo, el manifiesto sobrevive al autoguardado; el botín de un pecio sí entra; un casco comprado después de zarpar no desaparece.
 
+S152. **Los paneles del mar son flotantes: se arrastran y se pliegan.** Pedido del jugador (verbatim): "haz los paneles que se ven en el mar flotantes". Precisión (verbatim, elección entre tres opciones): "Las dos: arrastrables y plegables".
+- **Qué hay hoy**: los siete paneles del mar (`#hud` del barco, `#voyage-panel`, `#duel-panel`, `#port-panel`, `#wind-panel`, `.hud-actions` y `#minimap`) ya son overlays `position: fixed` con su esquina fija en CSS. No se pueden mover ni reducir, así que en una pantalla chica el jugador no tiene cómo despejar el agua.
+- **S152-A, el arrastre es por el título, no por el panel.** Se arrastra sólo desde el asa (`.hud-title` en los paneles con título; una barra propia en los que no lo tienen). Así el clic que pliega nunca se confunde con un arrastre, y los botones de dentro del panel (reparar, el selector de la flota) siguen recibiendo su clic.
+- **S152-B, se pliega y se despliega con un clic.** Cada panel tiene un botón de plegado en su barra; plegado deja sólo el título a la vista y el cuerpo desaparece. El estado se recuerda por panel.
+- **S152-C, la posición se guarda y no puede dejar un panel fuera de la pantalla.** Se guarda por panel en `barcos:sea-layout:v1`; al aplicar una posición guardada se acota al área visible menos el tamaño del panel, así que un cambio de tamaño de ventana o un guardado viejo no esconde un panel donde el jugador no puede alcanzarlo. Un guardado roto o ausente devuelve el panel a su esquina de CSS.
+- **S152-D, el minimapa entra en el mismo régimen**: es un panel más de la pantalla del mar y se arrastra y se pliega igual, aunque no tenga título. Sigue siendo un canvas de 170 px.
+- **S152-E, un botón devuelve todo a su sitio.** «Ordenar paneles» borra el diseño guardado y devuelve cada panel a su esquina original, con todos desplegados.
+- **S152-F, no se toca nada de lo que los paneles dicen.** Los números, las barras, el roster del combate y el panel de puerto se pintan igual; esto sólo cambia dónde y con qué tamaño se ven. El `signature` del roster y el repintado del puerto no se tocan.
+- **S152-G, i18n es/en** del asa, el plegado y el botón de ordenar.
+
+S153. **El mercado tiene doce mercancías más, repartidas por origen y demanda.** Pedido del jugador (verbatim): "añade 10 o 12 mercancias mas al mercado".
+- **S153-A, doce bienes nuevos en datos**: `COMMODITIES` en `src/data/naval-data.js` pasa de 5 a 17 entradas. Cada una declara `id`, `nameKey`, `kgPerUnit` y `baseGold`, como las cinco que ya están.
+- **S153-B, el peso y el precio cubren la escala entera**: desde un bien voluminoso y barato (maderas, 640 kg/unidad, ~9 doblones) hasta uno pequeño y carísimo (diamantes, 4 kg/unidad, ~1400 doblones). Los doce se ordenan por densidad de valor, así que el jugador elige entre bodega y bolsa, no entre bienes equivalentes.
+- **S153-C, cada astillero gana entre tres y cuatro bienes propios.** El mercado de cada uno se extiende manteniendo la regla que ya existe: un bien es barato donde se produce y caro donde falta. Ningún astillero lista el catálogo entero (el smoke de S119 lo exige y sigue valiendo).
+- **S153-D, la regla del viaje sigue pagando**: para cada uno de los diecisiete bienes, comprar en la costera y vender en el abismo sigue dando al menos el triple. Es el test de S113 y no se relaja.
+- **S153-E, la ganancia por viaje se mantiene en rango**: el margen de los doce nuevos no rompe el equilibrio de los cinco que ya estaban; ningún bien nuevo paga menos de 3× ni más de 12× en el viaje largo.
+- **S153-F, i18n es/en** de los doce nombres nuevos.
+
+S154. **El astillero abre en el tab de la flota, no en Comprar.** Reporte del jugador (verbatim): "cuando entro al astillero, me muestra el tab de comprar barco en vez del tab de flota".
+- **La causa**: `d895d04` (S105) cambió `const entryScreen = captain ? "flota" : "comprar"` por `const entryScreen = "comprar"` y el comentario que quedó encima siguió diciendo «El astillero abre en la flota (S97)». Desde entonces un capitán con flota caía siempre en la estantería de cascos al abrir el astillero, y el botón decía «Añadir a la flota» en vez de ofrecer su escuadra.
+- **S154-A, la regla de S97 vuelve**: con flota, el astillero abre en Flota; sin flota (guardado nuevo) abre en Comprar, porque no hay nada que mirar en la lista.
+- **S154-B, el hash sigue mandando**: una sala nombrada en la URL gana siempre, que es de lo que depende el mar al devolver al jugador a la sala de compra después de una travesía (S109).
+- **S154-C, no se toca nada más**: las cuatro salas siguen abriendo por su pestaña, el panel de buque y aparejo sigue siendo un solo DOM, y comprar una nave deja la pantalla donde está (S105).
+
 ## Tasks
 
 - T1 — S112: registro de astilleros, `shipyardAt`/`currentShipyard` y zona derivada. Ruta: inline. Commit: `a4b7b1e`.
@@ -137,6 +161,9 @@ S151. **El mar guarda lo suyo, no la flota entera.** Reporte del jugador (verbat
 - T20 — S133: selector de astilleros en la barra del título (`#yard-select`), nombre editable por astillero (`src/model/shipyard-names.js`), visita de sólo mirar con las acciones de presencia deshabilitadas y el botón `#yard-travel-btn`, viaje automático puro (`src/model/voyage.js`: `voyageQuote`/`arriveAt`), i18n es/en, tests nuevos y smoke del selector. Ruta: worker.
 
 - T32 — S151: `mergeSeaFleet(stored, live, { removed, holdsChanged })` en `src/model/fleet.js`, el autoguardado del mar cableado a él (`src/ui/sea.js`), `test/sea-fleet-merge.test.js` y el smoke `scripts/smoke-sea-save-merge.mjs`. Ruta: worker con contrato cerrado. Commit: `40d1948`.
+- T33 — S152: `src/model/sea-panels.js` (posición acotada, plegado, normalización del diseño guardado) + `test/sea-panels.test.js`, el arrastre y el plegado en `src/ui/sea.js`, las asas y el botón de ordenar en `sea.html`, estilos, i18n es/en y el smoke `scripts/smoke-sea-panels.mjs`. Ruta: worker con contrato cerrado.
+- T34 — S153: doce entradas nuevas en `COMMODITIES` y sus mercados en `SHIPYARDS` (`src/data/naval-data.js`), los doce nombres en `src/i18n/es.js` y `src/i18n/en.js`, y un test nuevo `test/commodity-catalogue.test.js` que fija el reparto por astillero y el margen del viaje. Ruta: inline.
+- T35 — S154: la regla de entrada en `src/ui/app.js` y el smoke `scripts/smoke-yard-entry.mjs`. Ruta: inline.
 
 ## Log
 
@@ -355,3 +382,10 @@ L40 (cierre de S150): `npm test` **887/887** (879 previos + 9 nuevos en `test/zo
 L41 (pedido de S151, verbatim): "las cantidades de las mercacias compradas en el mercado, cambian aleatoriamente, sin vender ni comprar nada" y, sobre cuándo pasa, "pasa cuando vuelvo al mar y luego retorno al astillero". El jugador no estaba seguro de si tenía dos pestañas ("No estoy seguro / puede que sí"), así que el arreglo ataca la causa de raíz —un escritor no debe pisar lo que no posee— y se verifica en los dos escenarios.
 
 L42 (cierre de S151, commit `40d1948`): `npm test` **898/898** (887 previos + 11 nuevos en `test/sea-fleet-merge.test.js`). RED observado con `git stash` del arreglo y el smoke nuevo puesto: el autoguardado del mar pisa la compra y devuelve la billetera, medido como «manifest: sal:5» (la compra era de 8), «gold: 199919 -> 199950» y «stock: 5» (el puerto debía estar en 8). Verde con el arreglo: la carga, el peso y el oro sobreviven dos autoguardados, y tras recargar el astillero sigue mostrando «Bodega: 2560 de 112.500 kg» con el stock en 8. Smokes en 0: sea-save-merge, sea, market, market-ship, sale, yard-switch, levels, supply-per-hull, refit, refit-autosave, anchor-yard, combat, safe-zone, fort, fleet. **Límite conocido**: el arreglo se probó con el mar en otra pestaña, que es el escenario medido; el mismo camino cubre el ida y vuelta en una sola pestaña porque el mar relee el guardado en cada escritura, pero no se midió por separado.
+
+L43 (pedido de S152, verbatim): "haz los paneles que se ven en el mar flotantes". Precisión, elegida entre tres opciones: "Las dos: arrastrables y plegables", con la nota de que el arrastre vaya sólo por el título para no confundirse con el clic que pliega.
+
+L44 (pedido de S153, verbatim): "añade 10 o 12 mercancias mas al mercado".
+
+
+L45 (pedido de S154, verbatim): "cuando entro al astillero, me muestra el tab de comprar barco en vez del tab de flota". Causa hallada en el historial: `d895d04` (S105) reemplazó `captain ? "flota" : "comprar"` por `"comprar"` y dejó el comentario de S97 encima. RED observado con el smoke nuevo sobre la base: «S154: the yard must open on the fleet, it opened on comprar»; verde con la regla restaurada, y las dos comprobaciones del hash y del guardado nuevo pasan en los dos estados. `npm test` **898/898** (sin tests de modelo: es la regla de entrada de la UI). Smokes en 0: yard-entry, tabs, buy-hull, shipyard-buttons, shipyard-layout, refit, refit-boot, ui, fleet, sale, market, anchor-yard, dock, auto-repair, manual-repair, purse, start-gold.
