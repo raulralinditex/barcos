@@ -316,3 +316,12 @@ S148. **En el mercado el color de compra va en la palabra «Comprar», no en el 
 - T29 — S148: el marcado de la fila en `src/ui/app.js`, las dos reglas de color en `src/ui/styles.css` y la actualización de `scripts/smoke-yard-switch.mjs`. Ruta: inline.
 
 L38 (cierre de S148): `npm test` **879/879** (sin tests de modelo: el veredicto no cambió, cambió dónde se pinta). RED observado restaurando el código base con el smoke nuevo puesto: falla con «S135: some good must be the cheapest of our markets and read green» y las tres comprobaciones siguientes, porque en la base el color está en el nombre y la columna de compra no tiene ninguna clase. `scripts/smoke-yard-switch.mjs` se actualizó para leer el veredicto en el precio de compra y **agrega** la comprobación de que el nombre ya no lleva color (S148). Smokes en 0: yard-switch, market, market-ship, i18n.
+
+S149. **En el mercado, el precio de compra arranca en la línea de abajo, no al lado del nombre.** Pedido del jugador (verbatim): "pon el comprar en otra linea".
+- **Qué se veía**: la fila del mercado es una grilla, y `.market-kg` (el peso) y `.market-price` (la cifra de compra) compartían la segunda columna. El peso es corto y la cifra quedaba pegada a su derecha, así que «Comprar» se leía como parte de la misma línea del nombre y el peso.
+- **La regla**: `.market-kg + .market-price` empieza en la columna 1, así que la cifra de compra baja a la línea siguiente y el peso queda solo arriba. Es una regla de grilla, no un cambio de marcado: el orden del DOM y las clases no se tocan.
+- **Nada más se mueve**: el precio de venta y el stock siguen en la línea del nombre (S136/S148 intactas) y los veredictos de color siguen en su cifra.
+- **Se mide a tres anchos**: la regla tiene que valer en escritorio y en móvil, no sólo donde el jugador la miró.
+- T30 — S149: la regla de grilla en `src/ui/styles.css` y el smoke `scripts/smoke-market-price-line.mjs`. Ruta: inline.
+
+L39 (cierre de S149): `npm test` **879/879** (sin tests de modelo: es una regla de grilla). RED observado con `git stash` del CSS y el smoke nuevo puesto: la comprobación falla porque el precio de compra comparte el borde superior con el nombre. Verde con la regla puesta a 1500, 900 y 320 px. Smokes en 0: market-price-line, market, sale, yard-switch, market-ship.
