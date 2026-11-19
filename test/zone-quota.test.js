@@ -193,3 +193,98 @@ test("S150: a replacement never takes an id the sea is already using", () => {
   assert.equal(new Set(ids).size, ids.length, `two sails answer to one id: ${ids.join(", ")}`);
   assert.equal(ids.length, enemiesPerZone(sailed.level));
 });
+
+/* ------------------------------------------------------------------ S162 */
+
+test("S162: seeding a new level does not erase a prize that struck", () => {
+  // The bug: `seedLevel` dropped every sail of the previous level, including one that had
+  // already struck her colours and was waiting to be boarded. Measured on the real screen:
+  // the enemy went from `hull 95` to gone in one tick, was never recorded as defeated, and
+  // the capture the player had earned simply vanished.
+  const world = createWorld(4, { speedKn: 6 }, 0);
+  const struck = {
+    id: 501,
+    type: "enemy",
+    x: 260,
+    y: 80,
+    hullId: "patache",
+    zoneId: "costera",
+    level: 1,
+    engaged: true,
+    heading: 0,
+    currentSpeedKn: 0,
+    drift: { heading: 0, speedKn: 1 },
+    combat: {
+      status: "surrendered",
+      condition: { hull: 51, rigging: 95, crew: 30, morale: 100 },
+      crew: { marino: 14, artillero: 2, soldado: 4 },
+      initialCrew: 20,
+      crewMin: 6,
+      pieces: [],
+      hullToughness: 1,
+    },
+  };
+  const withPrize = { ...world, encounters: [struck] };
+
+  const next = seedLevel(withPrize, 2);
+
+  const survivor = next.encounters.find((entry) => entry.id === 501);
+  assert.ok(survivor, "a prize that struck her colours must survive the new level");
+  assert.equal(survivor.combat?.status, "surrendered", "she must still be a prize");
+});
+
+test("S162: a sail still in the fight is not erased by the new level either", () => {
+  const world = createWorld(4, { speedKn: 6 }, 0);
+  const fighting = {
+    id: 502,
+    type: "enemy",
+    x: 260,
+    y: 80,
+    hullId: "patache",
+    zoneId: "costera",
+    level: 1,
+    engaged: true,
+    heading: 0,
+    currentSpeedKn: 0,
+    drift: { heading: 0, speedKn: 1 },
+    combat: {
+      status: "fighting",
+      condition: { hull: 80, rigging: 90, crew: 90, morale: 100 },
+      crew: { marino: 14, artillero: 2, soldado: 4 },
+      initialCrew: 20,
+      crewMin: 6,
+      pieces: [],
+      hullToughness: 1,
+    },
+  };
+  const next = seedLevel({ ...world, encounters: [fighting] }, 2);
+  assert.ok(
+    next.encounters.some((entry) => entry.id === 502),
+    "a hull mid-fight must not be erased under the player's guns",
+  );
+});
+
+test("S162: a sail of the previous level that is still drifting is still cleared", () => {
+  // The rule the old filter was for: the level owns its quota, so a sail from the level just
+  // finished does not linger on the new one. Only the ones still in play are kept.
+  const world = createWorld(4, { speedKn: 6 }, 0);
+  const drifting = {
+    id: 503,
+    type: "enemy",
+    x: 2000,
+    y: 0,
+    hullId: "patache",
+    zoneId: "costera",
+    level: 1,
+    heading: 0,
+    currentSpeedKn: 0,
+    drift: { heading: 0, speedKn: 1 },
+  };
+  const next = seedLevel({ ...world, encounters: [drifting] }, 2);
+  assert.equal(
+    next.encounters.some((entry) => entry.id === 503),
+    false,
+    "an untouched sail of the old level must not carry over",
+  );
+  assert.equal(next.level, 2);
+});

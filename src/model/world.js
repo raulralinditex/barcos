@@ -771,6 +771,21 @@ export function normaliseEffort(value) {
 }
 
 /**
+ * Whether a sail survives the seeding of a new level (S162).
+ *
+ * A hull the sea has not finished with belongs to the player's voyage, not to the level that
+ * is being replaced: one that has struck her colours is a prize still to be taken, and one
+ * still fighting is a fight still on. Everything else — a sail that is only drifting, with no
+ * combat of its own — is the previous level's quota and goes with it.
+ */
+function keepsAcrossLevels(encounter) {
+  if (!encounter || encounter.type !== "enemy") return false;
+  const status = encounter.combat?.status;
+  if (status === "surrendered") return true;
+  return status === "fighting";
+}
+
+/**
  * Seed the quota of `level` in the water the captain is in (S140-B/S150).
  *
  * The level caps each zone, so a level is seeded where it starts: the sails of the previous
@@ -795,8 +810,14 @@ export function seedLevel(world, level) {
   };
 
   const finished = defeatedEnemyIds(base);
-  // The sails of the previous level are not part of this one.
-  const encounters = (base.encounters ?? []).filter((entry) => entry.type !== "enemy");
+  // The sails of the previous level are not part of this one, with two exceptions that are
+  // the player's and not the level's (S162): a hull that has struck her colours is a prize
+  // waiting to be boarded, and a hull still in the fight is one the player has already spent
+  // shot and blood on. Erasing either of them took away something the player had earned: the
+  // capture vanished and no record of the victory was left behind.
+  const encounters = (base.encounters ?? []).filter(
+    (entry) => entry.type !== "enemy" || keepsAcrossLevels(entry),
+  );
   const levelEnemies = [];
   const ship = base.ship ?? { x: 0, y: 0 };
   for (let i = 0; i < quota; i += 1) {
