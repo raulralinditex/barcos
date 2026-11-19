@@ -187,6 +187,73 @@ export function withLiveCondition(fleet, live) {
   return result;
 }
 
+/**
+ * The fleet the sea is allowed to write (S151).
+ *
+ * The sea keeps its own copy of the fleet from the moment it opens, and its autosave
+ * used to write that whole copy back. A copy is a photograph of the past: cargo bought in
+ * the yard afterwards was overwritten with the value the sea remembered, and the player
+ * watched her hold empty itself and the port's stock return to rest without selling a
+ * single barrel.
+ *
+ * The rule is ownership, hull by hull. The voyage owns what it observed or did: the
+ * condition and the living crew of the hulls that fought, where each hull is moored, and
+ * the hold of the hulls whose cargo the sea itself changed (a prize taken aboard).
+ * Everything else — the name, the hull, the guns, a refit, the price — belongs to the
+ * yard and is read from the stored sheet, never from the sea's stale copy.
+ *
+ * A hull that only exists in `stored` was bought after the sea opened, so the sea never
+ * saw her: she is kept untouched instead of being deleted by omission. A hull that only
+ * exists in `live` is a prize that joined the squadron, and she is appended. `removed`
+ * lists the hulls the voyage lost.
+ *
+ * Total by construction: a missing, broken or duplicated input yields a sane fleet and
+ * never throws, because this runs inside the autosave.
+ */
+export function mergeSeaFleet(stored, live, { removed = [], holdsChanged = [] } = {}) {
+  const storedShips = Array.isArray(stored?.ships) ? stored.ships : [];
+  const liveShips = Array.isArray(live?.ships) ? live.ships : [];
+  const gone = new Set((Array.isArray(removed) ? removed : []).filter((id) => typeof id === "string"));
+  const holds = new Set((Array.isArray(holdsChanged) ? holdsChanged : []).filter((id) => typeof id === "string"));
+
+  const byId = new Map();
+  for (const ship of storedShips) {
+    if (!ship || typeof ship.id !== "string" || gone.has(ship.id) || byId.has(ship.id)) continue;
+    byId.set(ship.id, ship);
+  }
+
+  for (const ship of liveShips) {
+    if (!ship || typeof ship.id !== "string" || gone.has(ship.id)) continue;
+    const base = byId.get(ship.id);
+    if (!base) {
+      // A hull the sea added (a captured prize): the voyage owns her whole entry.
+      byId.set(ship.id, ship);
+      continue;
+    }
+    // A hull both sides know: the sea only brings back what she observed or did.
+    byId.set(ship.id, {
+      ...base,
+      ...(ship.condition ? { condition: { ...base.condition, ...ship.condition } } : {}),
+      ...(ship.crewAlive ? { crewAlive: { ...ship.crewAlive } } : {}),
+      ...(ship.yardId !== undefined ? { yardId: ship.yardId } : {}),
+      ...(holds.has(ship.id)
+        ? {
+            manifest: Array.isArray(ship.manifest) ? ship.manifest.map((entry) => ({ ...entry })) : [],
+            cargoKg: Number.isFinite(Number(ship.cargoKg)) ? Number(ship.cargoKg) : 0,
+          }
+        : {}),
+    });
+  }
+
+  const ships = [...byId.values()];
+  const storedCaptain = typeof stored?.captainId === "string" ? stored.captainId : null;
+  const liveCaptain = typeof live?.captainId === "string" ? live.captainId : null;
+  const captainId = [storedCaptain, liveCaptain].find((id) => id && ships.some((ship) => ship.id === id))
+    ?? ships[0]?.id
+    ?? null;
+  return { ships, captainId };
+}
+
 export function withShipCondition(fleet, shipId, { condition, crewAlive } = {}) {
   const ships = fleet?.ships ?? [];
   if (!ships.some((ship) => ship.id === shipId)) return { ...fleet, ships };

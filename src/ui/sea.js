@@ -40,6 +40,7 @@ import {
   captainShip,
   deserializeFleet,
   fleetUpkeep,
+  mergeSeaFleet,
   removeShip,
   withLiveCondition,
   shipsSailingAtSea,
@@ -252,6 +253,10 @@ let world = null;
 let gold = 0;
 let goldEarned = 0;
 let markets = {};
+// What the sea has not yet applied to the stored record (S151): the clock the ports recover
+// on, and the purse as the sea last agreed it with that record.
+let marketElapsedS = 0;
+let goldSynced = 0;
 let playerCombat = null;
 /**
  * The crew's reserve of every hull at sea, in seconds of game time, keyed by hull id
@@ -288,20 +293,82 @@ function shipDays(shipId) {
   return (fleet?.ships ?? []).find((ship) => ship.id === shipId)?.days ?? 0;
 }
 
+/**
+ * What the voyage owns of the fleet sheet (S151).
+ *
+ * `lostHullIds` are the hulls this voyage took out of the fleet, and `seaHoldsChanged`
+ * are the hulls whose hold the sea itself loaded (a prize taken aboard, S115) or emptied
+ * (a hull kept as a wreck, S116). Both are the exceptions the merge is allowed to write;
+ * everything else about a hull belongs to the yard. Neither set is ever inferred from a
+ * diff, so the sea cannot claim a hold it did not touch.
+ *
+ * A lost hull stays listed for the whole voyage: she must not come back from the stored
+ * sheet on the next autosave. A claimed hold is consumed by the write that publishes it —
+ * once the sheet agrees with the sea, the claim has done its job, and keeping it would let
+ * the sea overwrite a purchase made afterwards, which is the very bug this closes.
+ */
+const lostHullIds = new Set();
+const seaHoldsChanged = new Set();
+
 /* ---------------------------------------------------------------- persistence */
 
 /** Write the fleet back after it changed (a lost escort, a repair). */
 function saveFleetState() {
+  writeFleetSave();
+}
+
+/**
+ * The only place the sea writes the fleet sheet (S151).
+ *
+ * The page's `fleet` is a copy taken when the sea opened, and writing it whole erased
+ * whatever the yard bought afterwards: the player watched her hold empty itself and the
+ * port's stock return to rest without selling a barrel. So the sheet is read fresh and
+ * merged: the voyage contributes only what it observed or did, and every other field of
+ * every hull stays as the yard last wrote it.
+ */
+function writeFleetSave() {
   try {
+    const stored = deserializeFleet(localStorage.getItem(FLEET_KEY), legacyShip);
+    const live = withLiveCondition(fleet, [
+      { id: runtimeShip?.id, combat: playerCombat },
+      ...escorts.map((escort) => ({ id: escort.id, combat: escort.combat })),
+    ]);
+    fleet = mergeSeaFleet(stored, live, {
+      removed: [...lostHullIds],
+      holdsChanged: [...seaHoldsChanged],
+    });
     localStorage.setItem(FLEET_KEY, serializeFleet(fleet));
+    // The sheet now agrees with the sea about those holds, so the claim is spent.
+    seaHoldsChanged.clear();
   } catch {
     /* storage disabled: the change still lives in memory */
   }
 }
 
+/**
+ * Settle the two figures the yard also writes into the sea save (S151).
+ *
+ * The purse and the ports' stock live in the same record the yard edits. The sea only ever
+ * moves them by what it did — gold earned or spent on the voyage, and the clock that lets a
+ * port recover — so it applies those movements to the record as it stands now instead of
+ * writing the figures it remembered from when it opened. Otherwise a purchase made in the
+ * yard while the sea was alive was refunded and the port's stock rolled back.
+ */
+function settleSharedGameFigures() {
+  const stored = loadSavedGame();
+  if (stored) {
+    gold = Math.max(0, normaliseGold(stored.gold) + (gold - goldSynced));
+    markets = normaliseMarkets(stored.markets);
+  }
+  markets = recoverMarkets(markets, marketElapsedS);
+  marketElapsedS = 0;
+  goldSynced = gold;
+}
+
 function saveGame() {
   if (!world) return;
   try {
+    settleSharedGameFigures();
     world = { ...world, gold: goldEarned };
     const payload = {
       gold,
@@ -376,22 +443,9 @@ function saveGame() {
     // The damage also lives on the hull itself, so it survives the way back to the
     // shipyard and a change of captain (S23). Every hull, not only the captain (S90): an
     // escort's damage used to stay in the sea save alone, so the shipyard quoted her
-    // repair from a stale sheet.
-    fleet = withLiveCondition(fleet, [
-      { id: runtimeShip?.id, combat: playerCombat },
-      ...escorts.map((escort) => ({ id: escort.id, combat: escort.combat })),
-    ]);
-    // Her hold rides with her (S114): the cargo bought in a yard or taken off a prize is
-    // what the market sells later, so the sea save writes it on the hull it belongs to.
-    fleet = {
-      ...fleet,
-      ships: fleet.ships.map((ship) =>
-        ship.id === runtimeShip?.id
-          ? { ...ship, manifest: runtimeShip.manifest ?? [], cargoKg: runtimeShip.cargoKg ?? 0 }
-          : ship,
-      ),
-    };
-    localStorage.setItem(FLEET_KEY, serializeFleet(fleet));
+    // repair from a stale sheet. The hold of a hull the sea loaded rides with her too
+    // (S114), but only that one: see `writeFleetSave` for why the sheet is merged (S151).
+    writeFleetSave();
   } catch {
     /* storage disabled: the voyage continues in memory */
   }
@@ -2021,16 +2075,26 @@ function loseHull(currentFleet, shipId, status) {
   // A hull that struck her colours was not lost to the sea: she can still be taken, and
   // the wreck switch is about sinking, so it does not apply to her.
   const wreck = entry && status === "sunk" ? wreckHull(entry) : null;
-  if (!wreck) return removeShip(currentFleet, shipId);
-  return {
-    ...currentFleet,
-    ships: currentFleet.ships.map((ship) => (ship.id === shipId ? wreck : ship)),
-    // A wreck cannot captain: the fleet hands over to a hull that still floats.
-    captainId:
-      currentFleet.captainId === shipId
-        ? (currentFleet.ships.find((ship) => ship.id !== shipId && !isWreck(ship))?.id ?? null)
-        : currentFleet.captainId,
-  };
+  // A hull that leaves the fleet for good is the voyage's own doing, so the merge is
+  // allowed to drop her from the stored sheet (S151). A wreck stays: she is still a
+  // fleet entry, floated again in a yard.
+  if (wreck) {
+    // Her hold went down with her (S116), and that is the voyage's doing, not the yard's:
+    // without claiming the hold here the merge would keep the cargo the stored sheet still
+    // remembers, and floating her again would bring back goods that are at the bottom.
+    seaHoldsChanged.add(shipId);
+    return {
+      ...currentFleet,
+      ships: currentFleet.ships.map((ship) => (ship.id === shipId ? wreck : ship)),
+      // A wreck cannot captain: the fleet hands over to a hull that still floats.
+      captainId:
+        currentFleet.captainId === shipId
+          ? (currentFleet.ships.find((ship) => ship.id !== shipId && !isWreck(ship))?.id ?? null)
+          : currentFleet.captainId,
+    };
+  }
+  lostHullIds.add(shipId);
+  return removeShip(currentFleet, shipId);
 }
 
 /**
@@ -2127,7 +2191,10 @@ function collectCargoFrom(encounter, status) {
   const awarded = awardHold(runtimeShip, spoils);
   runtimeShip = awarded.ship;
   // The hull the player sails is a fleet entry too, so her hold is written where the
-  // market will read it (S118).
+  // market will read it (S118). The voyage loaded this hold itself, so it is one of the
+  // two things the merge is allowed to write over the yard's sheet (S151): a prize taken
+  // aboard is a real change of the voyage, and a hold bought in port is not.
+  seaHoldsChanged.add(runtimeShip.id);
   fleet = {
     ...fleet,
     ships: fleet.ships.map((ship) =>
@@ -2644,7 +2711,9 @@ function frame(now) {
       announcedLevel = world.level;
       pendingLevel = world.level;
     }
-    markets = recoverMarkets(markets, world.timeS - previousTime);
+    // The ports recover on the world clock; the elapsed time is applied to the record the
+    // yard last wrote when the sea saves (S151).
+    marketElapsedS += Math.max(0, world.timeS - previousTime);
     // The voyage eats the crew's reserve (S67). It runs on the world clock, so a
     // fast-forward burns it faster, exactly like everything else the sea does.
     if (!gameOver) burnVoyageSupply(dt);
@@ -2746,6 +2815,7 @@ function boot() {
   world = { ...world, ship: { ...world.ship, speedKn: runtimeShip.speedKn, turnFactor: shipTurnFactor(runtimeShip.hullId, runtimeShip.loadFraction) } };
 
   gold = normaliseGold(savedGame?.gold);
+  goldSynced = gold;
   // The reserves are seeded once the squadron is built, below (S132): each hull needs her
   // own id before her own `days` can be read.
 
