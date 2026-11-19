@@ -1,0 +1,30 @@
+scripts/smoke-hold-buy.mjs
+  s_87644080b176a0::t_f4a0a92852ea23 72,75,77
+src/i18n/es.js
+  s_87644080b176a0::t_830fcf1d717479 698-699,702-705,707-709,711,713-714
+test/commodity-catalogue.test.js
+  s_87644080b176a0::t_45e40d168c7a1b 1-17,20-94,96,98,101-103
+  s_87644080b176a0::t_cae2fa4ff0bf9e 18-19,95,97,99-100
+src/data/naval-data.js
+  s_87644080b176a0::t_b4ed3deabdf818 685-697,711-734,741-758,765-770,777-788,826-833,847-854,868-875
+src/i18n/en.js
+  s_87644080b176a0::t_830fcf1d717479 701-702,705-708,710-712,714,716-717
+scripts/smoke-market.mjs
+  s_87644080b176a0::t_12e7511b27b9fe 297,299,301,304,324,330-331,335,338
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.6",
+  "base_commit_sha": "e810d7e588a61f76152ff1422d8b43cd4dc1827d",
+  "prompts": {},
+  "sessions": {
+    "s_87644080b176a0": {
+      "agent_id": {
+        "tool": "pi",
+        "id": "01a1f522-62b3-72af-941b-b101d589ddf0",
+        "model": "deepseek-v4.1-flash_high"
+      },
+      "human_author": "Raul Ripoll <raulral@ext.inditex.com>"
+    }
+  }
+}
