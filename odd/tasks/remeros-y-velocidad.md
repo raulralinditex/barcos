@@ -21,7 +21,7 @@ S159. **Los remos son propulsión de respaldo, no un motor extra.** Pedido (verb
 - T42 — S159-G: los campos `oarBanks` y `oarMaxKn` en los siete cascos y su normalización en la derivación de `src/data/naval-data.js`. Ruta: inline.
 - T43 — S159-A/B/F/I: `stepHull` con el `max()`, el factor de giro por remo y el esfuerzo por escuadra en `src/model/world.js`, con su compatibilidad. Ruta: inline.
 - T44 — S159-E/F: el cableado en `src/ui/sea.js` (esfuerzo por casco, entrada al mundo) y el indicador del HUD. Ruta: inline.
-- T45 — S159-H: el campo de remeros oculto en los cascos sin bancos (`src/ui/app.js`), i18n es/en. Ruta: inline.
+- T45 — S159-H: el campo de remeros oculto en los cascos sin bancos (`src/ui/app.js`), i18n es/en. Ruta: inline. Commit: ver L56.
 - T46 — el smoke `scripts/smoke-oars.mjs` y la verificación de la suite completa. Ruta: inline.
 
 ## Log
@@ -50,3 +50,22 @@ L55 (cierre de S159, commits `8beb5f5` y `3898109`). `npm test` **971/971** con 
 **El ajuste de velocidad del documento de `/Users/raulripoll/Downloads` quedó pendiente, y es deliberado.** La medición mostró que la tabla del documento no es función de la eslora (la carabela de 20 m es más rápida que la galeaza de 50 m), así que el ajuste por mínimos cuadrados daba un exponente de 0,09 —casi plano— que destruye la física. La forma fiel sería `Vref = 2,43·√L · k_casco`, con un `k` por casco. **No se implementó** porque reescribe `test/ship-model.test.js:131`, que fija la fórmula vigente, y esa decisión quedó sin respuesta.
 
 **Estado de las dos fichas:** S159 (remos) cerrada en modelo y física; falta el cableado en la pantalla del mar (el esfuerzo por casco no se pasa todavía a `stepHull` desde `sea.js`) y el indicador del HUD.
+
+L56 (cierre de S159-H / T45, el cableado que faltaba de la ficha). `npm test` **974/974** (971 + 3 en `test/oars.test.js`).
+
+**Pedido del jugador, verbatim**: "en el panel de aparejos, si ese buque, los remeros no inportan, esconde el editor de añador remeros". Es S159-H tal como se había especificado en L51 ("los cascos que no tienen remos no aparecen en la interface esa posibilidad"), que nunca se había ejecutado: `renderCrew` recorría los cuatro roles sin mirar el casco.
+
+**La regla vive en el modelo, no en la pantalla** (`src/model/oars.js`):
+
+| Pieza | Qué hace |
+|---|---|
+| `crewRolesForHull(hull, roles)` | devuelve los roles que el casco puede sentar; sin bancos, sin `remero` |
+| `withoutUnseatableRowers(hull, crew)` | la misma tripulación sin los remeros que el casco no puede sentar |
+
+**Dónde se lee**: `renderCrew` (`src/ui/app.js`) arma las filas desde `crewRolesForHull`, y el casco se resuelve con `hullById(state.hullId)`, así que elegir otro casco cambia lo que ofrece el panel sin otra regla. `withoutUnseatableRowers` se aplica en los tres momentos en que la tripulación puede quedar sin asiento: elegir casco, cargar un guardado y `applyCountryToLoadout`. Los otros roles nunca se tocan.
+
+**Evidencia**: RED observado dos veces. En el modelo, `test/oars.test.js` no podía ni importar las funciones (`SyntaxError: does not provide an export named 'crewRolesForHull'`). En pantalla, `scripts/smoke-oars-editor.mjs` sobre la base falla las tres comprobaciones («a nao armada must not offer rowers, it offered ["marino","artillero","soldado","remero"]», y los 120 remeros sobreviven al cambio de casco); con el arreglo pasa en 0. Verde además: `smoke-refit`, `smoke-shipyard-buttons`, `smoke-ui`, `smoke-i18n`.
+
+**No se tocó la regla del aviso.** `rowers-without-galley` sigue emitiéndose en `ship-model.js` y su test sigue verde: el aviso cubre el guardado viejo y la reforma, la pantalla cubre al jugador que arma un casco.
+
+**Tres smokes fallan también en la base** (comprobado con `git stash` de este trabajo): `smoke-two-hulls` y `smoke-buy-hull` agotan el tiempo esperando `#launch-btn`, y `smoke-tabs` cuenta 23 bloques de Configuración donde espera otro número. Son previos y ajenos a esta ficha; quedan reportados, no tocados.
