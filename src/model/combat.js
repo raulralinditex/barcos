@@ -18,6 +18,7 @@
 
 import { AMMO, ammoById, hullById, pieceById } from "../data/naval-data.js";
 import { referenceSpeedKn } from "./ship-model.js";
+import { garrisonSurrenderPct } from "./boarding.js";
 import { mulberry32, stepHull } from "./world.js";
 import { LEVELS } from "./levels.js";
 import { hullTurnFactor } from "./turning.js";
@@ -767,7 +768,7 @@ export function refreshStatus(combatant) {
 function updateStatus(combatant) {
   if (combatant.condition.hull <= 0) {
     combatant.status = "sunk";
-  } else if (combatant.condition.crew <= COMBAT.surrenderCrewPct) {
+  } else if (combatant.condition.crew <= garrisonSurrenderPct(combatant)) {
     combatant.status = "surrendered";
   }
 }

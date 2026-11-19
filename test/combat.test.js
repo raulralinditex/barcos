@@ -2,6 +2,7 @@ import test from "node:test";
 import assert from "node:assert/strict";
 
 import { ammoById, hullById, pieceById } from "../src/data/naval-data.js";
+import { garrisonSurrenderPct } from "../src/model/boarding.js";
 import {
   COMBAT,
   accuracyModifier,
@@ -289,12 +290,56 @@ test("S5: rigging damage slows the ship; crew damage kills crew", () => {
 });
 
 test("S5: losing the crew below the surrender threshold strikes the colours", () => {
+  // S160-D moved this rule: the threshold is not the constant any more, it is what the
+  // soldiers holding the deck leave of it. A hull with no soldiers keeps exactly the
+  // threshold the game always had, which is the case this test now pins.
   const combatant = createPlayerCombatant(starterRuntimeShip());
+  combatant.crew.soldado = 0;
   const total = combatant.initialCrew;
-  const toKill = Math.ceil(total * (1 - COMBAT.surrenderCrewPct / 100));
+  const threshold = garrisonSurrenderPct(combatant);
+  assert.equal(threshold, COMBAT.surrenderCrewPct, "a hull with no soldiers breaks where it always did");
+  const toKill = Math.ceil(total * (1 - threshold / 100));
   applyDamage(combatant, { hull: 0, rigging: 0, crew: toKill * COMBAT.casualtyPoints + 1 });
-  assert.ok(combatant.condition.crew <= COMBAT.surrenderCrewPct);
+  assert.ok(combatant.condition.crew <= threshold);
   assert.equal(combatant.status, "surrendered");
+});
+
+test("S160-D: soldiers holding the deck make the hull harder to break", () => {
+  // The same hull, with her soldiers aboard: she has to be beaten further before she strikes.
+  const bare = createPlayerCombatant(starterRuntimeShip());
+  bare.crew.soldado = 0;
+  const defended = createPlayerCombatant(starterRuntimeShip());
+  assert.ok(defended.crew.soldado > 0, "the starter hull must carry soldiers, or this test proves nothing");
+
+  const barePct = garrisonSurrenderPct(bare);
+  const defendedPct = garrisonSurrenderPct(defended);
+  assert.ok(
+    defendedPct < barePct,
+    `soldiers must lower the threshold (${defendedPct} vs ${barePct})`,
+  );
+
+  // The rule, read where it is decided. The crew is set by hand and the status asked for,
+  // because applying damage would kill soldiers and move the threshold under the test: the
+  // garrison weakens as it dies, which is the behaviour, not a defect.
+  const between = (barePct + defendedPct) / 2;
+  bare.condition.crew = between;
+  defended.condition.crew = between;
+  assert.equal(bare.condition.crew <= garrisonSurrenderPct(bare), true, "a bare hull strikes here");
+  assert.equal(
+    defended.condition.crew <= garrisonSurrenderPct(defended),
+    false,
+    "a defended hull holds at the very crew level a bare one strikes at",
+  );
+});
+
+test("S160-D: the garrison weakens as it dies, so the threshold follows the men alive", () => {
+  // A hull that loses her soldiers ends up breaking where a bare hull does: the defence is
+  // the men on the deck, not a permanent bonus.
+  const combatant = createPlayerCombatant(starterRuntimeShip());
+  const withSoldiers = garrisonSurrenderPct(combatant);
+  combatant.crew.soldado = 0;
+  assert.equal(garrisonSurrenderPct(combatant), COMBAT.surrenderCrewPct);
+  assert.ok(withSoldiers < COMBAT.surrenderCrewPct);
 });
 
 test("S5: losing sailors below the hull's minimum hurts the helm", () => {

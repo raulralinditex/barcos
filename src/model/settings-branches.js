@@ -27,7 +27,7 @@ export const SETTINGS_BRANCHES = [
   {
     id: "fight",
     label: "settings.branch.fight",
-    groups: ["combat", "zones", "turning", "escort", "danger", "trail", "bars"],
+    groups: ["combat", "oars", "zones", "turning", "escort", "danger", "trail", "bars"],
   },
   {
     id: "yard",

@@ -3,6 +3,8 @@ import assert from "node:assert/strict";
 import {
   OARS,
   effortStep,
+  rowersWorth,
+  soldiersWorth,
   oarSpeedKn,
   oarTurnFactor,
   oarsAboard,
@@ -207,4 +209,35 @@ test("S159-D: a broken effort record reads as fresh, and never throws", () => {
   assert.deepEqual(normaliseEffort([1, 2]), {});
   // Out of range values are clamped, and broken ones dropped.
   assert.deepEqual(normaliseEffort({ a: 2, b: -1, c: "mucho", d: 0.5 }), { a: 1, b: 0, d: 0.5 });
+});
+
+/* ------------------------------------------------- S161: rowers and soldiers trade */
+
+test("S161: a rower is worth a share of a soldier, and a soldier a share of a rower", () => {
+  // The player asked for it (verbatim): "vamos a hacer que los remeros sean un 50% de
+  // soldados y los soldados un 30% de remeros estos valores configurables".
+  assert.equal(OARS.rowerShareOfSoldier, 0.5);
+  assert.equal(OARS.soldierShareOfRower, 0.3);
+});
+
+test("S161: a hull with rowers can board, and her rowers count for half a soldier each", () => {
+  // The galleass carries rowers, and rowers are men: they help take a prize at half weight.
+  const galleass = { id: "galeaza", oarBanks: 300, oarMaxKn: 7 };
+  const crew = { remero: 200, soldado: 0 };
+  // 200 rowers at 50 % are 100 soldiers' worth.
+  assert.equal(soldiersWorth({ crew }), 100);
+  assert.equal(soldiersWorth({ crew: { soldado: 10, remero: 20 } }), 10 + 10);
+});
+
+test("S161: a soldier is worth a share of a rower, so a deck of soldiers pulls an oar too", () => {
+  // 100 soldiers at 30 % are 30 rowers' worth of pull.
+  assert.equal(rowersWorth({ crew: { soldado: 100, remero: 0 } }), 30);
+  assert.equal(rowersWorth({ crew: { remero: 10, soldado: 100 } }), 10 + 30);
+});
+
+test("S161: a broken crew record is no men at all, never a crash", () => {
+  for (const broken of [null, {}, { crew: null }, { crew: { remero: "muchos", soldado: -5 } }]) {
+    assert.equal(soldiersWorth(broken), 0);
+    assert.equal(rowersWorth(broken), 0);
+  }
 });

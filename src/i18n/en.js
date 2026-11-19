@@ -239,6 +239,7 @@ export const en = {
   "sea.banner.collectOn": "The {name} goes for the golden buoys",
   "sea.banner.collectOff": "The {name} abandons the pick-up",
   "sea.banner.collectNone": "No golden buoy left on the sea",
+  "sea.banner.collectDone": "The {name} finished the pick-up",
   "sea.banner.orderCancelled": "You take the helm: the order is cancelled",
   "shipyard.fort.title": "Shipyard",
   "shipyard.fort.ours": "In your hands",
@@ -400,6 +401,9 @@ export const en = {
   "settings.gunners.falconete": "Gunners per falconet",
   "settings.gunners.pedrero": "Gunners per stone gun",
   "settings.gunners.verso": "Gunners per swivel gun",
+  /* S161: what a rower is worth on a deck and a soldier at an oar. */
+  "settings.oars.rowerShare": "A rower is worth (of a soldier)",
+  "settings.oars.soldierShare": "A soldier is worth (of a rower)",
   "settings.combat.surrender": "Crew surrender threshold",
   "settings.combat.flee": "Hull flee threshold",
   "settings.time.day": "Length of a game day",

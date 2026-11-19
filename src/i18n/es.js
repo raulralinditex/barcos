@@ -236,6 +236,7 @@ export const es = {
   "sea.banner.collectOn": "El {name} va por las bolas amarillas",
   "sea.banner.collectOff": "El {name} abandona la recogida",
   "sea.banner.collectNone": "No queda ninguna bola amarilla en el mar",
+  "sea.banner.collectDone": "El {name} terminó la recogida",
   "sea.banner.orderCancelled": "Tomás el timón: la orden queda cancelada",
   "shipyard.fort.title": "Astillero",
   "shipyard.fort.ours": "En tus manos",
@@ -397,6 +398,9 @@ export const es = {
   "settings.gunners.falconete": "Artilleros por falconete",
   "settings.gunners.pedrero": "Artilleros por pedrero",
   "settings.gunners.verso": "Artilleros por verso",
+  /* S161: lo que vale un remero en cubierta y un soldado al remo. */
+  "settings.oars.rowerShare": "Un remero vale (de un soldado)",
+  "settings.oars.soldierShare": "Un soldado vale (de un remero)",
   "settings.combat.surrender": "Rendición por tripulación",
   "settings.combat.flee": "Huida por casco",
   "settings.time.day": "Duración de un día de juego",

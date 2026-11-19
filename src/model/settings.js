@@ -28,6 +28,7 @@ import { TRAIL } from "./damage-trail.js";
 import { BAR_SCALE } from "./sea-hud.js";
 import { AUTOFIRE_DEFAULT } from "./autofire.js";
 import { LEVELS } from "./levels.js";
+import { OARS } from "./oars.js";
 import { DANGER } from "./danger.js";
 
 /**
@@ -67,6 +68,9 @@ export const SETTINGS_FIELDS = [
   { group: "combat", key: "maxBonus", label: "settings.combat.maxBonus", scale: "factor", min: 1, max: 3, step: 0.1, target: "gunnery" },
   ...PIECES.map((piece) => ({ group: "combat", key: `gunners-${piece.id}`, label: `settings.gunners.${piece.id}`, scale: "factor", min: 0.1, max: 4, step: 0.1, target: "gunners", targetKey: piece.id })),
   { group: "combat", key: "surrenderCrewPct", label: "settings.combat.surrender", scale: "percent100", min: 0, max: 100, step: 5 },
+  // S161: what a rower is worth on a deck and what a soldier is worth at an oar.
+  { group: "oars", key: "rowerShareOfSoldier", label: "settings.oars.rowerShare", scale: "percent", min: 0, max: 1, step: 0.05 },
+  { group: "oars", key: "soldierShareOfRower", label: "settings.oars.soldierShare", scale: "percent", min: 0, max: 1, step: 0.05 },
   { group: "combat", key: "fleeHullPct", label: "settings.combat.flee", scale: "percent100", min: 0, max: 100, step: 5 },
   // The broadside arc is radians in the model and degrees on the screen (S79). The range
   // stays in model units, like every other field; only what the player types is degrees.
@@ -214,7 +218,7 @@ export const SETTINGS_FIELDS = [
 /** The automatic-fire switch as a live block, so it is a setting like any other (S88). */
 export const AUTOFIRE = { enabled: AUTOFIRE_DEFAULT ? 1 : 0 };
 
-export const SETTINGS_BLOCKS = { wind: WIND, world: WORLD, combat: COMBAT, repair: REPAIR, prices: PRICES, gunnery: GUNNERY, gunners: GUNNERY.gunnersPerGun, zones: ZONE_DAMAGE, loot: LOOT, sales: SALES, time: GAME_TIME, fort: FORT, fortUpgrade: FORT_UPGRADE, start: START, turning: TURNING, escort: ESCORT, trail: TRAIL, bars: BAR_SCALE, autofire: AUTOFIRE, sinking: SINKING, refit: REFIT, voyage: VOYAGE, commerce: COMMERCE, markets: MARKETS, yardMarkets: YARD_MARKETS, levels: LEVELS, danger: DANGER };
+export const SETTINGS_BLOCKS = { oars: OARS, wind: WIND, world: WORLD, combat: COMBAT, repair: REPAIR, prices: PRICES, gunnery: GUNNERY, gunners: GUNNERY.gunnersPerGun, zones: ZONE_DAMAGE, loot: LOOT, sales: SALES, time: GAME_TIME, fort: FORT, fortUpgrade: FORT_UPGRADE, start: START, turning: TURNING, escort: ESCORT, trail: TRAIL, bars: BAR_SCALE, autofire: AUTOFIRE, sinking: SINKING, refit: REFIT, voyage: VOYAGE, commerce: COMMERCE, markets: MARKETS, yardMarkets: YARD_MARKETS, levels: LEVELS, danger: DANGER };
 
 /**
  * The design constant blocks S79 promises to expose, by name.
