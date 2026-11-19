@@ -1,0 +1,24 @@
+test/orders.test.js
+  s_f0a363535db2a0::t_280062f125146f 133-175,179-180,182
+  s_f0a363535db2a0::t_92303eb93b0b7a 176-178,181
+  s_f0a363535db2a0::t_d0b16dcc9be24a 183-209
+src/model/orders.js
+  s_f0a363535db2a0::t_afa059f6589595 57-61,67,70,85,133-134,136-138,146,148-154
+  s_f0a363535db2a0::t_9606ce61db6b55 114-118,126
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.6",
+  "base_commit_sha": "3d7c9797a44c1f06742bbdaf79a061df1c33f0d8",
+  "prompts": {},
+  "sessions": {
+    "s_f0a363535db2a0": {
+      "agent_id": {
+        "tool": "pi",
+        "id": "01a1f481-398c-75ea-a49b-8fb241e4a403",
+        "model": "deepseek-v4.1-flash_high"
+      },
+      "human_author": "Raul Ripoll <raulral@ext.inditex.com>"
+    }
+  }
+}
