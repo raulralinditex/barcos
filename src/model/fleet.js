@@ -74,11 +74,61 @@ export function shipsSailingAtSea(fleet) {
   return sailingShips(fleet).filter((ship) => yardOf(ship) === null && !isWreck(ship));
 }
 
+/** The captains are the hulls that command themselves, including the legacy captain. */
+export function captains(fleet) {
+  const ships = Array.isArray(fleet?.ships) ? fleet.ships : [];
+  return ships.filter((ship) => ship && typeof ship.id === "string" &&
+    (ship.commandId === ship.id || (ship.id === fleet?.captainId && ship.commandId == null)));
+}
+
+/** A squadron includes its captain's own hull and all hulls serving her. */
+export function squadrons(fleet) {
+  const ships = Array.isArray(fleet?.ships) ? fleet.ships : [];
+  return captains(fleet)
+    .slice()
+    .sort((a, b) => a.id < b.id ? -1 : a.id > b.id ? 1 : 0)
+    .map((captain) => ({
+      captain,
+      ships: ships.filter((ship) => ship && typeof ship.id === "string" &&
+        (ship.commandId ?? fleet?.captainId) === captain.id),
+    }));
+}
+
+export function squadronOf(fleet, captainId) {
+  return squadrons(fleet).find((squadron) => squadron.captain.id === captainId) ?? null;
+}
+
+/** A captain at sea is not moored at a shipyard. */
+export function captainAt(fleet, yardId) {
+  if (!shipyardById(yardId)) return null;
+  return captains(fleet).find((captain) => yardOf(captain) === yardId) ?? null;
+}
+
+/** Transfer an escort only when she and the target captain are in the same place. */
+export function withShipCommand(fleet, shipId, captainId) {
+  const ships = Array.isArray(fleet?.ships) ? fleet.ships : [];
+  const ship = ships.find((entry) => entry && entry.id === shipId);
+  const target = captains(fleet).find((captain) => captain.id === captainId);
+  if (!ship || !target || captains(fleet).some((captain) => captain.id === shipId) ||
+      yardOf(ship) !== yardOf(target)) return fleet;
+  return { ...fleet, ships: ships.map((entry) => entry === ship ? { ...ship, commandId: captainId } : entry) };
+}
+
+/** Add a captain without changing which captain is selected for the fleet. */
+export function addCaptain(fleet, ship) {
+  const added = addShip(fleet, { ...ship, commandId: ship.id });
+  return { ...fleet, ...added, captainId: fleet?.captainId ?? ship.id };
+}
+
 /**
  * Add a freshly launched ship to the fleet and make it the captain: buying a new
  * hull is how the player moves up, so it becomes the ship they sail out with.
  */
 export function addShip(fleet, ship) {
+  // A bought hull becomes the fleet's captain (S7), and under S155 the fleet's captain is
+  // a captain whether or not she carries a `commandId`: `captains()` reads that fallback,
+  // so a purchase needs no field of its own. Setting one here would rewrite the hull the
+  // caller passed in, which is what the repair tests compare against.
   const ships = [...(fleet?.ships ?? []), ship];
   return { ships, captainId: ship.id };
 }
@@ -95,7 +145,12 @@ export function removeShip(fleet, shipId) {
 export function setCaptain(fleet, shipId) {
   const ships = fleet?.ships ?? [];
   if (!ships.some((ship) => ship.id === shipId)) return { ...fleet, ships };
-  return { ships, captainId: shipId };
+  // The promoted hull is a captain of her own command (S155-A): a hull that answers to
+  // another captain is an escort, and `captains()` would keep ignoring her promotion.
+  return {
+    ships: ships.map((ship) => (ship.id === shipId ? { ...ship, commandId: shipId } : ship)),
+    captainId: shipId,
+  };
 }
 
 /**
@@ -274,7 +329,7 @@ export function withShipCondition(fleet, shipId, { condition, crewAlive } = {}) 
 const CONDITION_SEGMENTS = ["hull", "rigging", "crew", "morale"];
 
 /** A stored ship keeps a usable condition and crew even if the save predates them. */
-function normaliseShip(ship) {
+function normaliseShip(ship, captainId = ship.id) {
   const source = ship.condition && typeof ship.condition === "object" ? ship.condition : {};
   const condition = {};
   for (const segment of CONDITION_SEGMENTS) {
@@ -289,7 +344,7 @@ function normaliseShip(ship) {
   // The hold is a manifest of whole units, and her kg is derived from it (S114): a save
   // that predates the trade has no manifest and keeps her hand-typed cargo untouched.
   const hold = holdOf(ship.manifest ?? []);
-  const stored = { ...ship, condition, crewAlive, sails, yardId: yardOf(ship) };
+  const stored = { ...ship, condition, crewAlive, sails, yardId: yardOf(ship), commandId: ship.commandId ?? captainId };
   if (hold.cargoKg > 0) {
     stored.manifest = hold.manifest;
   } else {
@@ -312,18 +367,26 @@ export function deserializeFleet(json, legacyShip = null) {
 
   if (!data || !Array.isArray(data.ships)) {
     return legacyShip
-      ? { ships: [normaliseShip(legacyShip)], captainId: legacyShip.id }
+      ? { ships: [normaliseShip({ ...legacyShip, commandId: legacyShip.id })], captainId: legacyShip.id }
       : { ships: [], captainId: null };
   }
 
-  const ships = data.ships
-    .filter((ship) => ship && typeof ship.id === "string" && Number.isFinite(ship.speedKn))
-    .map(normaliseShip);
-  if (ships.length === 0) {
-    return legacyShip ? { ships: [normaliseShip(legacyShip)], captainId: legacyShip.id } : { ships: [], captainId: null };
+  const validShips = data.ships
+    .filter((ship) => ship && typeof ship.id === "string" && Number.isFinite(ship.speedKn));
+  if (validShips.length === 0) {
+    return legacyShip ? { ships: [normaliseShip({ ...legacyShip, commandId: legacyShip.id })], captainId: legacyShip.id } : { ships: [], captainId: null };
   }
-  const captainId = ships.some((s) => s.id === data.captainId) ? data.captainId : ships[0].id;
-  return { ships, captainId };
+  const captainId = validShips.some((ship) => ship.id === data.captainId) ? data.captainId : validShips[0].id;
+  const ships = validShips.map((ship) => normaliseShip(ship, captainId));
+  // The selected captain commands herself; orphaned hulls return to her command.
+  const captainIds = new Set(ships.filter((ship) => ship.commandId === ship.id).map((ship) => ship.id));
+  captainIds.add(captainId);
+  return {
+    ships: ships.map((ship) => ship.id === captainId || !captainIds.has(ship.commandId)
+      ? { ...ship, commandId: captainId }
+      : ship),
+    captainId,
+  };
 }
 
 /** Serialise the fleet for autosave. */
