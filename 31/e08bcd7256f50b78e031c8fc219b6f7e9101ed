@@ -1,0 +1,19 @@
+scripts/smoke-settings-menu.mjs
+  s_87644080b176a0::t_24fa2ddbbff94b 191
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.6",
+  "base_commit_sha": "31e08bcd7256f50b78e031c8fc219b6f7e9101ed",
+  "prompts": {},
+  "sessions": {
+    "s_87644080b176a0": {
+      "agent_id": {
+        "tool": "pi",
+        "id": "01a1f522-62b3-72af-941b-b101d589ddf0",
+        "model": "deepseek-v4.1-flash_high"
+      },
+      "human_author": "Raul Ripoll <raulral@ext.inditex.com>"
+    }
+  }
+}
