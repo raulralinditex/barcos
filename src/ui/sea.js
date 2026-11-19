@@ -47,6 +47,7 @@ import {
   shipsAvailableAtYard,
   serializeFleet,
   setCaptain,
+  squadrons as fleetSquadrons,
   withShipCondition,
 } from "../model/fleet.js";
 import {
@@ -100,9 +101,12 @@ import { priceWithPurse } from "../model/repair.js";
 import { captureableShip, withPrize } from "../model/sale.js";
 import {
   WORLD,
+  afloatSquadrons,
   clampToSafeZone,
   insideSafeZone,
+  nearestSquadron,
   safeZoneRadiusM,
+  withActiveSquadron,
   ZONE_BANDS,
   createWorld,
   deserializeWorld,
@@ -115,6 +119,16 @@ import {
   currentShipyard,
 } from "../model/world.js";
 import { toughnessForLevel } from "../model/levels.js";
+import {
+  ORDER,
+  clearOrder,
+  destinationOrder,
+  orderDistance,
+  orderDone,
+  orderProgress,
+  pickUpOrder,
+  steerTowards,
+} from "../model/orders.js";
 
 const SHIP_KEY = "barcos:current-ship:v1";
 const FLEET_KEY = "barcos:fleet:v1";
@@ -281,6 +295,28 @@ let gameOver = false;
 let gameOverAt = 0;
 let gameOverShown = false;
 const fx = [];
+/**
+ * The squadrons that are not holding the helm, as the sea screen keeps them (S155-D).
+ *
+ * Each one is `{ id, name, ship, escorts, order }`: her own captain hull, her own formation
+ * and the standing orders she was last given. `world.squadrons` is the same list as the
+ * model sees it; this is the live copy that carries each captain's combatant, exactly as
+ * `escorts` carries the active squadron's.
+ */
+let squadrons = [];
+/**
+ * The combatant of every captain afloat, keyed by hull id (S155-C). The active captain's
+ * lives in `playerCombat`, as it always has; the others live here, so a second command is a
+ * fighting command and not a drawing on the water.
+ */
+let captainCombat = new Map();
+/**
+ * What the active squadron was ordered to do besides the helm (S155-F/G): a destination she
+ * is sailing to, or the pick-up mode that chases the golden buoys. `null` means the helm is
+ * the player's and the order is over. Toggling the helm cancels it, which is the rule the
+ * player was promised: taking the wheel ends the order.
+ */
+let activeOrder = null;
 // The initial position is seeded at boot, so only movement into port counts.
 let wasInPort = false;
 /** The level the sea is showing, so a clear is announced once (S140-G). */
@@ -435,6 +471,45 @@ function saveGame() {
                 shotsLeft: p.shotsLeft,
                 reloadTimer: p.reloadTimer,
               })),
+            },
+            // Every other command's damage and rounds (S155-C): a captain the player is not
+            // steering still took hits and spent powder, and she has to come back that way.
+            squadrons: {
+              escorts: Object.fromEntries(
+                squadrons.flatMap((squadron) =>
+                  (squadron.escorts ?? [])
+                    .filter((escort) => escort.combat)
+                    .map((escort) => [
+                      escort.id,
+                      {
+                        condition: escort.combat.condition,
+                        crew: escort.combat.crew,
+                        pieces: (escort.combat.pieces ?? []).map((p) => ({
+                          pieceId: p.pieceId,
+                          side: p.side,
+                          ammoId: p.ammoId,
+                          shotsLeft: p.shotsLeft,
+                          reloadTimer: p.reloadTimer,
+                        })),
+                      },
+                    ]),
+                ),
+              ),
+              ...Object.fromEntries(
+                [...captainCombat.entries()].map(([id, combat]) => [
+                  id,
+                  {
+                    condition: combat.condition,
+                    crew: combat.crew,
+                    pieces: (combat.pieces ?? []).map((p) => ({
+                      pieceId: p.pieceId,
+                      ammoId: p.ammoId,
+                      shotsLeft: p.shotsLeft,
+                      reloadTimer: p.reloadTimer,
+                    })),
+                  },
+                ]),
+              ),
             },
           }
         : undefined,
@@ -715,6 +790,15 @@ window.addEventListener("keydown", (event) => {
     ui.throttle = Math.min(1, ui.throttle + THROTTLE_STEP);
   } else if (key === "arrowdown" || key === "s") {
     ui.throttle = Math.max(0, ui.throttle - THROTTLE_STEP);
+  } else if (key === "c") {
+    // One key cycles the helm through the squadrons afloat (S155-D/E): the sea shows every
+    // captain, and the mouse picks one, but the keyboard has to be able to as well.
+    event.preventDefault();
+    if (!event.repeat) cycleSquadron();
+  } else if (key === "g") {
+    // The pick-up order (S155-G): the active captain works the golden buoys by herself.
+    event.preventDefault();
+    if (!event.repeat) toggleCollectOrder();
   } else if (key === "q" || key === "e") {
     event.preventDefault();
     firePlayerBroadside(key === "q" ? "babor" : "estribor");
@@ -739,6 +823,20 @@ window.addEventListener("keyup", (event) => {
 function readInput() {
   const left = ui.keys.has("arrowleft") || ui.keys.has("a");
   const right = ui.keys.has("arrowright") || ui.keys.has("d");
+  // Taking the wheel ends whatever order was live (S155-F): the player is sailing now, and a
+  // destination that kept steering under her hands would be a second captain on the same hull.
+  const steering = left || right;
+  if (steering && activeOrder) {
+    activeOrder = clearOrder();
+    showBanner(t("sea.banner.orderCancelled"), "info", 1800);
+  }
+  // An order sets the helm and the sail; the helm keys still win when they are held.
+  if (activeOrder && !steering) {
+    const steered = steerTowards(world.ship, activeOrder);
+    const sailFactor = playerCombat ? speedFactor(playerCombat) : 1;
+    const helmFactor = playerCombat ? maneuverFactor(playerCombat) : 1;
+    return { turn: steered.turn * helmFactor, throttle: steered.throttle * sailFactor };
+  }
   // A shredded rig or a skeleton crew must be felt at the helm, not just in the HUD.
   const sailFactor = playerCombat ? speedFactor(playerCombat) : 1;
   const helmFactor = playerCombat ? maneuverFactor(playerCombat) : 1;
@@ -871,7 +969,9 @@ function drawSea(ctx) {
   drawRangeCircles(ctx);
   drawEncounters(ctx);
   drawWake(ctx);
+  drawDestinationMark(ctx);
   drawPlayerShip(ctx);
+  drawOtherCaptains(ctx);
   drawFx(ctx);
 
   ctx.restore();
@@ -886,6 +986,114 @@ function drawSea(ctx) {
   ctx.scale(PX_PER_M, PX_PER_M);
   ctx.translate(-world.ship.x, -world.ship.y);
   for (const escort of escorts) drawEscortShip(ctx, escort);
+  for (const squadron of squadrons) {
+    for (const escort of squadron.escorts ?? []) drawEscortShip(ctx, escort, { active: false });
+  }
+  ctx.restore();
+}
+
+/**
+ * The mark of the order in force (S155-F): where the active squadron is sailing to, and how
+ * far it still is. A crossing on the water, so the player can see the order she gave instead
+ * of inferring it from the wake.
+ */
+function drawDestinationMark(ctx) {
+  if (!activeOrder || !Number.isFinite(activeOrder.x) || !Number.isFinite(activeOrder.y)) return;
+  const now = performance.now();
+  const pulse = 0.6 + 0.4 * Math.sin(now / 320);
+  ctx.save();
+  ctx.translate(activeOrder.x, activeOrder.y);
+  ctx.strokeStyle = activeOrder.kind === ORDER.pickUp
+    ? `rgba(224,168,21,${0.5 + 0.5 * pulse})`
+    : `rgba(143,208,255,${0.5 + 0.5 * pulse})`;
+  ctx.lineWidth = 8;
+  // A crossing: two strokes, drawn in world units so it keeps its size relative to the sea.
+  const arm = 70;
+  ctx.beginPath();
+  ctx.moveTo(-arm, -arm);
+  ctx.lineTo(arm, arm);
+  ctx.moveTo(arm, -arm);
+  ctx.lineTo(-arm, arm);
+  ctx.stroke();
+  ctx.beginPath();
+  ctx.arc(0, 0, 110, 0, Math.PI * 2);
+  ctx.lineWidth = 5;
+  ctx.stroke();
+  ctx.restore();
+}
+
+/**
+ * Every captain that is not holding the helm (S155-C), drawn with her own hull and colours
+ * and marked so the player can tell which command she is looking at.
+ *
+ * The active captain has her own renderer (`drawPlayerShip`) because she carries the helm
+ * indicator. These do not: they are hulls under a standing order, and the ring around them
+ * is the only thing that says "this one is a captain too, and you can take her".
+ */
+function drawOtherCaptains(ctx) {
+  const now = performance.now();
+  for (const squadron of squadrons) {
+    const ship = squadron.ship;
+    if (!ship || !Number.isFinite(ship.x) || !Number.isFinite(ship.y)) continue;
+    const record = (fleet?.ships ?? []).find((entry) => entry.id === squadron.id) ?? null;
+    drawHullShape(ctx, ship, record?.hullId ?? runtimeShip.hullId, { ring: true, now });
+  }
+}
+
+/**
+ * The hull of any captain, drawn the same way whoever she is (S155-C). `ring` marks the ones
+ * the player can take the helm of, which is every captain she is not already steering.
+ */
+function drawHullShape(ctx, ship, hullId, { ring = false, now = 0 } = {}) {
+  const hull = hullById(hullId);
+  const lengthRatio = hull ? Math.min(1.5, Math.max(0.7, hull.lengthM / 25)) : 1;
+  const len = 70 * lengthRatio;
+  const beam = 26 * lengthRatio;
+
+  ctx.save();
+  ctx.translate(ship.x, ship.y);
+  ctx.rotate(ship.heading ?? 0);
+
+  ctx.beginPath();
+  ctx.moveTo(len * 0.5, 0);
+  ctx.lineTo(len * 0.1, -beam * 0.5);
+  ctx.lineTo(-len * 0.5, -beam * 0.42);
+  ctx.quadraticCurveTo(-len * 0.56, 0, -len * 0.5, beam * 0.42);
+  ctx.lineTo(len * 0.1, beam * 0.5);
+  ctx.closePath();
+  ctx.fillStyle = "#3c5a7a";
+  ctx.fill();
+  ctx.strokeStyle = "#101c2a";
+  ctx.lineWidth = 3;
+  ctx.stroke();
+
+  ctx.strokeStyle = "#d9d2c2";
+  ctx.lineWidth = 4;
+  for (const t of [-0.2, 0.05, 0.22]) {
+    ctx.beginPath();
+    ctx.moveTo(len * t, -beam * 0.34);
+    ctx.lineTo(len * t, beam * 0.34);
+    ctx.stroke();
+  }
+
+  // Every hull in the fleet flies the captain's colours (S72).
+  const captainHull = captainShip(fleet)?.hullId ?? runtimeShip.hullId;
+  drawFlag(ctx, flagFor({ hullId, isFleet: true, captainHullId: captainHull, country: playerCountry }), {
+    x: -len * 0.3,
+    size: 22,
+  });
+  ctx.restore();
+
+  if (!ring) return;
+  // A captain the player is not steering: a pulsing ring in the fleet's colour, so a sea with
+  // three commands is readable at a glance instead of three identical hulls.
+  const pulse = 0.5 + 0.5 * Math.sin(now / 420);
+  ctx.save();
+  ctx.beginPath();
+  ctx.arc(ship.x, ship.y, len * 0.85, 0, Math.PI * 2);
+  ctx.strokeStyle = `rgba(143,208,255,${0.25 + 0.45 * pulse})`;
+  ctx.lineWidth = 6;
+  ctx.stroke();
   ctx.restore();
 }
 
@@ -961,6 +1169,81 @@ function toScreen(x, y) {
     x: window.innerWidth / 2 + (x - world.ship.x) * PX_PER_M,
     y: window.innerHeight / 2 + (y - world.ship.y) * PX_PER_M,
   };
+}
+
+/**
+ * Screen pixels back to world metres (S155-E). The camera always looks at the squadron under
+ * the helm, so this is the inverse of `toScreen` and the only way a click can name a point of
+ * the sea.
+ */
+function toWorld(px, py) {
+  return {
+    x: world.ship.x + (px - window.innerWidth / 2) / PX_PER_M,
+    y: world.ship.y + (py - window.innerHeight / 2) / PX_PER_M,
+  };
+}
+
+/**
+ * The mouse picks a captain (S155-E): a click on one of them takes the helm, and a click on
+ * open water is not an order, so it leaves the command alone.
+ *
+ * The radius is generous on purpose. A captain is drawn about 28 px long, and asking the
+ * player to hit that on a moving sea is a game of reflexes, not a choice of command.
+ */
+const CAPTAIN_CLICK_RADIUS_M = 90;
+
+function squadronAtPointer(event) {
+  if (!world || !els.canvas) return null;
+  const rect = els.canvas.getBoundingClientRect();
+  const at = toWorld(event.clientX - rect.left, event.clientY - rect.top);
+  return nearestSquadron(world, at, CAPTAIN_CLICK_RADIUS_M);
+}
+
+els.canvas?.addEventListener("click", (event) => {
+  const picked = squadronAtPointer(event);
+  if (picked) chooseSquadron(picked.id);
+});
+
+/**
+ * A double click gives the active squadron a destination (S155-F).
+ *
+ * The point is where the player clicked, not the hull nearest to it: an order is a place on
+ * the sea. A double click on another captain takes her helm instead, which is why the pick
+ * wins over the order when both could fire.
+ */
+els.canvas?.addEventListener("dblclick", (event) => {
+  if (!world || gameOver) return;
+  const picked = squadronAtPointer(event);
+  if (picked) {
+    chooseSquadron(picked.id);
+    return;
+  }
+  const rect = els.canvas.getBoundingClientRect();
+  const at = toWorld(event.clientX - rect.left, event.clientY - rect.top);
+  const order = destinationOrder(at, world.ship);
+  if (!order) return;
+  activeOrder = order;
+  showBanner(t("sea.banner.destination", { distance: fmtInt.format(Math.round(order.distanceM)) }), "info", 2200);
+});
+
+/**
+ * The pick-up order (S155-G): the active captain works the golden buoys by herself. A second
+ * press abandons the order, and with no buoy left the sea says so instead of doing nothing.
+ */
+function toggleCollectOrder() {
+  if (!world || gameOver) return;
+  if (activeOrder?.kind === ORDER.pickUp) {
+    activeOrder = clearOrder();
+    showBanner(t("sea.banner.collectOff", { name: runtimeShip.name }), "info", 2000);
+    return;
+  }
+  const order = pickUpOrder(world.ship, world.encounters);
+  if (!order) {
+    showBanner(t("sea.banner.collectNone"), "info", 2000);
+    return;
+  }
+  activeOrder = order;
+  showBanner(t("sea.banner.collectOn", { name: runtimeShip.name }), "info", 2400);
 }
 
 /** True when the enemy is close enough to be fought, which is what "a tiro" means (S21). */
@@ -1455,7 +1738,7 @@ function drawPlayerShip(ctx) {
 }
 
 /** Draw an allied hull at its actual position and heading, without a player rudder. */
-function drawEscortShip(ctx, escort) {
+function drawEscortShip(ctx, escort, { active = true } = {}) {
   const ship = fleet.ships.find((entry) => entry.id === escort.id);
   const hull = hullById(ship?.hullId);
   const lengthRatio = hull ? Math.min(1.5, Math.max(0.7, hull.lengthM / 25)) : 1;
@@ -1472,7 +1755,9 @@ function drawEscortShip(ctx, escort) {
   ctx.quadraticCurveTo(-len * 0.56, 0, -len * 0.5, beam * 0.42);
   ctx.lineTo(len * 0.1, beam * 0.5);
   ctx.closePath();
-  ctx.fillStyle = "#3c5a7a";
+  // A hull under another captain's command is drawn dimmer (S155-C): she is on the sea and
+  // she is ours, but she is not the one taking orders from this keyboard.
+  ctx.fillStyle = active ? "#3c5a7a" : "#2c4257";
   ctx.fill();
   ctx.strokeStyle = "#101c2a";
   ctx.lineWidth = 3;
@@ -1567,17 +1852,13 @@ function drawMinimap() {
 
   // the escorts, smaller and in their own colour (S42)
   for (const escort of escorts) {
-    ctx.save();
-    ctx.translate(escort.x, escort.y);
-    ctx.rotate(escort.heading ?? 0);
-    ctx.beginPath();
-    ctx.moveTo(150, 0);
-    ctx.lineTo(-95, -80);
-    ctx.lineTo(-95, 80);
-    ctx.closePath();
-    ctx.fillStyle = "#8fd0ff";
-    ctx.fill();
-    ctx.restore();
+    drawMinimapHull(ctx, escort, "#8fd0ff");
+  }
+  // Every other command on the chart (S155-C): her escorts and her captain, so the player can
+  // see where the squadron she is not steering is without leaving the one she has.
+  for (const squadron of squadrons) {
+    for (const escort of squadron.escorts ?? []) drawMinimapHull(ctx, escort, "#6fa8c8");
+    if (squadron.ship) drawMinimapHull(ctx, squadron.ship, "#b6e2ff");
   }
 
   // player arrow
@@ -1593,6 +1874,22 @@ function drawMinimap() {
   ctx.fill();
   ctx.restore();
 
+  ctx.restore();
+}
+
+/** One hull on the chart, as a small arrow in the colour of her command (S155-C). */
+function drawMinimapHull(ctx, hull, colour) {
+  if (!hull || !Number.isFinite(hull.x) || !Number.isFinite(hull.y)) return;
+  ctx.save();
+  ctx.translate(hull.x, hull.y);
+  ctx.rotate(hull.heading ?? 0);
+  ctx.beginPath();
+  ctx.moveTo(150, 0);
+  ctx.lineTo(-95, -80);
+  ctx.lineTo(-95, 80);
+  ctx.closePath();
+  ctx.fillStyle = colour;
+  ctx.fill();
   ctx.restore();
 }
 
@@ -1742,30 +2039,205 @@ function allies() {
   return line;
 }
 
+/**
+ * The rounds a saved battery comes back with (S65, S122): the piece the player chose survives
+ * a reload, but only when the gun in that slot can actually fire it, because a refit can put a
+ * different one there.
+ */
+function restorePieces(pieces, saved) {
+  if (!Array.isArray(saved)) return pieces;
+  return pieces.map((piece, index) => {
+    const stored = saved[index];
+    if (!stored) return piece;
+    const samePiece = !stored.pieceId || stored.pieceId === piece.pieceId;
+    const carries = samePiece && pieceById(piece.pieceId).ammo.includes(stored.ammoId);
+    return {
+      ...piece,
+      ...(carries ? { ammoId: stored.ammoId } : {}),
+      shotsLeft: stored.shotsLeft ?? piece.shotsLeft,
+      reloadTimer: stored.reloadTimer ?? 0,
+    };
+  });
+}
+
+/**
+ * Every captain afloat, each with her own combatant (S155-C).
+ *
+ * The active captain is `playerCombat`; the others are in `captainCombat`. A squadron whose
+ * combatant was never built is skipped instead of crashing the sea: the enemies aim at
+ * hulls that can take the damage.
+ */
+function captainsAfloat() {
+  const line = [];
+  if (playerCombat) {
+    line.push({ id: runtimeShip.id, name: runtimeShip.name, ...world.ship, combat: playerCombat, active: true });
+  }
+  for (const squadron of squadrons) {
+    const combat = captainCombat.get(squadron.id);
+    if (!combat) continue;
+    line.push({ id: squadron.id, name: squadron.name, ...squadron.ship, combat, active: false });
+  }
+  return line;
+}
+
+/**
+ * Every hull of every squadron afloat (S155-C): what the enemies aim at and what fires back.
+ *
+ * Before this the sea held one line. With several commands on the water a hostile has to be
+ * able to shoot at any of them, and each command answers for herself: the player asked to
+ * see them all at sea, and a squadron that could be shot at but never fired would be a
+ * worse lie than not showing her.
+ */
+function alliedHulls() {
+  const line = allies();
+  for (const squadron of squadrons) {
+    const combat = captainCombat.get(squadron.id);
+    if (combat) {
+      line.push({ id: squadron.id, name: squadron.name, ...squadron.ship, combat });
+    }
+    for (const escort of squadron.escorts ?? []) {
+      if (escort.combat) line.push({ id: escort.id, name: escort.name, ...escort, combat: escort.combat });
+    }
+  }
+  return line;
+}
+
+/** The combatant of one captain afloat, by hull id, active or not (S155-C). */
+function captainCombatOf(id) {
+  if (id === runtimeShip?.id) return playerCombat;
+  return captainCombat.get(id) ?? null;
+}
+
+/**
+ * Hand the helm to another captain afloat (S155-D/E), and say who took it.
+ *
+ * The model does the swap, so nothing is moved and nothing is rebuilt. The screen keeps one
+ * invariant: `world.ship`/`world.escorts`/`playerCombat` are the squadron under the helm, and
+ * `squadrons`/`captainCombat` are every other one. Switching is moving a record across that
+ * line, which is why no hull can be held twice.
+ */
+function chooseSquadron(id) {
+  if (!world) return false;
+  const chosen = afloatSquadrons(world).find((squadron) => squadron.id === id);
+  const previousId = world.activeId ?? runtimeShip?.id;
+  if (!chosen || chosen.id === previousId) return false;
+
+  // The squadron that loses the helm keeps everything she is doing: her position, her
+  // formation, her sail and her combatant, so she goes on sailing and fighting without him.
+  const previousShip = (fleet?.ships ?? []).find((ship) => ship.id === previousId) ?? null;
+  const parked = {
+    id: previousId,
+    name: previousShip?.name ?? runtimeShip?.name ?? previousId,
+    ship: { ...world.ship },
+    escorts: escorts.map((escort) => ({ ...escort })),
+    order: { throttle: ui.throttle, turn: 0 },
+  };
+  captainCombat.set(previousId, playerCombat);
+
+  // The incoming squadron leaves the parked list and takes the helm with her own combatant.
+  const incoming = squadrons.find((squadron) => squadron.id === chosen.id) ?? null;
+  squadrons = [...squadrons.filter((squadron) => squadron.id !== chosen.id), parked];
+  runtimeShip = (fleet?.ships ?? []).find((ship) => ship.id === chosen.id) ?? runtimeShip;
+  playerCombat = captainCombat.get(chosen.id) ?? null;
+  captainCombat.delete(chosen.id);
+  escorts = (incoming?.escorts ?? []).map((escort) => ({ ...escort }));
+
+  // The model swaps the two records; the sea then carries the parked list it just built.
+  world = withActiveSquadron(world, chosen.id);
+  world = { ...world, squadrons: squadrons.map(stripSquadron) };
+
+  // The helm keeps the sail the squadron had when she was last steered.
+  ui.throttle = Math.max(0, Math.min(1, Number(incoming?.order?.throttle) || 0));
+  ui.trail = [];
+  // The order belongs to the squadron that was steered: the new one starts with the wheel.
+  activeOrder = null;
+  showBanner(t("sea.banner.squadronActive", { name: runtimeShip.name }), "info", 2200);
+  return true;
+}
+
+/** A squadron as the world model carries it: positions and orders, no live combatant. */
+function stripSquadron(squadron) {
+  return {
+    id: squadron.id,
+    ship: squadron.ship,
+    escorts: (squadron.escorts ?? []).map(({ combat, ...rest }) => rest),
+    order: squadron.order,
+  };
+}
+
+/** Cycle the helm through the squadrons afloat (S155-E), for the keyboard. */
+function cycleSquadron() {
+  if (!world) return;
+  const afloat = afloatSquadrons(world);
+  if (afloat.length < 2) return;
+  const index = afloat.findIndex((squadron) => squadron.id === (world.activeId ?? runtimeShip?.id));
+  const next = afloat[(index + 1) % afloat.length];
+  chooseSquadron(next.id);
+}
+
 /** Each escort fires on its own when a hostile bears, with its own reloads. */
 function escortsFire() {
   if (gameOver) return;
   const fortTarget = occupiedFortTarget();
-  for (const escort of escorts) {
-    const sails = world.encounters.filter((e) => e.type === "enemy" && e.combat?.status === "fighting");
-    const target = closestTarget(fortTarget ? [...sails, fortTarget] : sails, escort);
-    if (!target) continue;
-    // A yard the enemy holds takes its damage through the occupiers' rule (S93).
-    const isFort = target.id === "fort";
-    if (isFort && !fortHeldByEnemy(fortCombat)) continue;
-    const { volley, side } = escortFire(escort, target, rnd);
-    if (!volley.length) continue;
-    for (const shot of volley) {
-      pushFx("tracer", escort.x, escort.y, target.x, target.y, 0.3);
-      if (shot.hit) {
+  const sails = world.encounters.filter((e) => e.type === "enemy" && e.combat?.status === "fighting");
+  const targets = fortTarget ? [...sails, fortTarget] : sails;
+  // The squadron under the helm, hull by hull, and then every other command (S155-C): a
+  // captain the player is not steering still fights for herself, or the sea would be showing
+  // a squadron that takes fire and never answers it.
+  const lines = [
+    { escorts, quiet: false },
+    ...squadrons.map((squadron) => ({ escorts: squadron.escorts ?? [], quiet: true })),
+  ];
+  for (const line of lines) {
+    for (const escort of line.escorts) {
+      const target = closestTarget(targets, escort);
+      if (!target) continue;
+      // A yard the enemy holds takes its damage through the occupiers' rule (S93).
+      const isFort = target.id === "fort";
+      if (isFort && !fortHeldByEnemy(fortCombat)) continue;
+      const { volley, side } = escortFire(escort, target, rnd);
+      if (!volley.length) continue;
+      for (const shot of volley) {
+        pushFx("tracer", escort.x, escort.y, target.x, target.y, 0.3);
+        if (shot.hit) {
+          if (isFort) hitOccupiedFort(shot.damage);
+          else applyDamage(target.combat, shot.damage);
+          pushFx("hit", target.x, target.y, target.x, target.y, 0.5);
+        } else {
+          pushFx("splash", target.x + (rnd() - 0.5) * 70, target.y + (rnd() - 0.5) * 70, 0, 0, 0.6);
+        }
+      }
+      // Only the squadron under the helm reports her own fire: a banner per hull of every
+      // command on the water would bury the screen.
+      if (!line.quiet) {
+        showBanner(t("sea.banner.escortFire", { name: escort.name, side: t(`sea.sides.${side}`) }), "info", 1400);
+      }
+    }
+  }
+
+  // The captains fire too (S155-C): each with her own guns and her own rounds, at whatever
+  // bears, exactly as the hull under the helm does when the yard's auto-fire is on.
+  for (const captain of captainsAfloat().filter((entry) => !entry.active)) {
+    for (const side of ["babor", "estribor"]) {
+      const target = targetForSide(captain, targets, side, playerMaxRangeM(), []);
+      if (!target) continue;
+      const isFort = target.id === "fort";
+      if (isFort && !fortHeldByEnemy(fortCombat)) continue;
+      const distance = Math.hypot(captain.x - target.x, captain.y - target.y);
+      const bearing = sideForBearing(captain.heading ?? 0, Math.atan2(target.y - captain.y, target.x - captain.x));
+      if (!bearing) continue;
+      const { volley } = fireBroadside(captain.combat, side, distance, rnd);
+      for (const shot of volley) {
+        pushFx("tracer", captain.x, captain.y, target.x, target.y, 0.3);
+        if (!shot.hit) {
+          pushFx("splash", target.x + (rnd() - 0.5) * 70, target.y + (rnd() - 0.5) * 70, 0, 0, 0.6);
+          continue;
+        }
         if (isFort) hitOccupiedFort(shot.damage);
         else applyDamage(target.combat, shot.damage);
         pushFx("hit", target.x, target.y, target.x, target.y, 0.5);
-      } else {
-        pushFx("splash", target.x + (rnd() - 0.5) * 70, target.y + (rnd() - 0.5) * 70, 0, 0, 0.6);
       }
     }
-    showBanner(t("sea.banner.escortFire", { name: escort.name, side: t(`sea.sides.${side}`) }), "info", 1400);
   }
 }
 
@@ -1883,6 +2355,12 @@ function processCombat(dt, now) {
   if (!playerCombat || gameOver) return;
   tickCombatant(playerCombat, dt);
   for (const escort of escorts) tickCombatant(escort.combat, dt);
+  // Every other command on the water fights too (S155-C): her captain and her escorts reload
+  // on the same clock as ours, because the enemies can shoot at them.
+  for (const combat of captainCombat.values()) tickCombatant(combat, dt);
+  for (const squadron of squadrons) {
+    for (const escort of squadron.escorts ?? []) if (escort.combat) tickCombatant(escort.combat, dt);
+  }
 
   playerAutoFire();
 
@@ -1901,7 +2379,13 @@ function processCombat(dt, now) {
 
   for (const encounter of world.encounters) {
     if (encounter.type !== "enemy") continue;
-    const distance = Math.hypot(encounter.x - world.ship.x, encounter.y - world.ship.y);
+    // Every hull of every squadron is a target and a shooter (S155-C): a hostile picks the
+    // nearest one, whichever command she serves.
+    const line = alliedHulls();
+    const nearest = closestTarget(line, encounter);
+    const distance = nearest
+      ? Math.hypot(encounter.x - nearest.x, encounter.y - nearest.y)
+      : Math.hypot(encounter.x - world.ship.x, encounter.y - world.ship.y);
     if (distance > COMBAT.engageRadiusM && !encounter.combat) continue;
     const combat = ensureEnemyCombat(encounter);
     if (!combat || combat.status !== "fighting") continue;
@@ -1916,7 +2400,7 @@ function processCombat(dt, now) {
       Math.hypot(encounter.x, encounter.y) <= COMBAT.engageRadiusM;
     const aimedAt = assaulting
       ? { id: "fort", name: fortCombat.name, x: 0, y: 0, combat: fortCombat }
-      : closestTarget(allies(), encounter) ?? {
+      : nearest ?? {
           id: runtimeShip.id,
           name: runtimeShip.name,
           ...world.ship,
@@ -1975,9 +2459,10 @@ function processCombat(dt, now) {
   warnIfDry();
 
   // The voyage ends when nothing is left to sail (S87): losing the flagship is a blow,
-  // not the end, and the next hull in line takes over. Only when every hull is gone does
-  // the sinking screen come up.
-  const status = squadronStatus(allies());
+  // not the end, and the next hull in line takes over. Only when every hull of every
+  // squadron is gone does the sinking screen come up (S155-C): a captain still afloat on the
+  // same sea is still a game.
+  const status = squadronStatus(alliedHulls());
   if (status.over && !gameOver) {
     gameOver = true;
     gameOverAt = now;
@@ -2628,7 +3113,15 @@ function hullName(id) {
 
 function updateHud() {
   const zone = zoneAtRadius(Math.hypot(world.ship.x, world.ship.y));
-  els.name.textContent = `${runtimeShip.name} — ${runtimeShip.hullName}`;
+  // The title names the captain under the helm, and says so when the sea holds more than one
+  // command (S155-D): with several squadrons afloat the player has to know whose helm she has.
+  const afloatCount = afloatSquadrons(world).length;
+  els.name.textContent = afloatCount > 1
+    ? t("sea.squadron.title", {
+        name: `${runtimeShip.name} — ${runtimeShip.hullName}`,
+        count: afloatCount,
+      })
+    : `${runtimeShip.name} — ${runtimeShip.hullName}`;
   els.gold.textContent = fmtInt.format(gold);
   const squadron = squadronSupply(supplyByHull);
   const voyage = voyageClock({ supplyLeftS: squadron.worstSeconds, upkeep: fleetUpkeep(fleet), gold });
@@ -2710,6 +3203,27 @@ function frame(now) {
     if (Number.isFinite(world.level) && world.level > announcedLevel) {
       announcedLevel = world.level;
       pendingLevel = world.level;
+    }
+    // The order the active squadron is under (S155-F/G): a destination ends on arrival, and
+    // a pick-up moves to the next golden buoy or ends when the sea has none left.
+    if (activeOrder && !gameOver) {
+      if (orderDone(world.ship, activeOrder)) {
+        const kind = activeOrder.kind;
+        activeOrder = clearOrder();
+        ui.throttle = 0;
+        if (kind === ORDER.destination) {
+          showBanner(t("sea.banner.destinationDone", { name: runtimeShip.name }), "gold", 3000);
+        }
+      } else if (activeOrder.kind === ORDER.pickUp) {
+        const next = orderProgress(world.ship, activeOrder, world.encounters);
+        if (!next) {
+          activeOrder = clearOrder();
+          ui.throttle = 0;
+          showBanner(t("sea.banner.destinationDone", { name: runtimeShip.name }), "gold", 3000);
+        } else {
+          activeOrder = next;
+        }
+      }
     }
     // The ports recover on the world clock; the elapsed time is applied to the record the
     // yard last wrote when the sea saves (S151).
@@ -2892,6 +3406,47 @@ function boot() {
   });
   world = { ...world, escorts: escorts.map(({ combat, ...rest }) => rest) };
 
+  // The other commands on the water (S155-C): each captain builds her own combatant and her
+  // own escorts from the fleet sheet, and their damage comes back from the sea save, exactly
+  // as the active squadron's does. A save written before this rule has none of them.
+  captainCombat = new Map();
+  const savedOthers = savedGame?.combat?.squadrons;
+  squadrons = (Array.isArray(world.squadrons) ? world.squadrons : [])
+    .filter((squadron) => squadron && typeof squadron.id === "string" && squadron.ship)
+    .map((squadron) => {
+      const record = (fleet?.ships ?? []).find((ship) => ship.id === squadron.id) ?? null;
+      const saved = savedOthers?.[squadron.id];
+      if (record) {
+        const combatant = createPlayerCombatant(record);
+        if (saved && typeof saved === "object") {
+          combatant.condition = { ...combatant.condition, ...saved.condition };
+          combatant.crew = { ...combatant.crew, ...saved.crew };
+          combatant.pieces = restorePieces(combatant.pieces, saved.pieces);
+        }
+        refreshStatus(combatant);
+        captainCombat.set(squadron.id, combatant);
+      }
+      return {
+        ...squadron,
+        name: record?.name ?? squadron.id,
+        escorts: (squadron.escorts ?? [])
+          .filter((escort) => escort && typeof escort.id === "string")
+          .map((escort) => {
+            const hull = (fleet?.ships ?? []).find((ship) => ship.id === escort.id) ?? null;
+            const combatant = hull ? createPlayerCombatant(hull) : null;
+            const stored = savedOthers?.escorts?.[escort.id];
+            if (combatant && stored && typeof stored === "object") {
+              combatant.condition = { ...combatant.condition, ...stored.condition };
+              combatant.crew = { ...combatant.crew, ...stored.crew };
+              combatant.pieces = restorePieces(combatant.pieces, stored.pieces);
+              refreshStatus(combatant);
+            }
+            return { ...escort, name: hull?.name ?? escort.name ?? escort.id, combat: combatant };
+          }),
+        order: { throttle: Number(squadron.order?.throttle) || 0, turn: Number(squadron.order?.turn) || 0 },
+      };
+    });
+
   // The squadron's reserves (S132), one per hull that actually sailed: the captain first
   // and then every escort, each seeded from her own `days` of provisions. The sea save is
   // fresher than the fleet sheet, as it is for damage and crew: a per-hull map wins, and an
@@ -2948,7 +3503,7 @@ function boot() {
 
   applyStaticTranslations();
   const handedOver = handOverCommand();
-  if (!handedOver && squadronStatus(allies()).over) {
+  if (!handedOver && squadronStatus(alliedHulls()).over) {
     gameOver = true;
     gameOverAt = 0;
   }

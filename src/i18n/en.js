@@ -198,7 +198,7 @@ export const en = {
   "sea.rigging": "Rig",
   "sea.crew": "Crew",
   "sea.rounds": "Rounds P/S",
-  "sea.help": "<strong>W / S</strong> sail · <strong>A / D</strong> helm<br /><strong>Q</strong> port broadside · <strong>E</strong> starboard broadside · <strong>R</strong> repair in port · <strong>T</strong> time ×1 · ×2 · ×4 · ×8<br /><strong>1</strong> iron shot · <strong>2</strong> chain shot · <strong>3</strong> hailshot: only the guns that take it change<br />Chase the glint of gold and fight the hostile sails",
+  "sea.help": "<strong>W / S</strong> sail · <strong>A / D</strong> helm<br /><strong>Q</strong> port broadside · <strong>E</strong> starboard broadside · <strong>R</strong> repair in port · <strong>T</strong> time ×1 · ×2 · ×4 · ×8<br /><strong>1</strong> iron shot · <strong>2</strong> chain shot · <strong>3</strong> hailshot: only the guns that take it change<br /><strong>C</strong> change captain · <strong>G</strong> pick up gold · <strong>click</strong> choose a captain · <strong>double click</strong> sail there<br />Chase the glint of gold and fight the hostile sails",
 
   /* ---------------------------------------------------------------- sea banners */
   "sea.wind.title": "Wind",
@@ -226,6 +226,16 @@ export const en = {
   "sea.banner.escortFire": "{name} fires to {side}",
   "sea.banner.escortLost": "We lost the {name}! She leaves the fleet",
   "sea.banner.commandHandover": "We lost the {lost}! The {name} takes command of the fleet",
+  /* S155: several captains afloat, and the orders one of them can be given. */
+  "sea.squadron.title": "{name} · {count} captains at sea",
+  "sea.banner.squadronActive": "You take the helm of the {name}",
+  "sea.banner.noSquadrons": "There is no other captain at sea",
+  "sea.banner.destination": "Course set: {distance} m to the mark",
+  "sea.banner.destinationDone": "The {name} reached her destination",
+  "sea.banner.collectOn": "The {name} goes for the golden buoys",
+  "sea.banner.collectOff": "The {name} abandons the pick-up",
+  "sea.banner.collectNone": "No golden buoy left on the sea",
+  "sea.banner.orderCancelled": "You take the helm: the order is cancelled",
   "shipyard.fort.title": "Shipyard",
   "shipyard.fort.ours": "In your hands",
   "shipyard.fort.taken": "Taken by the enemy",

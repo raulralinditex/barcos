@@ -195,7 +195,7 @@ export const es = {
   "sea.rigging": "Aparejo",
   "sea.crew": "Tripulación",
   "sea.rounds": "Munición B/E",
-  "sea.help": "<strong>W / S</strong> velamen · <strong>A / D</strong> timón<br /><strong>Q</strong> andanada de babor · <strong>E</strong> andanada de estribor · <strong>R</strong> reparar en puerto · <strong>T</strong> tiempo ×1 · ×2 · ×4 · ×8<br /><strong>1</strong> bala de hierro · <strong>2</strong> cadena · <strong>3</strong> metralla: sólo cambian las piezas que la aceptan<br />Buscá los destellos de oro y batí las velas hostiles",
+  "sea.help": "<strong>W / S</strong> velamen · <strong>A / D</strong> timón<br /><strong>Q</strong> andanada de babor · <strong>E</strong> andanada de estribor · <strong>R</strong> reparar en puerto · <strong>T</strong> tiempo ×1 · ×2 · ×4 · ×8<br /><strong>1</strong> bala de hierro · <strong>2</strong> cadena · <strong>3</strong> metralla: sólo cambian las piezas que la aceptan<br /><strong>C</strong> cambiar de capitana · <strong>G</strong> recoger doblones · <strong>clic</strong> elegir capitana · <strong>doble clic</strong> navegar hasta ahí<br />Buscá los destellos de oro y batí las velas hostiles",
 
   /* ---------------------------------------------------------------- sea banners */
   "sea.wind.title": "Viento",
@@ -223,6 +223,16 @@ export const es = {
   "sea.banner.escortFire": "{name} dispara por {side}",
   "sea.banner.escortLost": "¡Perdimos el {name}! Sale de la flota",
   "sea.banner.commandHandover": "¡Perdimos el {lost}! El {name} toma el mando de la flota",
+  /* S155: varias capitanas a flote y las órdenes que se le pueden dar a una. */
+  "sea.squadron.title": "{name} · {count} capitanas en el mar",
+  "sea.banner.squadronActive": "Tomás el mando del {name}",
+  "sea.banner.noSquadrons": "No hay otra capitana en el mar",
+  "sea.banner.destination": "Rumbo puesto: {distance} m a la marca",
+  "sea.banner.destinationDone": "El {name} llegó a su destino",
+  "sea.banner.collectOn": "El {name} va por las bolas amarillas",
+  "sea.banner.collectOff": "El {name} abandona la recogida",
+  "sea.banner.collectNone": "No queda ninguna bola amarilla en el mar",
+  "sea.banner.orderCancelled": "Tomás el timón: la orden queda cancelada",
   "shipyard.fort.title": "Astillero",
   "shipyard.fort.ours": "En tus manos",
   "shipyard.fort.taken": "Tomado por el enemigo",
