@@ -130,3 +130,80 @@ test("S155: a broken order or a broken hull is a straight helm, never a crash", 
     assert.doesNotThrow(() => steerTowards(broken, destinationOrder({ x: 10, y: 10 }, { x: 0, y: 0 })));
   }
 });
+
+/* ------------------------------------------------------------------ S158 */
+
+test("S158: a pick-up does not chase a buoy the sea keeps re-seeding", () => {
+  // The sea tops its treasures back up to the zone's quota on every tick (S150 kept that
+  // rule), so "no golden buoy left" never becomes true and the order never ends. Measured
+  // before the fix: 900 ticks of an order that had collected six buoys was still chasing
+  // the seventh. The order is a round, not a life sentence: it ends when the buoys it set
+  // out for are collected.
+  const buoys = [
+    { id: 1, type: "treasure", x: 200, y: 0 },
+    { id: 2, type: "treasure", x: 0, y: 200 },
+    { id: 3, type: "treasure", x: -200, y: 0 },
+  ];
+  const order = pickUpOrder({ x: 0, y: 0 }, buoys);
+
+  assert.equal(order.kind, ORDER.pickUp);
+  assert.equal(order.remaining, 3, "the order must remember how many buoys it set out for");
+
+  // Collecting them one by one counts down.
+  let current = orderProgress({ x: 200, y: 0 }, order, buoys.filter((b) => b.id !== 1));
+  assert.equal(current.remaining, 2);
+  current = orderProgress({ x: 0, y: 200 }, current, buoys.filter((b) => b.id > 2));
+  assert.equal(current.remaining, 1);
+  // The last one ends the order, even though the sea has already seeded fresh buoys.
+  const reseeded = [{ id: 90, type: "treasure", x: 500, y: 500 }];
+  assert.equal(orderProgress({ x: -200, y: 0 }, current, reseeded), null);
+});
+
+test("S158: a pick-up ends when the buoys it was chasing are all gone", () => {
+  const buoys = [{ id: 7, type: "treasure", x: 120, y: 0 }];
+  const order = pickUpOrder({ x: 0, y: 0 }, buoys);
+  assert.equal(order.remaining, 1);
+  // The buoy was collected and the sea has not seeded a replacement yet.
+  assert.equal(orderProgress({ x: 120, y: 0 }, order, []), null);
+});
+
+test("S158: a pick-up still moves to a new buoy when the one it chased vanished uncollected", () => {
+  const buoys = [
+    { id: 1, type: "treasure", x: 400, y: 0 },
+    { id: 2, type: "treasure", x: 120, y: 0 },
+  ];
+  const order = pickUpOrder({ x: 0, y: 0 }, buoys);
+  assert.equal(order.remaining, 2);
+  // The target is gone without being collected: the round owes one less, but it is not over,
+  // so the captain looks again instead of sitting on the spot where the buoy was.
+  const next = orderProgress({ x: 60, y: 0 }, order, buoys.filter((b) => b.id !== 2));
+  assert.equal(next.targetId, 1);
+  assert.equal(next.remaining, 1, "a vanished buoy is one the round can no longer collect");
+});
+
+test("S158: reaching a buoy does not end the round, it moves to the next one", () => {
+  // The bug the player reported (verbatim): "cuando le das a la tecla G recogida de doblones,
+  // entra en un ciclo, seleccion de destello, ir a destello recoger doblones, y empieza otra
+  // vez". After the fix of the endless round it stopped after the FIRST buoy instead: the
+  // arrival check was answering for a pick-up as if it were a destination, so the sea cleared
+  // the order the moment the captain reached the buoy she was chasing.
+  const buoys = [
+    { id: 1, type: "treasure", x: 200, y: 0 },
+    { id: 2, type: "treasure", x: 0, y: 200 },
+  ];
+  const order = pickUpOrder({ x: 0, y: 0 }, buoys);
+  // She is right on top of the buoy she was chasing: a pick-up is not "arrived" and over.
+  assert.equal(orderDone({ x: 200, y: 0 }, order), false, "a pick-up has no destination to arrive at");
+
+  // The round continues to the next buoy.
+  const next = orderProgress({ x: 200, y: 0 }, order, buoys.filter((buoy) => buoy.id !== 1));
+  assert.equal(next.targetId, 2);
+  assert.equal(next.remaining, 1);
+});
+
+test("S158: a destination is still over when the hull arrives", () => {
+  // The rule S155-F keeps, so the fix above does not swallow it.
+  const order = destinationOrder({ x: 500, y: 0 }, { x: 0, y: 0 });
+  assert.equal(orderDone({ x: 500, y: 0 }, order), true);
+  assert.equal(orderDone({ x: 0, y: 0 }, order), false);
+});

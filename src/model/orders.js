@@ -54,13 +54,20 @@ export function destinationOrder(point, from) {
  * An order to work the golden buoys, aimed at the nearest one. Only treasures count: an
  * enemy is not something to sail into, and a wreck is paid by sailing over it, which the
  * world already does for any hull of the squadron (S128).
+ *
+ * `remaining` is how many buoys this round set out for (S158). The sea tops its treasures
+ * back up to the zone's quota on every tick, so "no golden buoy left" never comes true and
+ * an order that waited for it became an endless loop of sail-collect-sail. The round ends
+ * when the buoys it named are collected.
  */
 export function pickUpOrder(from, encounters) {
   if (!isPoint(from) || !Array.isArray(encounters)) return null;
   let best = null;
   let bestDistance = Infinity;
+  let remaining = 0;
   for (const encounter of encounters) {
     if (encounter?.type !== "treasure" || !isPoint(encounter)) continue;
+    remaining += 1;
     const distance = Math.hypot(encounter.x - from.x, encounter.y - from.y);
     if (distance < bestDistance) {
       best = encounter;
@@ -75,6 +82,7 @@ export function pickUpOrder(from, encounters) {
     y: best.y,
     distanceM: bestDistance,
     arrived: false,
+    remaining,
   };
 }
 
@@ -103,7 +111,11 @@ export function steerTowards(ship, order) {
 
 /**
  * Whether the order is over. A destination ends when the hull is inside the arrival radius;
- * a pick-up ends when the buoy she was chasing is gone and no other one is left.
+ * a pick-up ends when the round has no buoy left to chase, which `orderProgress` decides.
+ *
+ * A pick-up must never answer `true` here for reaching her buoy (S158): reaching it is the
+ * point of the trip, not the end of it. The bug the player reported was exactly that, and it
+ * left her stopped on the buoy she had just collected.
  *
  * `cancelled` is the player taking the wheel: steering by hand ends whatever order was live,
  * which is the rule the double click was announced with.
@@ -111,18 +123,19 @@ export function steerTowards(ship, order) {
 export function orderDone(ship, order, { cancelled = false } = {}) {
   if (!order || typeof order !== "object") return false;
   if (cancelled) return true;
-  if (order.kind !== ORDER.destination && order.kind !== ORDER.pickUp) return false;
+  if (order.kind !== ORDER.destination) return false;
   if (!isPoint(ship)) return false;
   return Math.hypot(ship.x - order.x, ship.y - order.y) <= ARRIVAL_RADIUS_M;
 }
 
 /**
  * The next tick of a pick-up order: keep the buoy being chased while she is still afloat,
- * move to the nearest one when she is gone, and end the order when the sea has no golden
- * buoy left.
+ * move to the nearest one when she is gone, and end the round when the buoys it set out for
+ * are all collected (S158).
  *
- * This is what makes the order a loop instead of one trip: the captain collects, and the
- * next buoy becomes the mark without the player touching anything.
+ * This is what makes the order a loop instead of one trip, without making it a life
+ * sentence: the captain collects, the next buoy becomes the mark without the player touching
+ * anything, and the round ends when her list is empty instead of when the sea stops seeding.
  */
 export function orderProgress(ship, order, encounters) {
   if (!order || order.kind !== ORDER.pickUp) return order ?? null;
@@ -130,8 +143,15 @@ export function orderProgress(ship, order, encounters) {
   const current = list.find(
     (encounter) => encounter?.type === "treasure" && encounter.id === order.targetId,
   );
+  const remaining = Number.isFinite(order.remaining) ? Math.max(0, order.remaining) : null;
   if (current) return { ...order, x: current.x, y: current.y };
-  return pickUpOrder(ship, list);
+  // The buoy this tick was aimed at is gone: she was collected, or she drifted out of the
+  // sea. Either way the round owes one less.
+  const left = remaining === null ? null : Math.max(0, remaining - 1);
+  if (left === 0) return null;
+  const next = pickUpOrder(ship, list);
+  if (!next) return null;
+  return left === null ? next : { ...next, remaining: Math.min(left, next.remaining) };
 }
 
 /** The wheel is the player's again: no order is live. */
