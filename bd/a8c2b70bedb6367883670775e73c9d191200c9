@@ -1,0 +1,34 @@
+test/squadrons.test.js
+  s_4d0585bb40a7aa::t_a9df94a8bf3096 12-13,179-195,201,203,205,208-209
+  s_4d0585bb40a7aa::t_e88e5efc61bfe6 1-11,14-178,213
+  s_4d0585bb40a7aa::t_ae07b66b3c3251 196-200,202,204,206-207,210-212
+src/model/fleet.js
+  s_9a29fb79b9c88e::t_ee9e53316eb22f 370,377
+  s_4d0585bb40a7aa::t_731ccdcf2194b7 148-153
+  s_9a29fb79b9c88e::t_028670349e263f 77-122,332,347,374-376,379-389
+  s_4d0585bb40a7aa::t_525bb9f04019e3 128-131
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.6",
+  "base_commit_sha": "bda8c2b70bedb6367883670775e73c9d191200c9",
+  "prompts": {},
+  "sessions": {
+    "s_4d0585bb40a7aa": {
+      "agent_id": {
+        "tool": "pi",
+        "id": "01a1f448-537b-775c-9025-6f08735a34aa",
+        "model": "deepseek-v4.1-flash_high"
+      },
+      "human_author": "Raul Ripoll <raulral@ext.inditex.com>"
+    },
+    "s_9a29fb79b9c88e": {
+      "agent_id": {
+        "tool": "pi",
+        "id": "01a1f46c-b91d-775b-85a1-5cc7015542ac",
+        "model": "gpt-6.1-terra"
+      },
+      "human_author": "Raul Ripoll <raulral@ext.inditex.com>"
+    }
+  }
+}
