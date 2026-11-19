@@ -14,6 +14,7 @@ import { enemiesPerZone, normaliseLevel, victoriesForLevel } from "./levels.js";
 import { createEscort, escortStation, stepEscort } from "./formation.js";
 import { seaSquadrons, shipsSailingAtSea, squadrons } from "./fleet.js";
 import { referenceSpeedKn } from "./ship-model.js";
+import { oarTurnFactor, speedUnderOars } from "./oars.js";
 import { windAt, windEffect } from "./wind.js";
 
 export const KN_TO_MS = 1852 / 3600;
@@ -344,7 +345,13 @@ export function stepHull(ship, input = {}, dt = 0) {
   // here, in the one physics every hull obeys (S57), so the rule reaches the player, the
   // escorts and the enemies alike.
   const rigFactor = riggingSpeedFactor(input.rigging);
-  const targetSpeed = ship.speedKn * throttle * windFactor * rigFactor;
+  const sailKn = ship.speedKn * windFactor * rigFactor;
+  // The oars are a reserve propulsion, not an extra engine (S159-A): the hull makes way at
+  // the greater of sail and oars, never their sum. `input.oars` is what the sea knows about
+  // the crew at the oars; a hull that does not declare them carries no such record and sails
+  // exactly as it always did (S159-I).
+  const oarKn = Number(input.oars?.speedKn) > 0 ? Number(input.oars.speedKn) : 0;
+  const targetSpeed = throttle * speedUnderOars(sailKn, oarKn);
   const currentSpeedKn = moveToward(
     ship.currentSpeedKn ?? 0,
     targetSpeed,
@@ -352,9 +359,13 @@ export function stepHull(ship, input = {}, dt = 0) {
   );
 
   // The hull's own share of the rudder rate: a heavy hull turns wider (S48). A ship with
-  // no factor on record turns at the base rate, as it always did.
+  // no factor on record turns at the base rate, as it always did. A crew at the oars sharpens
+  // the helm (S159-F), which is the tactical manoeuvre the oars are for.
   const turnFactor = Number.isFinite(ship.turnFactor) && ship.turnFactor > 0 ? ship.turnFactor : 1;
-  const heading = normalizeAngle((ship.heading ?? 0) + turn * WORLD.maxTurnRate * turnFactor * dt);
+  const oarTurn = oarTurnFactor(input.oars ?? null);
+  const heading = normalizeAngle(
+    (ship.heading ?? 0) + turn * WORLD.maxTurnRate * turnFactor * oarTurn * dt,
+  );
   const distanceM = currentSpeedKn * KN_TO_MS * WORLD.arcadeScale * dt;
 
   let x = ship.x + Math.cos(heading) * distanceM;
@@ -740,6 +751,26 @@ function stepSquadron(squadron, wind, dt) {
 }
 
 /**
+ * The effort left in each hull's crew at the oars, keyed by hull id (S159-D).
+ *
+ * The sea keeps it per hull, exactly as it keeps the provisions (S132): a galleass that
+ * sprinted has less left in her than a fresh one, and a hull that was resting has recovered.
+ * A missing, broken or out-of-range value reads as a fresh crew, so a save written before
+ * this rule opens with rested rowers.
+ */
+export function normaliseEffort(value) {
+  const source = value && typeof value === "object" && !Array.isArray(value) ? value : {};
+  const result = {};
+  for (const [id, effort] of Object.entries(source)) {
+    if (typeof id !== "string" || id.length === 0) continue;
+    const number = Number(effort);
+    if (!Number.isFinite(number)) continue;
+    result[id] = Math.min(1, Math.max(0, number));
+  }
+  return result;
+}
+
+/**
  * Seed the quota of `level` in the water the captain is in (S140-B/S150).
  *
  * The level caps each zone, so a level is seeded where it starts: the sails of the previous
@@ -898,6 +929,8 @@ export function serializeWorld(world) {
       ? world.levelEnemies.filter((id) => Number.isFinite(id))
       : [],
     levelVictories: normaliseVictories(world.levelVictories),
+    // The effort left in every crew at the oars (S159-D): a hull that sprinted stays tired.
+    oarEffort: normaliseEffort(world.oarEffort),
   });
 }
 
@@ -955,6 +988,8 @@ export function deserializeWorld(json) {
         : [],
       // A save written before S150 knows no victories, which is a level that has won none.
       levelVictories: normaliseVictories(data.levelVictories),
+      // A save written before the oars existed opens with rested crews (S159-I).
+      oarEffort: normaliseEffort(data.oarEffort),
     };
   } catch {
     return null;

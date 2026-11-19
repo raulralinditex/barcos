@@ -70,6 +70,12 @@ export const HULLS = [
     maxPiecesPerSide: 9,
     crewMin: 10,
     priceGold: 900,
+    /**
+     * Banks of oars (S159): how many rowers she can seat and how fast she moves
+     * under them at a full bank and full effort. Bancos de convención del juego.
+     */
+    oarBanks: 16,
+    oarMaxKn: 4.0,
   },
   {
     id: "carabela-latina",
@@ -89,6 +95,12 @@ export const HULLS = [
     maxPiecesPerSide: 10,
     crewMin: 8,
     priceGold: 1200,
+    /**
+     * Banks of oars (S159): how many rowers she can seat and how fast she moves
+     * under them at a full bank and full effort. Bancos de convención del juego.
+     */
+    oarBanks: 20,
+    oarMaxKn: 4.5,
   },
   {
     id: "jacht",
@@ -108,6 +120,12 @@ export const HULLS = [
     maxPiecesPerSide: 12,
     crewMin: 10,
     priceGold: 700,
+    /**
+     * Banks of oars (S159): how many rowers she can seat and how fast she moves
+     * under them at a full bank and full effort. Bancos de convención del juego.
+     */
+    oarBanks: 10,
+    oarMaxKn: 4.0,
   },
   {
     id: "zabra",
@@ -126,6 +144,12 @@ export const HULLS = [
     maxPiecesPerSide: 13,
     crewMin: 20,
     priceGold: 2200,
+    /**
+     * Banks of oars (S159): how many rowers she can seat and how fast she moves
+     * under them at a full bank and full effort. Bancos de convención del juego.
+     */
+    oarBanks: 10,
+    oarMaxKn: 4.0,
   },
   {
     id: "galeon-pequeno",
@@ -236,6 +260,12 @@ export const HULLS = [
     maxPiecesPerSide: 20,
     crewMin: 100,
     priceGold: 9000,
+    /**
+     * Banks of oars (S159): how many rowers she can seat and how fast she moves
+     * under them at a full bank and full effort. Remeros documentados: "300 remeros cada una".
+     */
+    oarBanks: 300,
+    oarMaxKn: 7.0,
   },
   {
     id: "gran-galeon",
@@ -291,6 +321,12 @@ export const HULLS = [
     maxPiecesPerSide: 4,
     crewMin: 6,
     priceGold: 320,
+    /**
+     * Banks of oars (S159): how many rowers she can seat and how fast she moves
+     * under them at a full bank and full effort. Bancos de convención del juego.
+     */
+    oarBanks: 8,
+    oarMaxKn: 3.5,
   },
   {
     id: "pinaza",
@@ -309,6 +345,12 @@ export const HULLS = [
     maxPiecesPerSide: 5,
     crewMin: 14,
     priceGold: 620,
+    /**
+     * Banks of oars (S159): how many rowers she can seat and how fast she moves
+     * under them at a full bank and full effort. Bancos de convención del juego.
+     */
+    oarBanks: 12,
+    oarMaxKn: 4.0,
   },
   {
     id: "bark-armado",

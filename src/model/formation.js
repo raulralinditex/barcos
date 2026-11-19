@@ -11,6 +11,7 @@
 
 import { KN_TO_MS, WORLD } from "./world.js";
 import { windEffect } from "./wind.js";
+import { oarTurnFactor, speedUnderOars } from "./oars.js";
 
 export const ESCORT = {
   /** How far astern of the captain the first station sits, in metres. */
@@ -164,13 +165,19 @@ export function stepEscort(escort, station, input = {}, dt = 0) {
   const turn = clamp(angleDiff(bearing, ship.heading) / Math.max(time, 1e-6), -1, 1) * (onStation ? 0.5 : 1);
   // Each escort turns at its own hull's rate (S48): a heavy one swings wide.
   const turnFactor = Number.isFinite(escort?.turnFactor) && escort.turnFactor > 0 ? escort.turnFactor : 1;
-  const heading = normaliseAngle(ship.heading + turn * WORLD.maxTurnRate * turnFactor * time);
+  // A crew at the oars sharpens her helm exactly as her captain's (S159-F).
+  const oarTurn = oarTurnFactor(input.oars ?? null);
+  const heading = normaliseAngle(ship.heading + turn * WORLD.maxTurnRate * turnFactor * oarTurn * time);
 
   // Station keeping is relative to the captain: an escort matches her speed and adds
   // a margin to close the gap, instead of aiming at a fraction of its own speed (which
   // would leave it forever trailing a faster flagship).
   const wind = input.wind ? windEffect(input.wind, heading).speedFactor : 1;
-  const ceiling = ship.speedKn * wind * ESCORT.catchUpSpeed;
+  // Her own oar speed is a reserve, not an addition (S159-A): the greater of the two, and
+  // the catch-up margin is applied on top of whichever wins.
+  const oarKn = Number(input.oars?.speedKn) > 0 ? Number(input.oars.speedKn) : 0;
+  const hullKn = speedUnderOars(ship.speedKn * wind, oarKn);
+  const ceiling = hullKn * ESCORT.catchUpSpeed;
   const captainSpeed = Number.isFinite(input.captainSpeedKn) ? input.captainSpeedKn : 0;
   // Dead band (S96). The target used to be `captain + closing`, and `closing` fell to
   // zero inside the tolerance — so the target dropped *below* the captain's speed and the

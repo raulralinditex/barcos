@@ -18,6 +18,7 @@
 import { CONVENTIONS, crewRoleById, pieceById } from "../data/naval-data.js";
 import { gunnersRequired } from "./gunnery.js";
 import { TURNING, lightLoadTurnFactor } from "./turning.js";
+import { hasOarBanks } from "./oars.js";
 
 /** Shot mass in kg carried by one piece of a battery entry. */
 export function shotMassKg(pieceId, shotsPerPiece) {
@@ -259,7 +260,10 @@ export function validateShip(input, budget = computeBudget(input)) {
     );
   }
 
-  if (counts.remero > 0 && hull.id !== "galeaza") {
+  // Rowers belong on a hull with banks of oars (S159-G): the hull declares them, so this is
+  // no longer a hard-coded exception for one ship. A hull that declares none cannot use them,
+  // and the warning says so instead of letting the player pay for idle men.
+  if (counts.remero > 0 && !hasOarBanks(hull)) {
     issues.push(issue(WARN, "rowers-without-galley"));
   }
 
