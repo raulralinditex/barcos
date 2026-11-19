@@ -10,6 +10,8 @@ import {
   oarsAboard,
   banksFor,
   hasOarBanks,
+  crewRolesForHull,
+  withoutUnseatableRowers,
   loadPenalty,
   rowingTarget,
   speedUnderOars,
@@ -240,4 +242,35 @@ test("S161: a broken crew record is no men at all, never a crash", () => {
     assert.equal(soldiersWorth(broken), 0);
     assert.equal(rowersWorth(broken), 0);
   }
+});
+
+/* ------------------------------------------------- S159-H: the editor offers no oars */
+
+test("S159-H: a hull without banks is offered no rowers at all", () => {
+  // The player asked for it (verbatim): "los cascos que no tienen remos no aparecen en la
+  // interface esa posibilidad". The rule is data, so the screen only reads it.
+  const roles = ["marino", "artillero", "soldado", "remero"];
+  assert.deepEqual(crewRolesForHull({ id: "galeon-pequeno" }, roles), ["marino", "artillero", "soldado"]);
+  assert.deepEqual(crewRolesForHull({ id: "galeaza", oarBanks: 300, oarMaxKn: 7 }, roles), roles);
+});
+
+test("S159-H: a hull that declares no banks drops the rowers it was carrying", () => {
+  // A loadout saved on a galleass and then moved to a galleon keeps no rowers: she has no
+  // banks to seat them, and the model would only warn about men who cannot pull.
+  const withRowers = { marino: 40, artillero: 6, soldado: 20, remero: 150 };
+  assert.deepEqual(withoutUnseatableRowers({ id: "galeon-pequeno" }, withRowers), {
+    marino: 40, artillero: 6, soldado: 20,
+  });
+  assert.deepEqual(withoutUnseatableRowers({ id: "galeaza", oarBanks: 300, oarMaxKn: 7 }, withRowers), withRowers);
+});
+
+test("S159-H: a broken hull or crew record is never a crash and never invents men", () => {
+  const roles = ["marino", "artillero", "soldado", "remero"];
+  assert.deepEqual(crewRolesForHull(null, roles), ["marino", "artillero", "soldado"]);
+  assert.deepEqual(crewRolesForHull({ id: "x" }, null), []);
+  for (const broken of [null, undefined, {}, { remero: 0 }, { remero: "muchos" }]) {
+    assert.deepEqual(withoutUnseatableRowers({ id: "galeon-pequeno" }, broken), {});
+  }
+  // The roles of a hull with banks survive a crew that never had rowers.
+  assert.deepEqual(withoutUnseatableRowers({ id: "galeaza", oarBanks: 300, oarMaxKn: 7 }, { marino: 10 }), { marino: 10 });
 });

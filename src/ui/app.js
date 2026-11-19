@@ -94,6 +94,8 @@ import {
 import { floatsAgain, isWreck, refloatCost } from "../model/sinking.js";
 import { rearmQuote, rearmShip } from "../model/rearm.js";
 import { REARM } from "../model/rearm.js";
+// S159-H: a hull with no banks of oars is offered no rowers at all.
+import { crewRolesForHull, withoutUnseatableRowers } from "../model/oars.js";
 
 const STORAGE_KEY = "barcos:config:v1";
 const GAME_KEY = "barcos:game:v1";
@@ -337,6 +339,8 @@ function loadConfig() {
     if (typeof saved.shipName === "string") state.shipName = saved.shipName;
     // A save written under another country must not leave an illegal loadout.
     applyCountryToLoadout();
+    // Nor may it seat men the hull cannot carry (S159-H): a galleon has no banks of oars.
+    state.crew = withoutUnseatableRowers(hullById(state.hullId), state.crew);
   } catch {
     /* a corrupted save must never block the shipyard */
   }
@@ -444,6 +448,9 @@ function renderHulls() {
       state.hullId = hull.id;
       // Pieces beyond the new hull's limit would be silently illegal: trim them.
       state.batteries = state.batteries.filter((entry) => pieceById(entry.pieceId));
+      // The same for men the new hull cannot seat (S159-H): a galleon has no banks of oars,
+      // so the rowers of a galleass do not come along.
+      state.crew = withoutUnseatableRowers(hull, state.crew);
       render();
     });
     els.hullList.appendChild(card);
@@ -545,9 +552,20 @@ function renderBatteries() {
   });
 }
 
+/**
+ * The crew editor of the Aparejo panel (S159-H).
+ *
+ * A hull that declares no banks of oars is offered every role but the rower's: the player
+ * asked for it (verbatim): "los cascos que no tienen remos no aparecen en la interface esa
+ * posibilidad". The list comes from the hull, so choosing another hull changes what the panel
+ * offers without any other rule.
+ */
 function renderCrew() {
   els.crewList.innerHTML = "";
+  const hull = hullById(state.hullId);
+  const offered = crewRolesForHull(hull, CREW_ROLES.map((role) => role.id));
   for (const role of CREW_ROLES) {
+    if (!offered.includes(role.id)) continue;
     const qty = state.crew[role.id] ?? 0;
     const row = document.createElement("div");
     row.className = "crew-row";

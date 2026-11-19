@@ -68,6 +68,33 @@ export function banksFor(hull) {
   return hasOarBanks(hull) ? Math.floor(Number(hull.oarBanks)) : 0;
 }
 
+/**
+ * The crew roles a hull can actually seat (S159-H).
+ *
+ * The player asked for it (verbatim): "los cascos que no tienen remos no aparecen en la
+ * interface esa posibilidad". So a hull that declares no banks is offered every role but the
+ * rower's, and the screen only reads this list instead of deciding it again.
+ */
+export function crewRolesForHull(hull, roles) {
+  const list = Array.isArray(roles) ? roles : [];
+  if (hasOarBanks(hull)) return [...list];
+  return list.filter((role) => role !== "remero");
+}
+
+/**
+ * The same crew without the men a hull cannot seat (S159-H).
+ *
+ * A loadout saved on a galleass and then moved to a galleon keeps no rowers: there are no
+ * banks to put them at, and the model would only warn about men who cannot pull. Every
+ * other role is untouched, and a broken record stays as empty as it came.
+ */
+export function withoutUnseatableRowers(hull, crew) {
+  if (!crew || typeof crew !== "object" || Array.isArray(crew)) return {};
+  const next = { ...crew };
+  if (!hasOarBanks(hull)) delete next.remero;
+  return next;
+}
+
 /** The rowers actually aboard a crew: whole men, never invented, never negative. */
 export function oarsAboard(crew) {
   const count = Number(crew?.remero);
