@@ -35,4 +35,20 @@ Las imágenes se redujeron a un máximo de 900 px y menos de 200 KB; la de CC BY
 | `galeaza` (`galeaza-2.jpg`) | GaleazaVenecianaPrincipiosDelSigloXVI.jpg — Museo Naval de Madrid | Rowanwindwhistler | CC BY-SA 3.0 | [Commons](https://commons.wikimedia.org/wiki/File:GaleazaVenecianaPrincipiosDelSigloXVI.jpg) |
 | `barca-costera` (`barca-costera-2.jpg`) | Chasse marée naviguant au plus près.jpg — lugre costero, grabado de 1826 (posterior al casco de 1586: se muestra como tipo, no como vista de época) | Jean-Jérôme Baugean (1764 - 1819) | Public domain | [Commons](https://commons.wikimedia.org/wiki/File:Chasse_mar%C3%A9e_naviguant_au_plus_pr%C3%A8s.jpg) |
 
-Total: 18 imágenes en 15 cascos.
+## Imágenes de los siglos XVI-XVIII (S156)
+
+Segunda ronda de imágenes, todas de dominio público, tomadas de Wikimedia Commons (las obras son del Royal Museums Greenwich, el Rijksmuseum y colecciones similares). Se redujeron a un máximo de 1000 px y menos de 200 KB. Las imágenes de Shutterstock que se pidieron primero no se usaron: su licencia no permite redistribuirlas en un repositorio y los archivos no se pueden descargar sin cuenta.
+
+| Casco | Archivo | Autor | Licencia | Fuente |
+|---|---|---|---|---|
+| `pinaza` (`pinaza-2.jpg`) | Cornelis Verbeeck - Een Nederlands pinasschip op een woelige zee.jpg | Cornelis Verbeeck | Public domain | [Commons](https://commons.wikimedia.org/wiki/File:Cornelis_Verbeeck_-_Een_Nederlands_pinasschip_op_een_woelige_zee.jpg) |
+| `galeon-pequeno` (`galeon-pequeno-2.jpg`) | An East Indiaman in stays, with a fleet chase beyond RMG BHC1051.jpg | Francis Swaine | Public domain | [Commons](https://commons.wikimedia.org/wiki/File:An_East_Indiaman_in_stays,_with_a_fleet_chase_beyond_RMG_BHC1051.jpg) |
+| `nao-armada` (`nao-armada-3.jpg`) | Portuguese Carracks off a Rocky Coast RMG BHC0705.tiff | Unknown author (as recorded on Commons) | Public domain | [Commons](https://commons.wikimedia.org/wiki/File:Portuguese_Carracks_off_a_Rocky_Coast_RMG_BHC0705.tiff) |
+| `fluyt` (`fluyt-2.jpg`) | A Dutch Whaler and Other Vessels in the Ice RMG BHC1016.jpg | Adam Silo | Public domain | [Commons](https://commons.wikimedia.org/wiki/File:A_Dutch_Whaler_and_Other_Vessels_in_the_Ice_RMG_BHC1016.jpg) |
+| `galeon-guerra` (`galeon-guerra-2.jpg`) | Defeat of the Spanish Armada, 8 August 1588 RMG BHC0264.tiff | Philip James de Loutherbourg | Public domain | [Commons](https://commons.wikimedia.org/wiki/File:Defeat_of_the_Spanish_Armada,_8_August_1588_RMG_BHC0264.tiff) |
+| `gran-buque-real` (`gran-buque-real-2.jpg`) | English Ships and the Spanish Armada, August 1588 RMG BHC0262.jpg | Unknown author (as recorded on Commons) | Public domain | [Commons](https://commons.wikimedia.org/wiki/File:English_Ships_and_the_Spanish_Armada,_August_1588_RMG_BHC0262.jpg) |
+| `gran-galeon` (`gran-galeon-2.jpg`) | Vroom Hendrick Cornelisz Battle between England and Spain 1601.jpg | Hendrick Cornelisz Vroom | Public domain | [Commons](https://commons.wikimedia.org/wiki/File:Vroom_Hendrick_Cornelisz_Battle_between_England_and_Spain_1601.jpg) |
+| `gran-mercante` (`gran-mercante-2.jpg`) | A fleet of East Indiamen at sea RMG BHC1097.tiff | Nicholas Pocock | Public domain | [Commons](https://commons.wikimedia.org/wiki/File:A_fleet_of_East_Indiamen_at_sea_RMG_BHC1097.tiff) |
+| `jacht` (`jacht-2.jpg`) | A Dutch Ferry Boat Before a Breeze RMG BHC0772.tiff | Simon de Vlieger | Public domain | [Commons](https://commons.wikimedia.org/wiki/File:A_Dutch_Ferry_Boat_Before_a_Breeze_RMG_BHC0772.tiff) |
+
+Total: 27 imágenes en 15 cascos.

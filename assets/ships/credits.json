@@ -14,11 +14,22 @@
     "source": "https://commons.wikimedia.org/wiki/File:Caravela_latina_from_the_Santa_Auta_altarpiece.jpg"
   },
   "jacht": {
-    "file": "assets/ships/jacht.jpg",
-    "title": "Een jacht voor de kust liggend, RP-T-00-1607.jpg",
-    "author": "Rijksmuseum",
-    "license": "CC0",
-    "source": "https://commons.wikimedia.org/wiki/File:Een_jacht_voor_de_kust_liggend,_RP-T-00-1607.jpg"
+    "pictures": [
+      {
+        "file": "assets/ships/jacht.jpg",
+        "title": "Een jacht voor de kust liggend, RP-T-00-1607.jpg",
+        "author": "Rijksmuseum",
+        "license": "CC0",
+        "source": "https://commons.wikimedia.org/wiki/File:Een_jacht_voor_de_kust_liggend,_RP-T-00-1607.jpg"
+      },
+      {
+        "file": "assets/ships/jacht-2.jpg",
+        "title": "A Dutch Ferry Boat Before a Breeze RMG BHC0772.tiff (resized)",
+        "author": "Simon de Vlieger",
+        "license": "Public domain",
+        "source": "https://commons.wikimedia.org/wiki/File:A_Dutch_Ferry_Boat_Before_a_Breeze_RMG_BHC0772.tiff"
+      }
+    ]
   },
   "zabra": {
     "file": "assets/ships/zabra.jpg",
@@ -28,18 +39,40 @@
     "source": "https://commons.wikimedia.org/wiki/File:Zabra_Santiago.jpg"
   },
   "galeon-pequeno": {
-    "file": "assets/ships/galeon-pequeno.jpg",
-    "title": "Golden Hind RMG B2588.tiff",
-    "author": "George Robinson",
-    "license": "Public domain",
-    "source": "https://commons.wikimedia.org/wiki/File:Golden_Hind_RMG_B2588.tiff"
+    "pictures": [
+      {
+        "file": "assets/ships/galeon-pequeno.jpg",
+        "title": "Golden Hind RMG B2588.tiff",
+        "author": "George Robinson",
+        "license": "Public domain",
+        "source": "https://commons.wikimedia.org/wiki/File:Golden_Hind_RMG_B2588.tiff"
+      },
+      {
+        "file": "assets/ships/galeon-pequeno-2.jpg",
+        "title": "An East Indiaman in stays, with a fleet chase beyond RMG BHC1051.jpg (resized)",
+        "author": "Francis Swaine",
+        "license": "Public domain",
+        "source": "https://commons.wikimedia.org/wiki/File:An_East_Indiaman_in_stays,_with_a_fleet_chase_beyond_RMG_BHC1051.jpg"
+      }
+    ]
   },
   "fluyt": {
-    "file": "assets/ships/fluyt.jpg",
-    "title": "Wenceslas Hollar - A Flute (State 2).jpg",
-    "author": "Wenceslaus Hollar",
-    "license": "Public domain",
-    "source": "https://commons.wikimedia.org/wiki/File:Wenceslas_Hollar_-_A_Flute_(State_2).jpg"
+    "pictures": [
+      {
+        "file": "assets/ships/fluyt.jpg",
+        "title": "Wenceslas Hollar - A Flute (State 2).jpg",
+        "author": "Wenceslaus Hollar",
+        "license": "Public domain",
+        "source": "https://commons.wikimedia.org/wiki/File:Wenceslas_Hollar_-_A_Flute_(State_2).jpg"
+      },
+      {
+        "file": "assets/ships/fluyt-2.jpg",
+        "title": "A Dutch Whaler and Other Vessels in the Ice RMG BHC1016.jpg (resized)",
+        "author": "Adam Silo",
+        "license": "Public domain",
+        "source": "https://commons.wikimedia.org/wiki/File:A_Dutch_Whaler_and_Other_Vessels_in_the_Ice_RMG_BHC1016.jpg"
+      }
+    ]
   },
   "nao-armada": {
     "pictures": [
@@ -56,22 +89,51 @@
         "author": "Master W.A. of Bruges",
         "license": "Public domain",
         "source": "https://commons.wikimedia.org/wiki/File:Karacke.jpg"
+      },
+      {
+        "file": "assets/ships/nao-armada-3.jpg",
+        "title": "Portuguese Carracks off a Rocky Coast RMG BHC0705.tiff (resized)",
+        "author": "Unknown author (as recorded on Commons)",
+        "license": "Public domain",
+        "source": "https://commons.wikimedia.org/wiki/File:Portuguese_Carracks_off_a_Rocky_Coast_RMG_BHC0705.tiff"
       }
     ]
   },
   "galeon-guerra": {
-    "file": "assets/ships/galeon-guerra.jpg",
-    "title": "English ship Revenge at Battle of Gravelines (1588) - Invincible Armada (cropped).jpg",
-    "author": "Unknown (English, 16th century)",
-    "license": "Public domain",
-    "source": "https://commons.wikimedia.org/wiki/File:English_ship_Revenge_at_Battle_of_Gravelines_(1588)_-_Invincible_Armada_(cropped).jpg"
+    "pictures": [
+      {
+        "file": "assets/ships/galeon-guerra.jpg",
+        "title": "English ship Revenge at Battle of Gravelines (1588) - Invincible Armada (cropped).jpg",
+        "author": "Unknown (English, 16th century)",
+        "license": "Public domain",
+        "source": "https://commons.wikimedia.org/wiki/File:English_ship_Revenge_at_Battle_of_Gravelines_(1588)_-_Invincible_Armada_(cropped).jpg"
+      },
+      {
+        "file": "assets/ships/galeon-guerra-2.jpg",
+        "title": "Defeat of the Spanish Armada, 8 August 1588 RMG BHC0264.tiff (resized)",
+        "author": "Philip James de Loutherbourg",
+        "license": "Public domain",
+        "source": "https://commons.wikimedia.org/wiki/File:Defeat_of_the_Spanish_Armada,_8_August_1588_RMG_BHC0264.tiff"
+      }
+    ]
   },
   "gran-mercante": {
-    "file": "assets/ships/gran-mercante.jpg",
-    "title": "A Castro, Lorenzo - A Dutch East-Indiaman off Hoorn - Google Art Project.jpg",
-    "author": "Lorenzo a Castro (active c. 1664 – c. 1700)",
-    "license": "Public domain",
-    "source": "https://commons.wikimedia.org/wiki/File:A_Castro,_Lorenzo_-_A_Dutch_East-Indiaman_off_Hoorn_-_Google_Art_Project.jpg"
+    "pictures": [
+      {
+        "file": "assets/ships/gran-mercante.jpg",
+        "title": "A Castro, Lorenzo - A Dutch East-Indiaman off Hoorn - Google Art Project.jpg",
+        "author": "Lorenzo a Castro (active c. 1664 – c. 1700)",
+        "license": "Public domain",
+        "source": "https://commons.wikimedia.org/wiki/File:A_Castro,_Lorenzo_-_A_Dutch_East-Indiaman_off_Hoorn_-_Google_Art_Project.jpg"
+      },
+      {
+        "file": "assets/ships/gran-mercante-2.jpg",
+        "title": "A fleet of East Indiamen at sea RMG BHC1097.tiff (resized)",
+        "author": "Nicholas Pocock",
+        "license": "Public domain",
+        "source": "https://commons.wikimedia.org/wiki/File:A_fleet_of_East_Indiamen_at_sea_RMG_BHC1097.tiff"
+      }
+    ]
   },
   "galeaza": {
     "pictures": [
@@ -92,18 +154,40 @@
     ]
   },
   "gran-galeon": {
-    "file": "assets/ships/gran-galeon.jpg",
-    "title": "Galleons S. Matheus & S. Martim.jpg",
-    "author": "Unknown (Portuguese, 16th century)",
-    "license": "Public domain",
-    "source": "https://commons.wikimedia.org/wiki/File:Galleons_S._Matheus_%26_S._Martim.jpg"
+    "pictures": [
+      {
+        "file": "assets/ships/gran-galeon.jpg",
+        "title": "Galleons S. Matheus & S. Martim.jpg",
+        "author": "Unknown (Portuguese, 16th century)",
+        "license": "Public domain",
+        "source": "https://commons.wikimedia.org/wiki/File:Galleons_S._Matheus_%26_S._Martim.jpg"
+      },
+      {
+        "file": "assets/ships/gran-galeon-2.jpg",
+        "title": "Vroom Hendrick Cornelisz Battle between England and Spain 1601.jpg (resized)",
+        "author": "Hendrick Cornelisz Vroom",
+        "license": "Public domain",
+        "source": "https://commons.wikimedia.org/wiki/File:Vroom_Hendrick_Cornelisz_Battle_between_England_and_Spain_1601.jpg"
+      }
+    ]
   },
   "gran-buque-real": {
-    "file": "assets/ships/gran-buque-real.jpg",
-    "title": "Ark-Royal-1587.jpg",
-    "author": "Claes Janszoon Visscher (after)",
-    "license": "Public domain",
-    "source": "https://commons.wikimedia.org/wiki/File:Ark-Royal-1587.jpg"
+    "pictures": [
+      {
+        "file": "assets/ships/gran-buque-real.jpg",
+        "title": "Ark-Royal-1587.jpg",
+        "author": "Claes Janszoon Visscher (after)",
+        "license": "Public domain",
+        "source": "https://commons.wikimedia.org/wiki/File:Ark-Royal-1587.jpg"
+      },
+      {
+        "file": "assets/ships/gran-buque-real-2.jpg",
+        "title": "English Ships and the Spanish Armada, August 1588 RMG BHC0262.jpg (resized)",
+        "author": "Unknown author (as recorded on Commons)",
+        "license": "Public domain",
+        "source": "https://commons.wikimedia.org/wiki/File:English_Ships_and_the_Spanish_Armada,_August_1588_RMG_BHC0262.jpg"
+      }
+    ]
   },
   "barca-costera": {
     "pictures": [
@@ -124,11 +208,22 @@
     ]
   },
   "pinaza": {
-    "file": "assets/ships/pinaza.jpg",
-    "title": "Black Pinnace.jpg",
-    "author": "Thomas Lant, 1587",
-    "license": "Public domain",
-    "source": "https://commons.wikimedia.org/wiki/File:Black_Pinnace.jpg"
+    "pictures": [
+      {
+        "file": "assets/ships/pinaza.jpg",
+        "title": "Black Pinnace.jpg",
+        "author": "Thomas Lant, 1587",
+        "license": "Public domain",
+        "source": "https://commons.wikimedia.org/wiki/File:Black_Pinnace.jpg"
+      },
+      {
+        "file": "assets/ships/pinaza-2.jpg",
+        "title": "Cornelis Verbeeck - Een Nederlands pinasschip op een woelige zee.jpg (resized)",
+        "author": "Cornelis Verbeeck",
+        "license": "Public domain",
+        "source": "https://commons.wikimedia.org/wiki/File:Cornelis_Verbeeck_-_Een_Nederlands_pinasschip_op_een_woelige_zee.jpg"
+      }
+    ]
   },
   "bark-armado": {
     "file": "assets/ships/bark-armado.jpg",
