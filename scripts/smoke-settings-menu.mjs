@@ -97,7 +97,7 @@ check(
 
 // The blocks of the other branches are hidden, not gone: they are still in the DOM.
 const mounted = await page.locator(".settings-card").count();
-check(mounted === 22, `every block must stay mounted, found ${mounted}`);
+check(mounted === 23, `every block must stay mounted, found ${mounted}`);
 check(
   (await page.locator(".settings-card .settings-row").count()) > 20,
   "the rows of the hidden blocks must still be in the DOM",
@@ -108,8 +108,8 @@ await page.click('[data-branch-pick="fight"]');
 await page.waitForTimeout(200);
 const fight = await shownBlocks();
 check(
-  fight.sort().join(",") === "bars,combat,danger,escort,trail,turning,zones",
-  `the fight branch must show its seven blocks, got ${fight.join(",")}`,
+  fight.sort().join(",") === "bars,combat,danger,escort,oars,trail,turning,zones",
+  `the fight branch must show its eight blocks, got ${fight.join(",")}`,
 );
 check(
   (await page.evaluate((key) => localStorage.getItem(key), NAV_KEY)) === "fight",
@@ -188,7 +188,7 @@ check(
 const staleCases = [
   { saved: "ghost", expected: "levels,time,voyage,wind,world", why: "an unknown branch" },
   { saved: "nope/nope", expected: "levels,time,voyage,wind,world", why: "an unknown branch and block" },
-  { saved: "fight/ghost", expected: "bars,combat,danger,escort,trail,turning,zones", why: "a block that no longer exists" },
+  { saved: "fight/ghost", expected: "bars,combat,danger,escort,oars,trail,turning,zones", why: "a block that no longer exists" },
   { saved: "sea/danger", expected: "levels,time,voyage,wind,world", why: "a block of another branch" },
 ];
 for (const { saved, expected, why } of staleCases) {
