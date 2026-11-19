@@ -239,6 +239,10 @@ export const en = {
   "sea.banner.collectOn": "The {name} goes for the golden buoys",
   "sea.banner.collectOff": "The {name} abandons the pick-up",
   "sea.banner.collectNone": "No golden buoy left on the sea",
+  /* S160: soldiers fire from the deck and board the prizes. */
+  "sea.banner.deckFire": "{name} opens musketry from the deck",
+  "sea.banner.noBoard.noSoldiers": "She has {theirs} men on her deck and you carry no soldiers! The prize is looted, not taken",
+  "sea.banner.noBoard.outnumbered": "You could not board her: {mine} men against her {theirs} (it takes {needed})",
   "sea.banner.collectDone": "The {name} finished the pick-up",
   "sea.banner.orderCancelled": "You take the helm: the order is cancelled",
   "shipyard.fort.title": "Shipyard",

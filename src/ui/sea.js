@@ -119,6 +119,7 @@ import {
   currentShipyard,
 } from "../model/world.js";
 import { toughnessForLevel } from "../model/levels.js";
+import { canBoard, deckFire } from "../model/boarding.js";
 import {
   ORDER,
   clearOrder,
@@ -2242,6 +2243,45 @@ function escortsFire() {
 }
 
 /**
+ * The soldiers' fire from the deck (S160-C): light arms at close range, crew damage only.
+ *
+ * A musket does not hole a hull, so this never touches the casemate: it is the reason to
+ * close the range, and the way a hull with soldiers aboard wins a fight it would otherwise
+ * only trade shot for shot. The rule lives in the boarding model; this only carries it.
+ */
+function deckFireVolley() {
+  if (gameOver) return;
+  const targets = world.encounters.filter(
+    (encounter) => encounter.type === "enemy" && encounter.combat?.status === "fighting",
+  );
+  if (targets.length === 0) return;
+  const lines = [
+    { hulls: allies(), quiet: false },
+    ...squadrons.map((squadron) => ({ hulls: squadron.escorts ?? [], quiet: true })),
+  ];
+  for (const line of lines) {
+    for (const hull of line.hulls) {
+      const target = closestTarget(targets, hull);
+      if (!target) continue;
+      const distance = Math.hypot(hull.x - target.x, hull.y - target.y);
+      const fire = deckFire(hull.combat ?? hull, distance);
+      if (fire.crew <= 0) continue;
+      // The deck fire is crew damage and nothing else, applied through the same rule every
+      // other wound goes through, so the casualties are counted the one way.
+      applyDamage(target.combat, fire);
+      pushFx("hit", target.x, target.y, target.x, target.y, 0.35);
+      if (!line.quiet) {
+        showBanner(
+          t("sea.banner.deckFire", { name: hull.name ?? runtimeShip.name }),
+          "info",
+          1200,
+        );
+      }
+    }
+  }
+}
+
+/**
  * Forget the targets that gave up the chase (S58). `updateWorld` releases their combat
  * when they fall past the disengage radius; the UI keeps its own view of the sea, so it
  * drops the stale combatant here instead of reading a fight that is over.
@@ -2363,6 +2403,10 @@ function processCombat(dt, now) {
   }
 
   playerAutoFire();
+
+  // The soldiers fire from the deck (S160-C): light arms, short reach, crew damage only.
+  // Every hull of the squadron does it, exactly as every hull answers with her guns.
+  deckFireVolley();
 
   // Escorts shoot first: they answer whatever hostile is nearest to them.
   escortsFire();
@@ -2610,7 +2654,26 @@ function resolveDefeatedEnemies() {
     // that goes down leaves only the share that can still be fished out of the water.
     collectCargoFrom(encounter, status);
 
-    const prize = status === "surrendered" ? captureableShip(encounter) : null;
+    // Taking her is a boarding, and a boarding needs soldiers (S160-B). The player asked for
+    // it in those words: "Sí: la captura pasa a exigir soldados". A hull with no soldiers
+    // aboard loots the prize and sails on, exactly as she did before the rule existed.
+    const boarding = status === "surrendered" ? canBoard(playerCombat, encounter.combat) : null;
+    const prize = status === "surrendered" && boarding?.allowed ? captureableShip(encounter) : null;
+    if (status === "surrendered" && !prize) {
+      // Say why the prize was not taken, or the player loses a ship and never learns why.
+      const reason = boarding?.reason === "no-soldiers" ? "noSoldiers" : boarding?.reason === "outnumbered" ? "outnumbered" : null;
+      if (reason) {
+        showBanner(
+          t(`sea.banner.noBoard.${reason}`, {
+            mine: boarding.mine,
+            theirs: boarding.theirs,
+            needed: boarding.needed,
+          }),
+          "danger",
+          4200,
+        );
+      }
+    }
     if (prize) {
       fleet = withPrize(fleet, { ...prize, yardId: null });
       // The fight is over for good (S139): remember her id, or the zone's top-up puts the
@@ -3208,25 +3271,25 @@ function frame(now) {
       announcedLevel = world.level;
       pendingLevel = world.level;
     }
-    // The order the active squadron is under (S155-F/G): a destination ends on arrival, and
-    // a pick-up moves to the next golden buoy or ends when the sea has none left.
+    // The order the active squadron is under (S155-F/G): a destination ends on arrival, and a
+    // pick-up moves to the next golden buoy or ends when its round is collected (S158).
     if (activeOrder && !gameOver) {
-      if (orderDone(world.ship, activeOrder)) {
-        const kind = activeOrder.kind;
-        activeOrder = clearOrder();
-        ui.throttle = 0;
-        if (kind === ORDER.destination) {
-          showBanner(t("sea.banner.destinationDone", { name: runtimeShip.name }), "gold", 3000);
-        }
-      } else if (activeOrder.kind === ORDER.pickUp) {
+      if (activeOrder.kind === ORDER.pickUp) {
+        // A pick-up is re-aimed on every tick, not only when the hull reaches a buoy: the
+        // buoy is collected the moment the world pays it, and waiting for the arrival check
+        // left the captain stopped on the buoy she had just collected.
         const next = orderProgress(world.ship, activeOrder, world.encounters);
         if (!next) {
           activeOrder = clearOrder();
           ui.throttle = 0;
-          showBanner(t("sea.banner.destinationDone", { name: runtimeShip.name }), "gold", 3000);
+          showBanner(t("sea.banner.collectDone", { name: runtimeShip.name }), "gold", 3000);
         } else {
           activeOrder = next;
         }
+      } else if (orderDone(world.ship, activeOrder)) {
+        activeOrder = clearOrder();
+        ui.throttle = 0;
+        showBanner(t("sea.banner.destinationDone", { name: runtimeShip.name }), "gold", 3000);
       }
     }
     // The ports recover on the world clock; the elapsed time is applied to the record the

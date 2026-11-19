@@ -236,6 +236,10 @@ export const es = {
   "sea.banner.collectOn": "El {name} va por las bolas amarillas",
   "sea.banner.collectOff": "El {name} abandona la recogida",
   "sea.banner.collectNone": "No queda ninguna bola amarilla en el mar",
+  /* S160: los soldados disparan desde la cubierta y abordan las presas. */
+  "sea.banner.deckFire": "{name} abre fuego de fusilería desde la cubierta",
+  "sea.banner.noBoard.noSoldiers": "¡{theirs} hombres en su cubierta y no llevás soldados! La presa se saquea, no se toma",
+  "sea.banner.noBoard.outnumbered": "No pudiste abordarla: {mine} hombres contra {theirs} de ella (hacen falta {needed})",
   "sea.banner.collectDone": "El {name} terminó la recogida",
   "sea.banner.orderCancelled": "Tomás el timón: la orden queda cancelada",
   "shipyard.fort.title": "Astillero",
