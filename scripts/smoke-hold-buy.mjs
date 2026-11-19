@@ -69,12 +69,12 @@ await page.click('.screen-tab[data-screen="mercado"]');
 await page.waitForTimeout(300);
 
 const manifest = () =>
-  page.evaluate(() => {
+  page.evaluate((commodityId) => {
     const saved = JSON.parse(localStorage.getItem("barcos:fleet:v1"));
     const ship = saved.ships.find((entry) => entry.id === "captain");
-    const line = (ship.manifest ?? []).find((entry) => entry.commodityId === "sal");
+    const line = (ship.manifest ?? []).find((entry) => entry.commodityId === commodityId);
     return line?.units ?? 0;
-  });
+  }, good);
 const purse = () =>
   page.evaluate(() => JSON.parse(localStorage.getItem("barcos:game:v1")).gold);
 

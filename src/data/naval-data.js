@@ -683,6 +683,19 @@ export const ZONES = [
  */
 export const COMMODITIES = [
   {
+    id: "maderas",
+    nameKey: "commodity.maderas",
+    /** Kg one unit (a load) adds to the hold, and so to the draught. */
+    kgPerUnit: 640,
+    baseGold: 9,
+  },
+  {
+    id: "carbon",
+    nameKey: "commodity.carbon",
+    kgPerUnit: 520,
+    baseGold: 14,
+  },
+  {
     id: "sal",
     nameKey: "commodity.sal",
     /** Kg one unit (a barrel) adds to the hold, and so to the draught. */
@@ -696,10 +709,52 @@ export const COMMODITIES = [
     baseGold: 26,
   },
   {
+    id: "hierro",
+    nameKey: "commodity.hierro",
+    kgPerUnit: 400,
+    baseGold: 22,
+  },
+  {
+    id: "lana",
+    nameKey: "commodity.lana",
+    kgPerUnit: 300,
+    baseGold: 30,
+  },
+  {
+    id: "cuero",
+    nameKey: "commodity.cuero",
+    kgPerUnit: 240,
+    baseGold: 38,
+  },
+  {
+    id: "brea",
+    nameKey: "commodity.brea",
+    kgPerUnit: 200,
+    baseGold: 46,
+  },
+  {
     id: "tabaco",
     nameKey: "commodity.tabaco",
     kgPerUnit: 160,
     baseGold: 48,
+  },
+  {
+    id: "cobre",
+    nameKey: "commodity.cobre",
+    kgPerUnit: 150,
+    baseGold: 60,
+  },
+  {
+    id: "cafe",
+    nameKey: "commodity.cafe",
+    kgPerUnit: 120,
+    baseGold: 74,
+  },
+  {
+    id: "azucar",
+    nameKey: "commodity.azucar",
+    kgPerUnit: 100,
+    baseGold: 86,
   },
   {
     id: "especias",
@@ -708,10 +763,28 @@ export const COMMODITIES = [
     baseGold: 95,
   },
   {
+    id: "canela",
+    nameKey: "commodity.canela",
+    kgPerUnit: 45,
+    baseGold: 150,
+  },
+  {
     id: "plata",
     nameKey: "commodity.plata",
     kgPerUnit: 60,
     baseGold: 180,
+  },
+  {
+    id: "seda",
+    nameKey: "commodity.seda",
+    kgPerUnit: 25,
+    baseGold: 320,
+  },
+  {
+    id: "diamantes",
+    nameKey: "commodity.diamantes",
+    kgPerUnit: 4,
+    baseGold: 1400,
   },
 ];
 
@@ -750,6 +823,14 @@ export const SHIPYARDS = [
       vino: { buy: 0.6, sell: 1.0 },
       tabaco: { buy: 0.95, sell: 1.5 },
       plata: { buy: 1.1, sell: 1.7 },
+      maderas: { buy: 0.5, sell: 0.8 },
+      carbon: { buy: 0.55, sell: 0.85 },
+      hierro: { buy: 0.6, sell: 0.95 },
+      lana: { buy: 0.6, sell: 0.95 },
+      cuero: { buy: 0.65, sell: 1.0 },
+      brea: { buy: 0.6, sell: 0.95 },
+      cobre: { buy: 0.65, sell: 1.0 },
+      azucar: { buy: 0.7, sell: 1.05 },
     },
   },
   {
@@ -763,6 +844,14 @@ export const SHIPYARDS = [
       tabaco: { buy: 0.6, sell: 1.0 },
       especias: { buy: 1.1, sell: 1.8 },
       plata: { buy: 0.9, sell: 1.5 },
+      lana: { buy: 1.0, sell: 1.6 },
+      cuero: { buy: 1.05, sell: 1.7 },
+      cobre: { buy: 1.1, sell: 1.75 },
+      azucar: { buy: 1.15, sell: 1.8 },
+      cafe: { buy: 0.75, sell: 1.2 },
+      canela: { buy: 1.2, sell: 1.9 },
+      seda: { buy: 1.3, sell: 2.1 },
+      diamantes: { buy: 1.35, sell: 2.2 },
     },
   },
   {
@@ -776,6 +865,14 @@ export const SHIPYARDS = [
       tabaco: { buy: 1.6, sell: 2.6 },
       especias: { buy: 0.7, sell: 1.1 },
       plata: { buy: 0.75, sell: 1.3 },
+      maderas: { buy: 1.6, sell: 2.5 },
+      carbon: { buy: 1.55, sell: 2.4 },
+      hierro: { buy: 1.5, sell: 2.3 },
+      brea: { buy: 1.5, sell: 2.3 },
+      cafe: { buy: 0.8, sell: 1.3 },
+      canela: { buy: 0.85, sell: 1.35 },
+      seda: { buy: 0.9, sell: 1.45 },
+      diamantes: { buy: 1.0, sell: 1.6 },
     },
   },
 ];

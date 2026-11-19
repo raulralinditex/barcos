@@ -294,14 +294,14 @@ for (const [x, zone] of [[0, "puerto-casa"], [2400, "ensenada-abierta"], [4600, 
   }
 }
 // An empty yard cannot sell even one unit; a disabled click changes no saved state.
-await legacy.evaluate(() => {
+await legacy.evaluate((commodityId) => {
   const game = JSON.parse(localStorage.getItem("barcos:game:v1"));
-  game.markets = { "cala-del-abismo": { stock: { sal: 0 } } };
+  game.markets = { "cala-del-abismo": { stock: { [commodityId]: 0 } } };
   localStorage.setItem("barcos:game:v1", JSON.stringify(game));
-});
+}, first.id);
 await legacy.reload({ waitUntil: "networkidle" });
 await legacy.click('.screen-tab[data-screen="mercado"]');
-const emptyBuy = legacy.locator('.market-row[data-commodity="sal"] [data-buy]');
+const emptyBuy = legacy.locator(`.market-row[data-commodity="${first.id}"] [data-buy]`);
 const beforeEmpty = await legacy.evaluate(() => [localStorage.getItem("barcos:game:v1"), localStorage.getItem("barcos:fleet:v1")]);
 check(await emptyBuy.isDisabled(), "S119: an empty yard disables the buy button");
 await emptyBuy.evaluate((button) => button.click());
@@ -321,21 +321,21 @@ await example.addInitScript((fleetJson) => {
 }, JSON.stringify({ ...fleet, ships: [laden] }));
 await example.goto("http://localhost:8765/index.html", { waitUntil: "networkidle" });
 await example.click('.screen-tab[data-screen="mercado"]');
-const exampleRow = example.locator('.market-row[data-commodity="sal"]');
+const exampleRow = example.locator(`.market-row[data-commodity="${first.id}"]`);
 const examplePrice = async () => Number((await exampleRow.locator(".market-price").nth(1).textContent()).replace(/[^0-9]/g, ""));
 const exampleBefore = await examplePrice();
 await exampleRow.locator("[data-sell]").click();
 const exampleAfter = await examplePrice();
 const exampleSave = await example.evaluate(() => JSON.parse(localStorage.getItem("barcos:game:v1")));
-// The abyss yard's own price for salt (the yards set their own prices now), and the fall
-// that 40 barrels cause on it: the curve is what is pinned, not a number of doblones.
+// The abyss yard's own price for the good (the yards set their own prices now), and the
+// fall that 40 units cause on it: the curve is what is pinned, not a number of doblones.
 const drop = 1 - exampleAfter / exampleBefore;
 check(
   exampleBefore === sellPrice(first.id, "cala-del-abismo") && drop > 0.3 && drop < 0.45,
-  `S119: 40 salt must drop the abyss price by 30-45% from its own price, got ${exampleBefore} -> ${exampleAfter}`,
+  `S119: 40 units of ${first.id} must drop the abyss price by 30-45% from its own price, got ${exampleBefore} -> ${exampleAfter}`,
 );
 check(exampleSave.gold > 20000 && exampleSave.gold < 20000 + 40 * exampleBefore, `S125: the 40-barrel sale pays the curve, not 40 × the displayed quote: ${exampleSave.gold - 20000}`);
-check(exampleSave.markets["cala-del-abismo"].stock.sal === 100, "S119: selling 40 moves abyss stock 60 -> 100");
+check(exampleSave.markets["cala-del-abismo"].stock[first.id] === 100, "S119: selling 40 moves abyss stock 60 -> 100");
 await example.reload({ waitUntil: "networkidle" });
 await example.click('.screen-tab[data-screen="mercado"]');
 check(await examplePrice() === exampleAfter, "S119: the 40-barrel example price survives reload");
