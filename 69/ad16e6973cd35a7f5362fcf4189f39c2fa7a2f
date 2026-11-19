@@ -1,0 +1,23 @@
+assets/ships/credits.json
+  s_4d0585bb40a7aa::t_9b5482974f8465 17-32,42-57,60-75,92-95,97-98,103-118,121-136,157-172,175-185,187-190,211-226
+  s_4d0585bb40a7aa::t_1e7344b982f425 96,186
+assets/ships/CREDITS.md
+  s_4d0585bb40a7aa::t_1a36ce59abb25c 38-45,47-48,50-54
+  s_4d0585bb40a7aa::t_1e7344b982f425 46,49
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.6",
+  "base_commit_sha": "69ad16e6973cd35a7f5362fcf4189f39c2fa7a2f",
+  "prompts": {},
+  "sessions": {
+    "s_4d0585bb40a7aa": {
+      "agent_id": {
+        "tool": "pi",
+        "id": "01a1f448-537b-775c-9025-6f08735a34aa",
+        "model": "claude-sonnet-5.5"
+      },
+      "human_author": "Raul Ripoll <raulral@ext.inditex.com>"
+    }
+  }
+}
