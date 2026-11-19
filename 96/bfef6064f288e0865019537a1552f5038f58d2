@@ -1,0 +1,26 @@
+odd/tasks/comercio-y-astilleros.md
+  s_4d0585bb40a7aa::t_4e00a11d8ed261 390-391
+  s_4d0585bb40a7aa::t_f394bb9f38e344 3,134-139,166
+  s_4d0585bb40a7aa::t_eade94aa4d7716 116-133,164-165,385-389
+src/ui/app.js
+  s_4d0585bb40a7aa::t_99bf13620d2146 2908-2911,2913
+scripts/smoke-yard-entry.mjs
+  s_4d0585bb40a7aa::t_aec1daa1ab90b5 1-74,77,79-83,85-108
+  s_4d0585bb40a7aa::t_d215406499520e 75-76,78,84
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.6",
+  "base_commit_sha": "96bfef6064f288e0865019537a1552f5038f58d2",
+  "prompts": {},
+  "sessions": {
+    "s_4d0585bb40a7aa": {
+      "agent_id": {
+        "tool": "pi",
+        "id": "01a1f448-537b-775c-9025-6f08735a34aa",
+        "model": "deepseek-v4.1-flash_high"
+      },
+      "human_author": "Raul Ripoll <raulral@ext.inditex.com>"
+    }
+  }
+}
