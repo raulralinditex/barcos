@@ -12,7 +12,7 @@
 import { ZONES, HULLS, SHIPYARDS, shipyardAt } from "../data/naval-data.js";
 import { enemiesPerZone, normaliseLevel, victoriesForLevel } from "./levels.js";
 import { createEscort, escortStation, stepEscort } from "./formation.js";
-import { shipsSailingAtSea } from "./fleet.js";
+import { seaSquadrons, shipsSailingAtSea, squadrons } from "./fleet.js";
 import { referenceSpeedKn } from "./ship-model.js";
 import { windAt, windEffect } from "./wind.js";
 
@@ -183,6 +183,130 @@ export function currentShipyard(position) {
   return shipyardAt(position);
 }
 
+/**
+ * Every squadron afloat, the active one first (S155-C).
+ *
+ * The sea stopped being one captain: the player asked to see them all and pick one with
+ * the mouse (verbatim): "las podremos ver en el mar, con el raton podremos seleccionar una
+ * y moverla". The active squadron is the one already stored in `ship`/`escorts`, so the
+ * helm, the keys, the HUD and the combat code keep reading the same two fields they always
+ * read, and switching squadrons is a swap instead of a second source of truth.
+ *
+ * A broken or missing list yields just the active squadron, which is the sea a save
+ * written before this rule has.
+ */
+export function afloatSquadrons(world) {
+  const base = world && typeof world === "object" ? world : {};
+  const others = Array.isArray(base.squadrons) ? base.squadrons.filter(isSquadron) : [];
+  const activeId = typeof base.activeId === "string" ? base.activeId : null;
+  const active = isShip(base.ship)
+    ? {
+        id: activeId ?? "captain",
+        ship: base.ship,
+        escorts: Array.isArray(base.escorts) ? base.escorts.filter(isShip) : [],
+        order: normaliseOrder(base.order),
+      }
+    : null;
+  const rest = others
+    .filter((squadron) => !active || squadron.id !== active.id)
+    .map((squadron) => ({
+      ...squadron,
+      escorts: Array.isArray(squadron.escorts) ? squadron.escorts.filter(isShip) : [],
+      order: normaliseOrder(squadron.order),
+    }));
+  return active ? [active, ...rest] : rest;
+}
+
+/** A squadron record: a captain with her own position, her escorts and her orders. */
+function isSquadron(value) {
+  return Boolean(value) && typeof value === "object" &&
+    typeof value.id === "string" && isShip(value.ship);
+}
+
+/** A hull on the sea: a position and a heading the renderer can trust. */
+function isShip(value) {
+  return Boolean(value) && typeof value === "object" &&
+    Number.isFinite(value.x) && Number.isFinite(value.y);
+}
+
+/**
+ * A squadron's standing orders (S155-D). `throttle` is how much sail she carries and `turn`
+ * is the helm she holds; a squadron the player is not steering keeps the last order she was
+ * given, which is the whole point of a sea with more than one command on it.
+ */
+function normaliseOrder(order) {
+  const throttle = Number(order?.throttle);
+  const turn = Number(order?.turn);
+  return {
+    throttle: Number.isFinite(throttle) ? Math.min(1, Math.max(0, throttle)) : 0,
+    turn: Number.isFinite(turn) ? Math.min(1, Math.max(-1, turn)) : 0,
+  };
+}
+
+/**
+ * Hand the helm to another squadron (S155-D/E). Nothing is moved and nothing is rebuilt:
+ * the chosen squadron takes the fields the sea reads as active, and the one that had them
+ * goes back into the list with her own position and her own standing orders.
+ *
+ * An id that is not afloat changes nothing, because a click on empty water is not an order.
+ */
+export function withActiveSquadron(world, squadronId) {
+  const base = world && typeof world === "object" ? world : {};
+  const all = afloatSquadrons(base);
+  const chosen = all.find((squadron) => squadron.id === squadronId);
+  const active = all[0];
+  if (!chosen || !active || chosen.id === active.id) return base;
+  return {
+    ...base,
+    activeId: chosen.id,
+    ship: chosen.ship,
+    escorts: chosen.escorts,
+    order: chosen.order,
+    squadrons: all.filter((squadron) => squadron.id !== chosen.id),
+  };
+}
+
+/**
+ * The captain nearest to `point`, within `radiusM` (S155-E). The mouse picks captains, not
+ * escorts: a click on a hull under someone else's command is a click on the water she
+ * happens to be floating in. Outside the radius nobody is selected, so clicking open sea
+ * leaves the current command alone.
+ */
+export function nearestSquadron(world, point, radiusM = WORLD.pickupRadiusM) {
+  const x = Number(point?.x);
+  const y = Number(point?.y);
+  const radius = Number(radiusM);
+  if (!Number.isFinite(x) || !Number.isFinite(y) || !Number.isFinite(radius) || radius <= 0) return null;
+  let best = null;
+  let bestDistance = radius;
+  for (const squadron of afloatSquadrons(world)) {
+    const distance = Math.hypot(squadron.ship.x - x, squadron.ship.y - y);
+    if (distance <= bestDistance) {
+      best = squadron;
+      bestDistance = distance;
+    }
+  }
+  return best;
+}
+
+/**
+ * Distance from `point` to the closest hull of any squadron afloat (S155-C). The enemies
+ * use it to decide what is near them: with several commands on the water, a hostile is
+ * not forgotten because the squadron she is chasing is not the one holding the helm.
+ */
+export function distanceToFleet(world, point) {
+  const x = Number(point?.x);
+  const y = Number(point?.y);
+  if (!Number.isFinite(x) || !Number.isFinite(y)) return Infinity;
+  let best = Infinity;
+  for (const squadron of afloatSquadrons(world)) {
+    for (const hull of [squadron.ship, ...squadron.escorts]) {
+      best = Math.min(best, Math.hypot(hull.x - x, hull.y - y));
+    }
+  }
+  return best;
+}
+
 /** The shipyard the captain's hull is moored at right now, or null at sea (S112). */
 export function shipyardOfCaptain(world) {
   return currentShipyard(world?.ship ?? null);
@@ -324,6 +448,10 @@ function spawnOne(rnd, ship, type, zone, id) {
 /**
  * Create the sea for a ship starting a voyage. `ship` needs at least `speedKn`;
  * its position is the origin (the home port).
+ *
+ * With a fleet that holds more than one captain afloat, every one of them puts to sea at
+ * once (S155-C): the fleet's own captain keeps the helm, and each other squadron takes her
+ * own station a little apart from her, so two commands do not start inside each other.
  */
 export function createWorld(seed, ship, gold = 0, fleet = null) {
   const world = {
@@ -348,13 +476,61 @@ export function createWorld(seed, ship, gold = 0, fleet = null) {
     level: 1,
     levelEnemies: [],
     levelVictories: 0,
+    /** The squadron holding the helm, and the standing orders of every squadron (S155-D). */
+    activeId: null,
+    order: { throttle: 0, turn: 0 },
+    squadrons: [],
   };
+  const own = fleet?.captainId ?? ship.id ?? null;
+  // The fleet's captain holds the helm (S155-C): she is the hull the player sails, and a
+  // save written before captains existed has exactly one, so the old voyage is unchanged.
+  world.activeId = own;
+  // The active squadron keeps forming exactly as she always did (S35/S130): the hulls of her
+  // own command marked to sail, the captain first. Another captain's hulls are not hers to
+  // form up, which is the whole point of a sea with several commands.
+  const leading = squadrons(fleet).find((squadron) => squadron.captain.id === own) ?? null;
+  // A hull of her own command that is actually afloat and marked to sail (S35/S130): the
+  // old rule, restricted to the command that holds the helm. Another captain's hulls are
+  // not hers to form up, which is the whole point of a sea with several commands.
+  const ownCommand = new Set((leading?.ships ?? []).map((entry) => entry.id));
   world.escorts = shipsSailingAtSea(fleet)
-    .filter((entry) => entry.id !== (fleet?.captainId ?? ship.id))
+    .filter((entry) => entry.id !== own && ownCommand.has(entry.id))
     .map((entry, index) => createEscort(entry, world.ship, index));
+  // Every other captain puts to sea too, each with her own formation and her own station
+  // apart from the first, so the sea shows every command at once (S155-C).
+  const others = seaSquadrons(fleet).filter((squadron) => squadron.captain.id !== own);
+  world.squadrons = others.map((squadron, index) => {
+    const at = { ...world.ship, ...squadronStation(world.ship, index) };
+    return {
+      id: squadron.captain.id,
+      ship: at,
+      escorts: squadron.ships
+        .filter((entry) => entry.id !== squadron.captain.id)
+        .map((entry, station) => createEscort(entry, at, station)),
+      order: { throttle: 0, turn: 0 },
+    };
+  });
   // The first level is seeded here, because the level is the only source of enemies
   // (S140): a fresh sea holds exactly the level 1 quota.
   return updateWorld(seedLevel(world, 1), {}, 0);
+}
+
+/**
+ * Where the `index`-th extra squadron starts, in metres from the leading one (S155-C).
+ *
+ * The stations are spread around the home port on a wide ring: two commands that opened on
+ * top of each other would be one command with a rendering bug, and the player could not
+ * click either of them.
+ */
+function squadronStation(captain, index) {
+  const ring = 420 + 160 * Math.floor(index / 6);
+  const angle = (index % 6) * (Math.PI / 3) + Math.PI / 6;
+  return {
+    x: Math.max(-WORLD.radiusM, Math.min(WORLD.radiusM, (captain.x ?? 0) + Math.cos(angle) * ring)),
+    y: Math.max(-WORLD.radiusM, Math.min(WORLD.radiusM, (captain.y ?? 0) + Math.sin(angle) * ring)),
+    heading: Number.isFinite(captain.heading) ? captain.heading : 0,
+    currentSpeedKn: 0,
+  };
 }
 
 /**
@@ -380,6 +556,12 @@ export function updateWorld(world, input = {}, dt = 0) {
       dt,
     ),
   );
+  // The squadrons that are not holding the helm still sail (S155-D): each one obeys the
+  // standing order she was last given, with her own helm and her own formation. Without
+  // this a second captain would be a drawing on the water instead of a command.
+  const squadrons = (Array.isArray(world.squadrons) ? world.squadrons : [])
+    .filter(isSquadron)
+    .map((squadron) => stepSquadron(squadron, wind, dt));
   let rngState = world.rngState;
   let nextId = world.nextId;
   const rnd = () => {
@@ -513,6 +695,8 @@ export function updateWorld(world, input = {}, dt = 0) {
     ...world,
     ship,
     escorts,
+    squadrons,
+    order: normaliseOrder(world.order),
     gold,
     encounters,
     rngState,
@@ -535,6 +719,24 @@ export function updateWorld(world, input = {}, dt = 0) {
   // barcos enemigos siguen apareciendo con el tiempo sin ningun limite".
   if (levelVictories >= victoriesForLevel(level)) return seedLevel(next, level + 1);
   return next;
+}
+
+/**
+ * Advance one squadron that is not holding the helm (S155-D).
+ *
+ * She obeys her standing orders: the sail she carries and the helm she holds. Her escorts
+ * keep their station behind her with their own hulls, exactly as the active squadron's do,
+ * so a second command looks and moves like the first one.
+ */
+function stepSquadron(squadron, wind, dt) {
+  const order = normaliseOrder(squadron.order);
+  const ship = stepShip(squadron.ship, { throttle: order.throttle, turn: order.turn, wind }, dt);
+  const escorts = (Array.isArray(squadron.escorts) ? squadron.escorts : [])
+    .filter(isShip)
+    .map((escort, index) =>
+      stepEscort(escort, escortStation(ship, index), { wind, captainSpeedKn: ship.currentSpeedKn }, dt),
+    );
+  return { ...squadron, ship, escorts, order };
 }
 
 /**
@@ -675,6 +877,18 @@ export function serializeWorld(world) {
     timeS: world.timeS ?? 0,
     ship: world.ship,
     escorts: world.escorts ?? [],
+    // The squadrons that are not holding the helm, with their own positions and their own
+    // standing orders (S155-D). The active one is `ship`/`escorts` above, as it always was.
+    activeId: typeof world.activeId === "string" ? world.activeId : null,
+    order: normaliseOrder(world.order),
+    squadrons: (Array.isArray(world.squadrons) ? world.squadrons : [])
+      .filter(isSquadron)
+      .map((squadron) => ({
+        id: squadron.id,
+        ship: squadron.ship,
+        escorts: (Array.isArray(squadron.escorts) ? squadron.escorts : []).filter(isShip),
+        order: normaliseOrder(squadron.order),
+      })),
     encounters: world.encounters,
     // The fights this sea has finished (S139): without them a defeated enemy comes back.
     defeated: [...defeatedEnemyIds(world)],
@@ -720,6 +934,18 @@ export function deserializeWorld(json) {
           )
         : [],
       encounters: data.encounters,
+      // A save written before the sea held several commands has none: the squadron in
+      // `ship`/`escorts` is the whole sea, which is exactly what that save was (S155).
+      activeId: typeof data.activeId === "string" ? data.activeId : null,
+      order: normaliseOrder(data.order),
+      squadrons: Array.isArray(data.squadrons)
+        ? data.squadrons.filter(isSquadron).map((squadron) => ({
+            id: squadron.id,
+            ship: squadron.ship,
+            escorts: Array.isArray(squadron.escorts) ? squadron.escorts.filter(isShip) : [],
+            order: normaliseOrder(squadron.order),
+          }))
+        : [],
       defeated: Array.isArray(data.defeated) ? data.defeated.filter((id) => Number.isFinite(id)) : [],
       // A save written before levels existed opens at level 1 with no quota record, and
       // the sea adopts the sails she already has; a broken level opens at level 1 too.

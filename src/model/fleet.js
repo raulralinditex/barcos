@@ -98,6 +98,26 @@ export function squadronOf(fleet, captainId) {
   return squadrons(fleet).find((squadron) => squadron.captain.id === captainId) ?? null;
 }
 
+/**
+ * The squadrons that are actually afloat (S155-C).
+ *
+ * The sea shows every captain at once, so it needs the list of squadrons that can be seen
+ * and steered, not every squadron the fleet owns. A squadron sails when her captain is at
+ * sea, and she takes with her only the hulls that are afloat too: a hull moored at a yard
+ * or kept as a wreck waits where she is, and her captain sails without her.
+ *
+ * A squadron whose captain is in port is not on this list at all: she is not sailing, and
+ * the sea has no business drawing her.
+ */
+export function seaSquadrons(fleet) {
+  return squadrons(fleet)
+    .filter((squadron) => yardOf(squadron.captain) === null && !isWreck(squadron.captain))
+    .map((squadron) => ({
+      ...squadron,
+      ships: squadron.ships.filter((ship) => yardOf(ship) === null && !isWreck(ship)),
+    }));
+}
+
 /** A captain at sea is not moored at a shipyard. */
 export function captainAt(fleet, yardId) {
   if (!shipyardById(yardId)) return null;
