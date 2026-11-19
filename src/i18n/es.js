@@ -656,7 +656,8 @@ export const es = {
   "shipyard.yard.label": "Astillero",
   /* S140: the level chip next to the yard's name. */
   "shipyard.level": "Nivel {level}",
-  "shipyard.level.title": "Nivel {level} del mar: hundí o capturá a todos sus enemigos para pasar al siguiente",
+  "shipyard.level.title": "Nivel {level} del mar: {done} de {target} victorias para pasar al siguiente",
+  "shipyard.level.title.none": "Nivel {level} del mar: {target} victorias para pasar al siguiente",
   "shipyard.yard.water": "{zone}",
   "shipyard.yard.rename": "Cambiar el nombre del astillero",
   "shipyard.yard.namePlaceholder": "Nombre del astillero",

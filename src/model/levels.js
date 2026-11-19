@@ -85,6 +85,31 @@ export function toughnessForLevel(level) {
 }
 
 /**
+ * How many enemies a level allows in **one zone** (S150).
+ *
+ * The player asked for a ceiling per zone (verbatim): "en cada nivel habra un maximo de
+ * enemigos por zona, y se crearan los enemigos de la misma zona que hayan sido undidos o
+ * capturados". He chose the same curve for it as for the total quota (verbatim: "ok" to the
+ * recommendation), so the cap per zone and the victories a level asks for are the same
+ * number, read from the same block: moving `LEVELS` moves all three together.
+ */
+export function enemiesPerZone(level) {
+  return enemiesForLevel(level);
+}
+
+/**
+ * How many victories a level asks for before the next one opens (S150). The player chose to
+ * advance "Por cantidad de victorias" instead of by an empty sea, and the same curve again:
+ * level 1 asks for 3, level 2 for 5, level 3 for 7.
+ *
+ * It is deliberately the same function as the quota: the sea a captain is given and the work
+ * the level asks for grow at the same rhythm, so a level never asks for more than it shows.
+ */
+export function victoriesForLevel(level) {
+  return enemiesForLevel(level);
+}
+
+/**
  * The level a sea save opens at (S140-C/S140-E). The header and the shipyard have no world
  * of their own: they read the sea record, and no record — or a broken one — is level 1.
  * `record` is the whole `barcos:game:v1` object; `record.world` may be the serialised
@@ -102,4 +127,27 @@ export function levelFromGameSave(record) {
   }
   if (!world || typeof world !== "object") return 1;
   return normaliseLevel(world.level);
+}
+
+/**
+ * How far into its level the sea save is (S150): the victories won and the ones the level
+ * asks for. The chip in the title bar reads it, so the player can see how close the next
+ * level is instead of guessing. No save, or a broken one, is level 1 with nothing won.
+ */
+export function levelProgressFromGameSave(record) {
+  const level = levelFromGameSave(record);
+  const target = victoriesForLevel(level);
+  if (!record || typeof record !== "object") return { level, done: 0, target };
+  let world = record.world;
+  if (typeof world === "string") {
+    try {
+      world = JSON.parse(world);
+    } catch {
+      return { level, done: 0, target };
+    }
+  }
+  if (!world || typeof world !== "object") return { level, done: 0, target };
+  const won = Number(world.levelVictories);
+  const done = Number.isFinite(won) ? Math.min(target, Math.max(0, Math.floor(won))) : 0;
+  return { level, done, target };
 }

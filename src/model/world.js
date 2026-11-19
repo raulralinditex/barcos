@@ -10,7 +10,7 @@
  */
 
 import { ZONES, HULLS, SHIPYARDS, shipyardAt } from "../data/naval-data.js";
-import { enemiesForLevel, normaliseLevel } from "./levels.js";
+import { enemiesPerZone, normaliseLevel, victoriesForLevel } from "./levels.js";
 import { createEscort, escortStation, stepEscort } from "./formation.js";
 import { shipsSailingAtSea } from "./fleet.js";
 import { referenceSpeedKn } from "./ship-model.js";
@@ -344,9 +344,10 @@ export function createWorld(seed, ship, gold = 0, fleet = null) {
     /** The rest of the fleet, in formation behind the captain (S36). */
     escorts: [],
     encounters: [],
-    /** The level the sea is on, and the ids of the sails that level owns (S140). */
+    /** The level the sea is on, the sails it owns, and the victories it has won (S140/S150). */
     level: 1,
     levelEnemies: [],
+    levelVictories: 0,
   };
   world.escorts = shipsSailingAtSea(fleet)
     .filter((entry) => entry.id !== (fleet?.captainId ?? ship.id))
@@ -395,6 +396,9 @@ export function updateWorld(world, input = {}, dt = 0) {
   // opening an old save does not seed a second quota on top of it.
   const level = normaliseLevel(world.level);
   let levelEnemies = Array.isArray(world.levelEnemies) ? [...world.levelEnemies] : [];
+  // The victories this level has won so far (S150). A save or a test that knows nothing
+  // about them starts the level with none, which is what a fresh level is.
+  const levelVictories = normaliseVictories(world.levelVictories);
   if (levelEnemies.length === 0) {
     levelEnemies = world.encounters
       .filter((encounter) => encounter.type === "enemy")
@@ -472,15 +476,32 @@ export function updateWorld(world, input = {}, dt = 0) {
     return distance <= forget;
   });
 
-  // A defeated enemy never comes back (S139). The zone's density is a target for the
-  // LEVEL's quota, not a licence to respawn a fight that is over: the spawner below skips
-  // every id this sea has already finished.
+  // A defeated enemy never comes back (S139). The spawner below skips every id this sea
+  // has already finished.
   const finished = defeatedEnemyIds(world);
 
-  // The level owns the enemy quota (S140): the zone's density is no longer a spawner, so
-  // nothing here tops the hostiles back up. Treasures keep their top-up.
+  // A level caps how many hostiles **each zone** holds, and the water the captain is in is
+  // topped back up to that cap (S150). The player asked for exactly that (verbatim): "en
+  // cada nivel habra un maximo de enemigos por zona, y se crearan los enemigos de la misma
+  // zona que hayan sido undidos o capturados". So the sail you beat is replaced by another
+  // of her own water, and no water ever grows past the cap, however long you sail it.
   const zone = zoneAtRadius(Math.hypot(ship.x, ship.y));
-  const wantTreasures = Math.max(0, zone.encounters - enemiesForLevel(level));
+  const cap = enemiesPerZone(level);
+  const here = encounters.filter((e) => e.type === "enemy" && e.zoneId === zone.id).length;
+  // An id is never handed out twice, so the sea cannot hold two sails that answer to the same
+  // name: a save whose `nextId` sits behind a live sail would otherwise spawn her twin.
+  for (const entry of encounters) if (Number.isFinite(entry.id)) finished.add(entry.id);
+  for (let i = here; i < cap; i += 1) {
+    while (finished.has(nextId)) nextId += 1;
+    const id = nextId;
+    encounters.push({ ...spawnOne(rnd, ship, "enemy", zone, id), level });
+    levelEnemies.push(id);
+    finished.add(id);
+    nextId += 1;
+  }
+
+  // Treasures keep the top-up they always had: they are not the level's business.
+  const wantTreasures = Math.max(0, zone.encounters - cap);
   const haveTreasures = encounters.filter((e) => e.type === "treasure").length;
 
   for (let i = haveTreasures; i < wantTreasures; i += 1) {
@@ -488,28 +509,49 @@ export function updateWorld(world, input = {}, dt = 0) {
     nextId += 1;
   }
 
-  const next = { ...world, ship, escorts, gold, encounters, rngState, nextId, collected, timeS, level, levelEnemies };
+  const next = {
+    ...world,
+    ship,
+    escorts,
+    gold,
+    encounters,
+    rngState,
+    nextId,
+    collected,
+    timeS,
+    level,
+    levelEnemies,
+    levelVictories,
+  };
 
-  // Clearing a level advances it, once (S140-C): the next quota is seeded and the level
-  // record is moved, so a second tick cannot advance it again. A sea with no level record
-  // (a save written before levels, a test that seeds its own sails) has nothing to clear
-  // and simply adopts what it has: it must not jump a level on its first tick.
-  if (levelEnemies.length > 0 && levelRemaining(next) === 0) return seedLevel(next, level + 1);
+  // A level is cleared by victories, not by an empty sea (S150). The player chose "Por
+  // cantidad de victorias" (verbatim), so the level advances when the fights it asks for are
+  // won, whatever is still afloat. Seeding the next level resets the count, so a second tick
+  // cannot advance it twice.
+  //
+  // Before S150 the level advanced when its sails vanished from `encounters`, and a sail that
+  // merely drifted past `despawnRadiusM` vanished: a captain who never fired a shot climbed
+  // levels while the sea kept filling. That is the bug the player reported (verbatim): "los
+  // barcos enemigos siguen apareciendo con el tiempo sin ningun limite".
+  if (levelVictories >= victoriesForLevel(level)) return seedLevel(next, level + 1);
   return next;
 }
 
 /**
- * Seed exactly the quota of `level` (S140-B): the level is the only source of enemies.
+ * Seed the quota of `level` in the water the captain is in (S140-B/S150).
  *
- * Every seeded sail is remembered by id in `levelEnemies`, which is what
- * `levelRemaining` counts, so a sail that drifts out of range is still part of the level
- * she belongs to. Anything already afloat that is not part of the new level's quota is
- * dropped: a new level starts on a clean slate instead of inheriting the old sails.
+ * The level caps each zone, so a level is seeded where it starts: the sails of the previous
+ * level are dropped and `enemiesPerZone(level)` fresh hostiles are placed in the band the
+ * captain is in. The rest of the water fills itself as she sails into it, which is what
+ * keeps the whole sea from paying for a cap it is not using.
+ *
+ * Every seeded sail is remembered by id in `levelEnemies`. The victory count starts clean:
+ * a new level is new work, not the leftover of the one just finished.
  */
 export function seedLevel(world, level) {
   const base = world && typeof world === "object" ? world : {};
   const nextLevel = normaliseLevel(level);
-  const quota = enemiesForLevel(nextLevel);
+  const quota = enemiesPerZone(nextLevel);
   const zone = zoneAtRadius(Math.hypot(base.ship?.x ?? 0, base.ship?.y ?? 0));
   let rngState = Number.isFinite(base.rngState) ? base.rngState : 1;
   let nextId = Number.isFinite(base.nextId) ? base.nextId : 1;
@@ -534,13 +576,16 @@ export function seedLevel(world, level) {
     nextId += 1;
   }
 
-  return { ...base, level: nextLevel, levelEnemies, encounters, rngState, nextId };
+  return { ...base, level: nextLevel, levelEnemies, levelVictories: 0, encounters, rngState, nextId };
 }
 
 /**
  * How many of the current level's enemies are still afloat (S140-B). An id the sea has
  * already defeated counts as done, whether or not the hull is still in `encounters`.
  * A sea with no level record has nothing left to clear, so it reads 0 and never throws.
+ *
+ * S150: this is a reading of the sea, not the trigger of a level. The level advances on
+ * victories; a captain who never fires a shot must never climb one.
  */
 export function levelRemaining(world) {
   const ids = world?.levelEnemies;
@@ -555,6 +600,30 @@ export function levelRemaining(world) {
     remaining += 1;
   }
   return remaining;
+}
+
+/**
+ * A victory count as a whole number of at least zero (S150). A save that never heard of
+ * victories, or a broken one, reads as none: a corrupted field must not open a level.
+ */
+export function normaliseVictories(value) {
+  const count = Number(value);
+  if (!Number.isFinite(count)) return 0;
+  return Math.max(0, Math.floor(count));
+}
+
+/**
+ * Count a beaten enemy against the level (S150). The player chose to advance "Por cantidad
+ * de victorias" (verbatim), so the fight that ends is the unit of progress, not the sail
+ * that happens to be out of sight.
+ *
+ * `encounter` is the sail that went down: her zone is not needed to count her, but it is
+ * what the sea reads to know which water is short a sail, so an unknown one still counts.
+ */
+export function recordVictory(world, encounter) {
+  const base = world && typeof world === "object" ? world : {};
+  if (!encounter || encounter.type !== "enemy") return { ...base, levelVictories: normaliseVictories(base.levelVictories) };
+  return { ...base, levelVictories: normaliseVictories(base.levelVictories) + 1 };
 }
 
 /** Nearest encounter of a type, for HUD warnings and minimap blips. */
@@ -609,11 +678,12 @@ export function serializeWorld(world) {
     encounters: world.encounters,
     // The fights this sea has finished (S139): without them a defeated enemy comes back.
     defeated: [...defeatedEnemyIds(world)],
-    // The level and the sails it owns (S140).
+    // The level and the sails it owns (S140), and the victories it has won (S150).
     level: normaliseLevel(world.level),
     levelEnemies: Array.isArray(world.levelEnemies)
       ? world.levelEnemies.filter((id) => Number.isFinite(id))
       : [],
+    levelVictories: normaliseVictories(world.levelVictories),
   });
 }
 
@@ -657,6 +727,8 @@ export function deserializeWorld(json) {
       levelEnemies: Array.isArray(data.levelEnemies)
         ? data.levelEnemies.filter((id) => Number.isFinite(id))
         : [],
+      // A save written before S150 knows no victories, which is a level that has won none.
+      levelVictories: normaliseVictories(data.levelVictories),
     };
   } catch {
     return null;

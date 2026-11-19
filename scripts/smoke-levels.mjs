@@ -147,6 +147,9 @@ const clearedWorld = {
   gold: 0,
   timeS: 0,
   level: 1,
+  // S150: a level is cleared by victories, so the save carries the count. The player chose
+  // "Por cantidad de victorias" (verbatim); level 1 asks for three.
+  levelVictories: 3,
   levelEnemies: [901, 902, 903],
   ship: { x: 210, y: 70, heading: 0, currentSpeedKn: 0, speedKn: runtime.speedKn },
   escorts: [],
@@ -174,11 +177,12 @@ const next = await (async () => {
   });
 })();
 const nextEnemies = enemiesOf(next);
-check(next?.level === 2, `S140: clearing level 1 must advance it, the save says ${next?.level}`);
-check(nextEnemies.length === 5, `S140: level 2 holds five enemies, the sea holds ${nextEnemies.length}`);
+check(next?.level === 2, `S150: reaching the victories must advance the level, the save says ${next?.level}`);
+check(next?.levelVictories === 0, `S150: the new level starts at no victories, it carries ${next?.levelVictories}`);
+check(nextEnemies.length === 5, `S150: level 2 holds five enemies, the sea holds ${nextEnemies.length}`);
 check(
   (next?.levelEnemies ?? []).length === 5,
-  `S140: the next quota must be seeded, it holds ${(next?.levelEnemies ?? []).length}`,
+  `S150: the next quota must be seeded, it holds ${(next?.levelEnemies ?? []).length}`,
 );
 // The banner names the new level (S140-G). It waits its turn behind the banner of the
 // fights that cleared the level, so it is polled instead of read once.
@@ -192,8 +196,74 @@ const bannerShows = async (pattern, timeoutMs = 12_000) => {
   return await fight.locator("#banner").textContent();
 };
 const banner = await bannerShows(/nivel\s*2/i);
-check(/nivel\s*2/i.test(banner ?? ""), `S140: the advance must be announced, the banner reads "${banner}"`);
+check(/nivel\s*2/i.test(banner ?? ""), `S150: the advance must be announced, the banner reads "${banner}"`);
 await fight.close();
+
+/* --------------------- 3b: a captain who never fires a shot never advances (S150) */
+
+// The reported bug (verbatim): "los barcos enemigos siguen apareciendo con el tiempo sin
+// ningun limite". Before S150 the level advanced when its sails vanished from `encounters`,
+// and a sail that merely drifted past `despawnRadiusM` vanished: the captain climbed levels
+// without winning a single fight while the sea kept filling.
+//
+// The sea is seeded with the sails a fresh level 1 has, exactly the scenario of the report,
+// so the sails that drift out of range are real sails and not an empty sea.
+const idle = await browser.newPage({ viewport: { width: 1500, height: 950 }, locale: "es-AR" });
+attach(idle);
+const idleSail = (id) => ({
+  id,
+  type: "enemy",
+  x: 210 + id * 120,
+  y: 900,
+  hullId: "patache",
+  zoneId: "costera",
+  drift: { heading: Math.PI / 2, speedKn: 2 },
+  level: 1,
+});
+const idleWorld = {
+  v: 1,
+  seed: 424242,
+  rngState: 424242,
+  nextId: 950,
+  gold: 0,
+  timeS: 0,
+  level: 1,
+  levelVictories: 0,
+  levelEnemies: [901, 902, 903],
+  ship: { x: 210, y: 70, heading: 0, currentSpeedKn: 0, speedKn: runtime.speedKn },
+  escorts: [],
+  encounters: [idleSail(901), idleSail(902), idleSail(903)],
+};
+await idle.addInitScript(
+  ([shipJson, worldJson]) => {
+    if (localStorage.getItem("barcos:fleet:v1")) return;
+    const ship = JSON.parse(shipJson);
+    localStorage.setItem("barcos:lang:v1", "es");
+    localStorage.setItem("barcos:fleet:v1", JSON.stringify({ v: 1, ships: [ship], captainId: ship.id }));
+    localStorage.setItem("barcos:game:v1", JSON.stringify({ gold: 5000, world: worldJson }));
+  },
+  [JSON.stringify(runtime), JSON.stringify(idleWorld)],
+);
+await idle.goto("http://localhost:8765/sea.html", { waitUntil: "networkidle" });
+// Long enough for sails to drift past the despawn radius several times over, which is what
+// used to empty the level. The captain never fires a shot.
+await idle.waitForTimeout(9000);
+await idle.evaluate(() => window.dispatchEvent(new Event("beforeunload")));
+const idled = await idle.evaluate(() => {
+  const game = JSON.parse(localStorage.getItem("barcos:game:v1") ?? "null");
+  return game?.world ? JSON.parse(game.world) : null;
+});
+check(idled?.level === 1, `S150: an idle captain must stay on level 1, the save says ${idled?.level}`);
+check(
+  (idled?.levelVictories ?? 0) === 0,
+  `S150: an idle captain has no victories, the save says ${idled?.levelVictories}`,
+);
+const idledEnemies = enemiesOf(idled);
+check(
+  idledEnemies.length <= 3,
+  `S150: level 1 caps the costera at three sails, the sea holds ${idledEnemies.length}`,
+);
+await idle.close();
 
 /* ------------------------------------------------- 4: the level survives a reload */
 
@@ -216,6 +286,13 @@ check(
   /nivel\s*2/i.test(reloadedChip ?? ""),
   `S140: the level must survive a reload, the chip reads "${reloadedChip}"`,
 );
+// S150: the tooltip names the victories the level asks for, not "sink every enemy",
+// because that instruction stopped being the rule.
+const reloadedTitle = await reload.locator("#brand-level").getAttribute("title");
+check(
+  /5 victorias/i.test(reloadedTitle ?? ""),
+  `S150: the chip must name the victories level 2 asks for, it reads "${reloadedTitle}"`,
+);
 await reload.close();
 
 /* ------------------------------------------------- the report */
@@ -227,4 +304,4 @@ if (failures.length) {
   for (const failure of failures) console.error(`✖ ${failure}`);
   process.exit(1);
 }
-console.log("✔ S140: levels — fresh game level 1 with 3 enemies, clearing advances to level 2 with 5, and it survives a reload");
+console.log("✔ S140/S150: levels — a fresh sea is level 1 with 3 sails, the victories advance to level 2 with 5, an idle captain never advances, and the level survives a reload");

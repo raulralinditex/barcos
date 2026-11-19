@@ -107,6 +107,7 @@ import {
   deserializeWorld,
   markDefeated,
   nearestEncounter,
+  recordVictory,
   serializeWorld,
   updateWorld,
   zoneAtRadius,
@@ -2045,6 +2046,7 @@ function resolveDefeatedEnemies() {
   // and writing `world.encounters` from inside the map would land on the object the
   // reassignment replaced, losing the record and bringing the enemy back.
   const finished = [];
+  const beatenEnemies = [];
   const resolved = world.encounters.map((encounter) => {
     if (encounter.type !== "enemy" || !encounter.combat) return encounter;
     const status = encounter.combat.status;
@@ -2052,6 +2054,8 @@ function resolveDefeatedEnemies() {
 
     // Beating a hostile is a victory, and victories grow the yard's battery (S74).
     victories += 1;
+    // The same victory is what clears a level now (S150).
+    beatenEnemies.push(encounter);
 
     // Her hold is the real prize (S115): a hull that strikes hands over all of it, a hull
     // that goes down leaves only the share that can still be fished out of the water.
@@ -2091,6 +2095,8 @@ function resolveDefeatedEnemies() {
   }).filter(Boolean);
   world = { ...world, encounters: resolved };
   for (const id of finished) world = markDefeated(world, id);
+  // The level counts victories, not an empty sea (S150). A hull that struck is one too.
+  for (const beaten of beatenEnemies) world = recordVictory(world, beaten);
 }
 
 /**

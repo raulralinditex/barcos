@@ -79,7 +79,7 @@ import {
 } from "../model/commerce.js";
 import { GAME_TIME, burnSupply, supplySeconds } from "../model/game-time.js";
 import { currentShipyard, deserializeWorld, shipyardZone } from "../model/world.js";
-import { levelFromGameSave } from "../model/levels.js";
+import { levelProgressFromGameSave } from "../model/levels.js";
 import { COMMODITIES, SHIPYARDS, shipyardById } from "../data/naval-data.js";
 // S133: the yard selector of the title bar, the editable names and the automatic voyage.
 import { arriveAt, voyageButtonVisible, voyageQuote } from "../model/voyage.js";
@@ -1461,12 +1461,17 @@ function renderYardTitle(yard) {
  * it reads the sea save, and no save means level 1, which is also what a restart shows
  * because Reiniciar clears the saves. The chip lives next to the yard's name, so it is on
  * screen in every tab.
+ *
+ * Since S150 the level is cleared by victories, so the tooltip names the count instead of
+ * asking for every sail afloat: that instruction stopped being the rule.
  */
 function renderLevelChip() {
   if (!els.brandLevel) return;
-  const level = levelFromGameSave(readFortSave());
+  const { level, done, target } = levelProgressFromGameSave(readFortSave());
   els.brandLevel.textContent = t("shipyard.level", { level });
-  els.brandLevel.title = t("shipyard.level.title", { level });
+  els.brandLevel.title = done > 0
+    ? t("shipyard.level.title", { level, done, target })
+    : t("shipyard.level.title.none", { level, target });
 }
 
 /**

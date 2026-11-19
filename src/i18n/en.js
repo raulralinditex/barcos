@@ -659,7 +659,8 @@ export const en = {
   "shipyard.yard.label": "Shipyard",
   /* S140: the level chip next to the yard's name. */
   "shipyard.level": "Level {level}",
-  "shipyard.level.title": "Sea level {level}: sink or capture every enemy to reach the next one",
+  "shipyard.level.title": "Sea level {level}: {done} of {target} victories to reach the next one",
+  "shipyard.level.title.none": "Sea level {level}: {target} victories to reach the next one",
   "shipyard.yard.water": "{zone}",
   "shipyard.yard.rename": "Rename the shipyard",
   "shipyard.yard.namePlaceholder": "Shipyard name",
