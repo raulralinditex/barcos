@@ -188,3 +188,43 @@ test("S159-A: an escort with banks rows too, not only the captain", () => {
     `the escort's crew must have an effort on record, got ${JSON.stringify(stepped.oarEffort)}`,
   );
 });
+
+test("S159-D: the effort record follows the hull, so a hull that leaves takes her row with her", () => {
+  // A prize joins the squadron and later goes down, or a hull is sold in a yard. Nobody
+  // pruned the map: measured, forty prizes through one voyage left forty-one entries for the
+  // one hull still afloat, and the sea save carried all of them forever.
+  let world = sea(galleass());
+  const captainId = world.ship.id;
+  const seen = [];
+  for (let i = 0; i < 5; i += 1) {
+    const prize = galleass();
+    seen.push(prize.id);
+    world = {
+      ...world,
+      escorts: [
+        {
+          id: prize.id,
+          x: 100,
+          y: 100,
+          heading: 0,
+          currentSpeedKn: 0,
+          speedKn: prize.speedKn,
+          hullId: prize.hullId,
+          loadFraction: 0.1,
+          crew: { marino: 40, remero: 300 },
+        },
+      ],
+    };
+    world = updateWorld(world, { throttle: 1, turn: 0, wind: HEAD_WIND }, 1);
+    // She leaves the squadron: nothing else about her is kept anywhere either.
+    world = { ...world, escorts: [] };
+    world = updateWorld(world, { throttle: 1, turn: 0, wind: HEAD_WIND }, 1);
+  }
+  assert.deepEqual(
+    Object.keys(world.oarEffort ?? {}),
+    [captainId],
+    `only the hull still afloat must keep an effort record, got ${JSON.stringify(Object.keys(world.oarEffort ?? {}))}`,
+  );
+  // And the effort of the hull that IS afloat survives: the pruning must not reset the crew.
+  assert.ok(world.oarEffort[captainId] < 1, `the captain's own effort must survive, it is ${world.oarEffort[captainId]}`);
+});

@@ -801,7 +801,11 @@ export function updateWorld(world, input = {}, dt = 0) {
  */
 function oarRecord(world, input, wind, dt) {
   const effortIn = normaliseEffort(world.oarEffort);
-  const next = { ...effortIn };
+  // Only the hulls afloat keep a record (S159-D). A prize that joined and later sank, or a
+  // hull sold in a yard, left her row in a map nobody ever pruned: measured, forty prizes
+  // through one voyage left forty-one entries for one hull afloat, and the sea save grew
+  // with them forever. The record follows the hull, as the provisions do (S132).
+  const next = {};
   const hulls = [
     { hull: world.ship, combat: input.rigging ?? world.playerCombat, throttle: input.throttle ?? 0 },
     ...(Array.isArray(world.escorts) ? world.escorts : [])
