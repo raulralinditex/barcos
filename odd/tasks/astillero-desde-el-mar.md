@@ -59,3 +59,20 @@ L64 (cierre de S163, commit `e533090`). `npm test` **1004/1004** (998 + 12 en `t
 **Smokes que fallan y NO son de este cambio**: `smoke-sale` y `smoke-soldiers`, comprobados contra la base.
 
 **Límite conocido**: el resaltado del ancla se midió por código, no con el ratón sobre el canvas en un smoke; el clic del ancla está cubierto por `nearestShipyard` en el modelo y por la entrada por hash en el smoke, pero el gesto completo ratón→ancla→astillero no tiene smoke propio.
+
+L69 (revisión del delta de S163 y S164). Sin revisión nativa: el candidato es de nuevo la rama entera (`base-ref 7ace33b`, 58 archivos) y ya falló tres veces con `lens_context_budget_exceeded` sin crear autoridad. **Divergencia reportada**: el target del recordatorio (`e6b2f0ac…`) no coincide con el que devuelve `gentle_review inspect` (`5baf04b2…`); el reminder consume la generación observada por la sesión e `inspect` lee el árbol, y no se inventó ningún valor.
+
+**Rango revisado**: `97439c1..HEAD`, 1001 líneas en 12 archivos. Cero líneas eliminadas en `test/`: no se relajó ninguna aserción.
+
+**Bordes medidos, todos sanos:**
+
+| Caso | Resultado |
+|---|---|
+| `captainYardId` con capitana en el mar (`yardId: null`) | `null` — correcto |
+| `captainYardId` con `yardId` ausente (guardado viejo) | puerto de casa — deliberado |
+| `captainYardId` con `yardId` basura | puerto de casa — degrada al comportamiento viejo |
+| `captainYardId` sin capitana, o flota `null` | `null`, sin lanzar |
+| `freshlyBought` sobre un casco que NO es capitán | no lo toca |
+| `freshlyBought` sobre un casco sin yarda válida | reconcilia normal |
+
+**Un falso positivo mío, para no repetirlo**: probé `#sala-que-no-existe:cala-del-abismo` con un fixture **sin flota** y vi «Puerto de casa», y lo tomé por un defecto de mi parseo. Con una capitana real la yarda se respeta (`Cala del abismo`, selector `cala-del-abismo`). El fallo era del fixture: sin capitana, la reconciliación deja la flota vacía y `screenShipyard()` cae al puerto de casa, que es el comportamiento de siempre. **Un fixture sin flota no sirve para medir la yarda en pantalla.**
