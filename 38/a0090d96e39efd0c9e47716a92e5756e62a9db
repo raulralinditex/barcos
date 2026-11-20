@@ -1,0 +1,59 @@
+src/model/fog.js
+  s_f3e7c3b3b1b693::t_236067eadfe6f5 1-25,30,32-46,56-59,61-127,142,145-160
+  s_f3e7c3b3b1b693::t_57d71b5a5d26ef 26-29,31,128-136,143-144
+  s_f3e7c3b3b1b693::t_71bd7e3decde1d 137-141
+  s_f3e7c3b3b1b693::t_da9c6ab7601276 47-55,60
+scripts/smoke-fog.mjs
+  s_f3e7c3b3b1b693::t_97028c07afe1ad 1-187
+scripts/smoke-settings-menu.mjs
+  s_f3e7c3b3b1b693::t_6fc6f4700e924e 86-87,100,189-190,192
+scripts/smoke-tabs.mjs
+  s_f3e7c3b3b1b693::t_6fc6f4700e924e 76-78
+src/i18n/en.js
+  s_f3e7c3b3b1b693::t_1b7144cd9e6f9a 388-392
+odd/tasks/niebla.md
+  s_f3e7c3b3b1b693::t_3f8bffc52866f7 1-32
+  s_f3e7c3b3b1b693::t_f31122c1107635 33-35
+test/fog.test.js
+  s_f3e7c3b3b1b693::t_9f50d809144de8 1-94,100,111-129,131-132
+  s_f3e7c3b3b1b693::t_da9c6ab7601276 95-99,101-110
+  s_f3e7c3b3b1b693::t_57d71b5a5d26ef 130
+src/i18n/es.js
+  s_f3e7c3b3b1b693::t_3dd72bb147f866 385-389
+test/settings.test.js
+  s_f3e7c3b3b1b693::t_a65a4eeaf3676b 281
+  s_f3e7c3b3b1b693::t_c4765562672d52 272-280,282
+src/ui/sea.js
+  s_f3e7c3b3b1b693::t_bc66c9f1a8b084 1040,1112-1140,3221-3223,3687
+  s_f3e7c3b3b1b693::t_e7b0ac752027ad 1642,1735-1736,2162-2164
+  s_f3e7c3b3b1b693::t_1eeeac089727a1 124,1018-1021
+  s_f3e7c3b3b1b693::t_c37dfda30ebad9 1041-1084,1111,1141-1158
+  s_f3e7c3b3b1b693::t_c5f11a6ce18800 966-967,1085-1110,2123-2127,2138
+  s_f3e7c3b3b1b693::t_f5dd4b31f6e895 2303-2306
+  s_f3e7c3b3b1b693::t_a8a33fd50ec232 1022
+src/model/world.js
+  s_f3e7c3b3b1b693::t_51df7bc9637396 802-805,893-904
+  s_f3e7c3b3b1b693::t_4160a7e009b712 26,1136-1137
+  s_f3e7c3b3b1b693::t_da9c6ab7601276 1202-1205
+  s_f3e7c3b3b1b693::t_f0f68dcbed75ba 905-906
+src/model/settings.js
+  s_f3e7c3b3b1b693::t_c9404cd9990584 30,147-154,230
+src/model/settings-branches.js
+  s_f3e7c3b3b1b693::t_3dd72bb147f866 25
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.6",
+  "base_commit_sha": "38a0090d96e39efd0c9e47716a92e5756e62a9db",
+  "prompts": {},
+  "sessions": {
+    "s_f3e7c3b3b1b693": {
+      "agent_id": {
+        "tool": "pi",
+        "id": "01a1f822-2360-71e3-a9a2-e0945b49ae1f",
+        "model": "claude-sonnet-5.5"
+      },
+      "human_author": "Raul Ripoll <raulral@ext.inditex.com>"
+    }
+  }
+}
