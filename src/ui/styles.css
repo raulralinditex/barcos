@@ -2805,3 +2805,10 @@ input[type="number"] {
   margin: 0;
   min-height: 1.2em;
 }
+
+/* The sea is looking somewhere else than the captain (S166): the title says so, so a hull
+   that seems not to move is read as "the view is away", not as "the ship stopped". */
+#hud-ship-name.is-viewing-elsewhere {
+  color: #ffd98a;
+  font-style: italic;
+}

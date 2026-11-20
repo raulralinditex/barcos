@@ -220,6 +220,8 @@ export const es = {
   "sea.banner.timeWarp": "Tiempo ×{scale}",
   "sea.banner.timeEngage": "¡Enemigo a tiro! El tiempo vuelve a ×1",
   "sea.banner.treasure": "+{gold} doblones · tesoro rescatado",
+  "sea.banner.camera": "Mirando esa parte del mapa · V vuelve a la capitana",
+  "sea.banner.cameraBack": "La vista vuelve al {name}",
   "sea.banner.depart": "Zarpa el {name}. Buen viento, capitán.",
   "sea.banner.enemyNear": "¡Vela hostil a {distance} m! Q babor · E estribor",
   "sea.banner.noTarget": "Sin blanco a {side}",

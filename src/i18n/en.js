@@ -223,6 +223,8 @@ export const en = {
   "sea.banner.timeWarp": "Time ×{scale}",
   "sea.banner.timeEngage": "Enemy in range! Time is back to ×1",
   "sea.banner.treasure": "+{gold} doubloons · treasure recovered",
+  "sea.banner.camera": "Looking at that part of the chart · V goes back to the captain",
+  "sea.banner.cameraBack": "The view is back on {name}",
   "sea.banner.depart": "The {name} sets sail. Fair winds, captain.",
   "sea.banner.enemyNear": "Hostile sail at {distance} m! Q port · E starboard",
   "sea.banner.noTarget": "No target to {side}",

@@ -115,12 +115,12 @@ import {
   nearestEncounter,
   nearestShipyard,
   recordVictory,
-  squadronOnChart,
   serializeWorld,
   updateWorld,
   zoneAtRadius,
   currentShipyard,
 } from "../model/world.js";
+import { cameraFor, clampCamera, isFollowingCaptain } from "../model/sea-camera.js";
 import { toughnessForLevel } from "../model/levels.js";
 import { canBoard, deckFire } from "../model/boarding.js";
 import {
@@ -154,6 +154,20 @@ const playerCountry = (() => {
 
 const PX_PER_M = 0.4; // camera scale: 1 px on screen = 2.5 m of sea
 const MINIMAP_RADIUS = 85;
+
+/**
+ * Where the sea screen is looking (S166).
+ *
+ * `null` means "follow the captain", which is the default and the only state a reload needs:
+ * the player looks at her ship. A point means the player clicked the chart and is looking at
+ * that piece of sea while her hull keeps sailing wherever it was.
+ */
+let camera = null;
+
+/** The point the sea is drawn around right now. */
+function viewCenter() {
+  return cameraFor({ ship: world?.ship, camera });
+}
 
 const ZONE_PAINT = {
   costera: { deep: "#2e6f8e", shallow: "#3d87a8", ring: "rgba(255,255,255,0.16)" },
@@ -805,6 +819,11 @@ window.addEventListener("keydown", (event) => {
     // The pick-up order (S155-G): the active captain works the golden buoys by herself.
     event.preventDefault();
     if (!event.repeat) toggleCollectOrder();
+  } else if (key === "v") {
+    // Back to the captain (S166): looking elsewhere with the chart is a detour, and this is
+    // the way home. `v` is free and sits next to `c`, which changes who is steering.
+    event.preventDefault();
+    if (!event.repeat) recenterOnCaptain();
   } else if (key === "q" || key === "e") {
     event.preventDefault();
     firePlayerBroadside(key === "q" ? "babor" : "estribor");
@@ -897,9 +916,10 @@ function drawSea(ctx) {
   ctx.fillRect(0, 0, width, height);
 
   ctx.save();
+  const view = viewCenter();
   ctx.translate(width / 2, height / 2);
   ctx.scale(PX_PER_M, PX_PER_M);
-  ctx.translate(-world.ship.x, -world.ship.y);
+  ctx.translate(-view.x, -view.y);
 
   // zone boundary rings and the edge of the known world
   for (const band of ZONE_BANDS) {
@@ -998,9 +1018,10 @@ function drawSea(ctx) {
 
   // Keep allied hulls visible even when the captain's stern bars overlap their station.
   ctx.save();
+  const viewEscorts = viewCenter();
   ctx.translate(width / 2, height / 2);
   ctx.scale(PX_PER_M, PX_PER_M);
-  ctx.translate(-world.ship.x, -world.ship.y);
+  ctx.translate(-viewEscorts.x, -viewEscorts.y);
   for (const escort of escorts) drawEscortShip(ctx, escort);
   for (const squadron of squadrons) {
     for (const escort of squadron.escorts ?? []) drawEscortShip(ctx, escort, { active: false });
@@ -1181,9 +1202,10 @@ function drawDangerBadge(ctx, centreX, centreY, rowCount, danger) {
 
 /** World metres to screen pixels, without the camera translation. */
 function toScreen(x, y) {
+  const view = viewCenter();
   return {
-    x: window.innerWidth / 2 + (x - world.ship.x) * PX_PER_M,
-    y: window.innerHeight / 2 + (y - world.ship.y) * PX_PER_M,
+    x: window.innerWidth / 2 + (x - view.x) * PX_PER_M,
+    y: window.innerHeight / 2 + (y - view.y) * PX_PER_M,
   };
 }
 
@@ -1193,9 +1215,10 @@ function toScreen(x, y) {
  * the sea.
  */
 function toWorld(px, py) {
+  const view = viewCenter();
   return {
-    x: world.ship.x + (px - window.innerWidth / 2) / PX_PER_M,
-    y: world.ship.y + (py - window.innerHeight / 2) / PX_PER_M,
+    x: view.x + (px - window.innerWidth / 2) / PX_PER_M,
+    y: view.y + (py - window.innerHeight / 2) / PX_PER_M,
   };
 }
 
@@ -1871,21 +1894,6 @@ function drawEscortShip(ctx, escort, { active = true } = {}) {
 }
 
 /**
- * The reach of a click on the chart, in world metres (S164-C).
- *
- * The chart draws `WORLD.radiusM` into `MINIMAP_RADIUS - 6` pixels, so one pixel of the
- * chart is far more sea than one pixel of the screen. The reach is derived from that scale
- * with a comfortable margin: the player aims at a small mark on a 170 px map, and a captain
- * drawn there is a dot. `MINIMAP_PICK_PX` is how close, in chart pixels, a click has to land.
- */
-const MINIMAP_PICK_PX = 9;
-
-function minimapReachM() {
-  const scale = (MINIMAP_RADIUS - 6) / WORLD.radiusM;
-  return MINIMAP_PICK_PX / scale;
-}
-
-/**
  * The captain a click on the chart names, or null (S164-A).
  *
  * The chart has its own geometry: it is centred on the sea's origin, not on the camera, and
@@ -1903,24 +1911,48 @@ function minimapAtPointer(event) {
   // canvas's own pixel space first.
   const px = ((event.clientX - rect.left) / rect.width) * size;
   const py = ((event.clientY - rect.top) / rect.height) * size;
-  return squadronOnChart(world, { x: (px - center) / scale, y: (py - center) / scale }, minimapReachM());
+  return { x: (px - center) / scale, y: (py - center) / scale };
 }
 
 /**
- * The chart picks a captain (S164-A). It does not give orders and it does not open shipyards:
- * the player chose "Elegir la capitana que está ahí", and that the sea's anchor is the only
- * way into a yard (S164-B).
+ * The chart moves the view (S166).
+ *
+ * The player asked for it (verbatim): "en el mar, tenemos un panel redondo con una miniatura
+ * de todo el mapa, cuando en ese panel cliqueas un punto, mostrar esa parte del mapa en
+ * pantalla". A click on the chart looks at that piece of sea. It does not give orders, it does
+ * not open shipyards, and above all it does not move the captain: the helm keeps steering the
+ * same hull, which goes on sailing wherever she was.
+ *
+ * A click on the captain's own mark brings the view back to her, which is also what the
+ * keyboard does (see `recenterOnCaptain`).
  */
 els.minimap?.addEventListener("click", (event) => {
   if (!world || gameOver) return;
-  const picked = minimapAtPointer(event);
-  if (picked) chooseSquadron(picked.id);
+  const point = minimapAtPointer(event);
+  if (!point) return;
+  camera = clampCamera(point, WORLD.radiusM);
+  showBanner(t("sea.banner.camera"), "info", 1400);
 });
 
+/**
+ * Back to the captain (S166).
+ *
+ * Looking elsewhere is a detour, not a mode: one key brings the view home to the hull the
+ * player is steering, which is also where it starts after a reload.
+ */
+function recenterOnCaptain() {
+  if (!world) return false;
+  if (isFollowingCaptain({ camera })) return false;
+  camera = null;
+  showBanner(t("sea.banner.cameraBack", { name: runtimeShip?.name ?? "" }), "info", 1600);
+  return true;
+}
+
 /** The chart says it responds: the cursor changes over a captain (S164-E). */
-els.minimap?.addEventListener("mousemove", (event) => {
+els.minimap?.addEventListener("mousemove", () => {
   if (!world || !els.minimap) return;
-  els.minimap.style.cursor = minimapAtPointer(event) ? "pointer" : "";
+  // The whole chart is clickable now (S166): it always says so.
+  els.minimap.style.cursor = "pointer";
 });
 
 els.minimap?.addEventListener("mouseleave", () => {
@@ -3373,6 +3405,9 @@ function updateHud() {
     }
   }
   els.speed.textContent = `${fmtOne.format(world.ship.currentSpeedKn)} kn`;
+  // The screen says when it is looking somewhere else (S166), or the player would think her
+  // hull had stopped moving: the captain keeps sailing while the view is away.
+  if (els.name) els.name.classList.toggle("is-viewing-elsewhere", !isFollowingCaptain({ camera }));
   const degrees = ((world.ship.heading * 180) / Math.PI + 360) % 360;
   els.heading.textContent = `${String(Math.round(degrees)).padStart(3, "0")}°`;
 
