@@ -101,3 +101,23 @@ Eso es lo que el commit afirma, y sólo eso: el fallback no toca a nadie que ya 
 **Una nota de método que casi me hace concluir lo contrario:** `git stash` sobre un archivo ya commiteado no guarda nada, así que la primera comparación «base contra cambio» fue en realidad el cambio contra sí mismo y dio idéntico. La comparación válida se hace con `git show <commit>:<archivo>`. Ya me pasó algo parecido en L59 con `git checkout`; conviene comprobar con `grep` que el árbol tiene el cambio que se cree estar midiendo.
 
 **Verificación**: `npm test` **992/992**; `smoke-soldiers` en 0. Cero líneas eliminadas en `test/` desde `7452078`: no se relajó ninguna aserción.
+
+L61 (cierre del doble castigo del aparejo, commit `1adb61a`). `npm test` **1013/1013** (1009 + 4 en `test/enemy-rigging.test.js`).
+
+**El defecto, confirmado y medido.** `speedFactor` (`combat.js`) y `riggingSpeedFactor` (`world.js`) son **exactamente la misma curva** — comprobado punto por punto en el test: `0.3 + 0.7·rigging/100` en las dos. Y se aplicaban las dos al enemigo: `aiStep` la metía en `maxSpeed`, y después `stepHull` —la física que comparten todos los cascos (S57)— la volvía a aplicar desde `input.rigging`. El casco del jugador la siente **una vez**; el del enemigo, dos.
+
+| Aparejo | Antes | Después |
+|---|---|---|
+| 100 % | 2,500 kn | 2,500 kn |
+| 50 % | **1,056 kn** | **1,625 kn** |
+| 10 % | **0,342 kn** | **0,925 kn** |
+
+**Por qué importaba.** Un enemigo desarbolado no podía mantener la estación, y eso es justo lo que hacía tan difícil abordarlo: medido con el arreglo, cerrar de 2000 m a 600 m tarda 47 s con aparejo entero, 71 s a la mitad y 123 s a un décimo. Sigue siendo más lento que uno intacto —de eso se trata desarbolarlo— pero deja de ser un blanco fijo. Con el defecto, a la mitad del aparejo tardaba cerca del doble de lo que la curva pide.
+
+**El arreglo es de una línea de concepto**: `aiStep` declara la velocidad del casco **con aparejo entero** y deja el castigo a `stepHull`, que es donde el jugador y las escoltas ya lo sentían. El *fallback* de S160 para un combatiente restaurado sin `maxSpeedKn` se conserva, y también queda escalado una sola vez.
+
+**Evidencia de RED**: sin el arreglo, la suite reporta «at 50% the enemy must make 1.625 kn (the curve applied once), she made 1.056».
+
+**Dos smokes que parecían regresiones y no lo eran**: `smoke-safe-zone` y `smoke-soldiers` fallaron en una corrida bajo carga del servidor y pasaron **tres veces seguidas** cada uno al repetirlos. `smoke-escort-range` y `smoke-formation` fallan **también en la base** (comprobado con `git show HEAD:src/model/combat.js`), y no se tocaron.
+
+**Nota de equilibrio**: el enemigo desarbolado es ahora hasta 2,7× más rápido que antes en el extremo. Si el combate queda demasiado duro, el número a mover es `COMBAT.fleeHullPct` o la curva de `speedFactor`, no volver a aplicar el castigo dos veces.
