@@ -1,0 +1,60 @@
+src/model/world.js
+  s_f3e7c3b3b1b693::t_bf2395231916c7 527-530
+  s_f3e7c3b3b1b693::t_2543e169e6cbe2 12,17-24,489-493,545,597-600,603-607,615,624,771,788-806,821-848,853,863,865-869,873-878
+  s_87644080b176a0::t_dc87dbd183f913 854-855
+  s_f3e7c3b3b1b693::t_12460db8e80187 769-770,772,849-852
+  s_f3e7c3b3b1b693::t_4e4bf8f4af5df5 546-551,553,557-559,561,568-569
+  s_f3e7c3b3b1b693::t_9f215d905b4688 522,536
+  s_f3e7c3b3b1b693::t_23cc6d6e67a692 494
+  s_f3e7c3b3b1b693::t_9c3ac69721ca39 1112
+  s_f3e7c3b3b1b693::t_405399c0fe5279 554-556,560,562-567
+  s_f3e7c3b3b1b693::t_1e4fbd3d89760b 1108-1111
+  s_f3e7c3b3b1b693::t_e995b0d154547c 552
+  s_f3e7c3b3b1b693::t_8bf36e530b0254 807-820
+src/i18n/en.js
+  s_f3e7c3b3b1b693::t_e498c206f6a129 199-202
+src/ui/sea.js
+  s_f3e7c3b3b1b693::t_ca4be7ef3ac88f 185-186,3216-3230
+  s_f3e7c3b3b1b693::t_074ed54ed0e228 113,3485-3491
+  s_f3e7c3b3b1b693::t_f2cc901c8dbe1f 2568-2571
+src/model/formation.js
+  s_f3e7c3b3b1b693::t_a8bef893b52065 109-116
+test/oars-sea.test.js
+  s_f3e7c3b3b1b693::t_89f6c9a1632fce 41-47,75,88,103,130
+  s_87644080b176a0::t_adf5d637935237 119,135
+  s_87644080b176a0::t_688d899f510734 1-40,48-67,71-74,76-87,89-102,104-114,120-129,131-134,136-152
+  s_87644080b176a0::t_7233d8402f2952 115-118
+  s_f3e7c3b3b1b693::t_f2d9c90accd823 153-190
+  s_f3e7c3b3b1b693::t_51a5c949d1e325 68-70
+src/i18n/es.js
+  s_f3e7c3b3b1b693::t_d016644a1d0685 196-199
+sea.html
+  s_f3e7c3b3b1b693::t_72302136f444a1 18-20
+scripts/smoke-oars.mjs
+  s_f3e7c3b3b1b693::t_e953a332bd3305 1-69,79-81,83-86,91,93-110,112-190
+  s_f3e7c3b3b1b693::t_b7d13b043a4230 70-78,82,87-90,92,111
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.6",
+  "base_commit_sha": "e6b92c0f3f86df9948db7d80a01cc0b31f906bb3",
+  "prompts": {},
+  "sessions": {
+    "s_87644080b176a0": {
+      "agent_id": {
+        "tool": "pi",
+        "id": "01a1f522-62b3-72af-941b-b101d589ddf0",
+        "model": "deepseek-v4.1-flash_high"
+      },
+      "human_author": "Raul Ripoll <raulral@ext.inditex.com>"
+    },
+    "s_f3e7c3b3b1b693": {
+      "agent_id": {
+        "tool": "pi",
+        "id": "01a1f822-2360-71e3-a9a2-e0945b49ae1f",
+        "model": "deepseek-v4.1-flash_high"
+      },
+      "human_author": "Raul Ripoll <raulral@ext.inditex.com>"
+    }
+  }
+}
