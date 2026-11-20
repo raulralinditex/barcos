@@ -31,7 +31,7 @@ L62 (alcance, verbatim): "si la capitana no esta en el radio de atraca, simpleme
 
 L63 (estado medido antes de tocar nada): el mar dibuja cada astillero de `SHIPYARDS` como un círculo con un ancla (`drawSea`), pero **no hay ninguna zona de clic**: los clics del canvas sólo buscan escuadras (`squadronAtPointer`). El astillero se abre hoy por una única vía, `updatePortArrival`, que dispara cuando la capitana **entra en el puerto de casa** y navega a `index.html#comprar`. `app.js` elige la yarda con `screenShipyard() = shipyardById(viewedYardId) ?? captainYard()`, y `captainYard()` devuelve `currentShipyard(posición) ?? puerto de casa`: **con la capitana en el mar miente**, porque cae al puerto de casa y `visitingYard()` compara mostrada contra atracada y da falso. Hay 10 llamadas a `refuseVisit()` en `app.js`; las salas son flota, comprar, astillero (reforma) y mercado.
 
-L64 (cierre de S163, commit `SIN_COMMIT`). `npm test` **1004/1004** (998 + 12 en `test/yard-presence.test.js`). `scripts/smoke-shipyard-from-sea.mjs` en 0.
+L64 (cierre de S163, commit `e533090`). `npm test` **1004/1004** (998 + 12 en `test/yard-presence.test.js`). `scripts/smoke-shipyard-from-sea.mjs` en 0.
 
 **El defecto de fondo era el que decía S163-E y era peor de lo que parecía.** `captainYard()` caía al puerto de casa cuando la capitana navegaba, y `visitingYard()` exigía `shown && moored`, así que una capitana en el mar **no era visita de nada**: el astillero la trataba como presente en la yarda que mirara y habilitaba acciones sobre un casco que no estaba. Peor: `shipsAvailableAtYard` compara la yarda en pantalla contra la yarda de la capitana, y con `captainYard()` mintiendo esa comparación nunca fallaba.
 
