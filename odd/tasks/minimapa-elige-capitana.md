@@ -26,7 +26,7 @@ L66 (decisiones, verbatim): el clic "Elegir la capitana que está ahí", y sobre
 
 L67 (estado medido antes de tocar nada): `drawMinimap` en `src/ui/sea.js` dibuja zonas, astilleros, encuentros, escoltas, cada escuadra (`drawMinimapHull`) y la flecha del jugador, pero **no tiene ni un solo `addEventListener`**: el minimapa es sólo un dibujo. El canvas mide 170 px y dibuja el mar entero de `WORLD.radiusM` en `MINIMAP_RADIUS - 6 = 79` px, así que un clic de mapa cubre muchísimo más mar que un clic de pantalla: el radio de acierto tiene que salir de esa escala, no del `CAPTAIN_CLICK_RADIUS_M = 90` del mar.
 
-L68 (cierre de S164, commit `SIN_COMMIT`). `npm test` **1009/1009** (1004 + 5 en `test/minimap-pick.test.js`). `scripts/smoke-minimap-pick.mjs` en 0.
+L68 (cierre de S164, commit `cfa4b5f`). `npm test` **1009/1009** (1004 + 5 en `test/minimap-pick.test.js`). `scripts/smoke-minimap-pick.mjs` en 0.
 
 **Lo que se implementó, y dónde vive la regla:**
 
