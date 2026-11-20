@@ -1,0 +1,19 @@
+odd/tasks/astillero-desde-el-mar.md
+  s_f3e7c3b3b1b693::t_091b90a3969871 34
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.6",
+  "base_commit_sha": "fd6688655d0be5d193eb2f90c3a82b52cd8a853d",
+  "prompts": {},
+  "sessions": {
+    "s_f3e7c3b3b1b693": {
+      "agent_id": {
+        "tool": "pi",
+        "id": "01a1f822-2360-71e3-a9a2-e0945b49ae1f",
+        "model": "deepseek-v4.1-flash_high"
+      },
+      "human_author": "Raul Ripoll <raulral@ext.inditex.com>"
+    }
+  }
+}
