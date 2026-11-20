@@ -60,6 +60,7 @@ import {
 import { conditionOf, damagedShips, priceWithPurse, repairCost, repairFleetShip, repairReport } from "../model/repair.js";
 import { buildShip, toRuntimeShip } from "../model/shipyard.js";
 import { repaintSettingsForLanguage } from "./settings-tab.js";
+import { showsBuilderPanels } from "../model/fleet-panels.js";
 import { applyRefit, configFromShip, quoteRefit, REFIT } from "../model/refit.js";
 import { canSellShip, salePrice, sellShip } from "../model/sale.js";
 import { FORT, buyFortGun, fortBoughtGuns, fortGunCost, fortGunHeadroom, fortGunsPerSide, fortRepair, fortRepairQuote } from "../model/fort.js";
@@ -1308,6 +1309,24 @@ const $shipAndRig = () => [document.querySelector(".panel-ship"), document.query
  * Only the room's own foot actions show: no refit banner while buying, no price while
  * reading the fort.
  */
+/**
+ * Put the ship+rig panels where the room and the selection say (S165).
+ *
+ * `showsBuilderPanels` owns the rule; this only applies it, because the panels are moved
+ * between parking slots and the slot has to be visible for its children to be.
+ */
+function layoutBuilderPanels(screen) {
+  const standIn = showsBuilderPanels({ screen, hasSelection: Boolean(refitId) });
+  for (const node of $shipAndRig()) node.toggleAttribute("hidden", !standIn);
+  if (!standIn) return;
+  const slot = document.getElementById(`${screen}-builder-slot`);
+  if (!slot) return;
+  // The parking slots ship hidden so an empty room shows no gap; a slot that holds
+  // the ship+rig panels must be visible, or her children inherit the hidden state.
+  slot.removeAttribute("hidden");
+  for (const node of $shipAndRig()) slot.appendChild(node);
+}
+
 function showScreen(next) {
   if (!SCREENS.includes(next)) return;
   if (reconcileSavedCaptain()) renderFleet();
@@ -1329,15 +1348,11 @@ function showScreen(next) {
   // Two rooms are reading rooms and do not take them (S145/S147): the yard, where the
   // player reads her fort and her repairs, and the market, which trades goods and has no
   // business showing a shipbuilder beside the board.
-  const standIn = next !== "configuracion" && next !== "astillero" && next !== "mercado";
-  for (const node of $shipAndRig()) node.toggleAttribute("hidden", !standIn);
-  const slot = document.getElementById(standIn ? `${next}-builder-slot` : null);
-  if (standIn && slot) {
-    // The parking slots ship hidden so an empty room shows no gap; a slot that holds
-    // the ship+rig panels must be visible, or her children inherit the hidden state.
-    slot.removeAttribute("hidden");
-    for (const node of $shipAndRig()) slot.appendChild(node);
-  }
+  //
+  // The fleet room takes them only for the hull the player picked (S165): with nothing
+  // selected they belong to nobody, and the room greeted her with the captain's rig and
+  // guns before she had chosen anything.
+  layoutBuilderPanels(next);
 
   // The footer shows only what the room needs (S98/S99, S105): buying shows the price
   // and the add button; refitting shows the price and the save button; the fleet shows
@@ -2621,7 +2636,13 @@ function selectRefitShip(ship, { openRoom = true } = {}) {
   // into the fleet room, which now reads like the old build screen in refit mode.
   // The boot picks the captain only to fill the editor, so it must not choose the room
   // the player lands in (S109).
-  if (openRoom) showScreen("flota");
+  if (openRoom) {
+    showScreen("flota");
+  } else {
+    // The room is not changing, but the selection is: the fleet room's panels follow it
+    // (S165), so they have to be re-laid out even when the player stays where she is.
+    layoutBuilderPanels(activeScreen);
+  }
 }
 
 els.fleetList.addEventListener("click", (event) => {
@@ -2753,6 +2774,8 @@ els.fleetSellBtn.addEventListener("click", () => {
 
 els.newShipBtn.addEventListener("click", () => {
   refitId = null;
+  // Dropping the selection takes the fleet room's panels with it (S165).
+  layoutBuilderPanels(activeScreen);
   renderFleet();
   render();
 });
