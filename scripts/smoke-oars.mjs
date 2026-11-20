@@ -57,8 +57,10 @@ const galleon = toRuntimeShip(
 const browser = await chromium.launch();
 const failures = [];
 const errors = [];
+let checksPassed = 0;
 const check = (ok, message) => {
-  if (!ok) failures.push(message);
+  if (ok) checksPassed += 1;
+  else failures.push(message);
 };
 const attach = (page) => {
   page.on("console", (msg) => {
@@ -151,7 +153,76 @@ check(
 );
 await oars.close();
 
-/* ------------------------------------- 3: a hull with no banks is offered no oars */
+/* ------------------- 3: a save written before S159 still rows after loading */
+
+// A save from before the oars existed carries no `id`, no `hullId` and no `oarEffort`. The
+// sea has to give the captain her identity back from the fleet sheet, or she would never row
+// a stroke again — the row is hidden and the effort stays empty forever.
+const legacy = await browser.newPage({ viewport: { width: 1500, height: 950 }, locale: "es-AR" });
+attach(legacy);
+await legacy.addInitScript(
+  ([shipJson]) => {
+    if (localStorage.getItem("barcos:fleet:v1")) return;
+    const hull = JSON.parse(shipJson);
+    const oldWorld = {
+      v: 1,
+      seed: 7,
+      rngState: 12345,
+      nextId: 1,
+      gold: 5000,
+      timeS: 0,
+      ship: { x: 210, y: 70, heading: 0, currentSpeedKn: 0, speedKn: 10 },
+      escorts: [],
+      encounters: [],
+      defeated: [],
+      level: 1,
+      levelEnemies: [],
+      levelVictories: 0,
+      activeId: hull.id,
+      order: { throttle: 0, turn: 0 },
+      squadrons: [],
+    };
+    localStorage.setItem("barcos:lang:v1", "es");
+    localStorage.setItem("barcos:fleet:v1", JSON.stringify({ v: 1, ships: [hull], captainId: hull.id }));
+    localStorage.setItem(
+      "barcos:game:v1",
+      JSON.stringify({
+        gold: 5000,
+        combat: { player: { condition: { rigging: 10 } } },
+        world: JSON.stringify(oldWorld),
+      }),
+    );
+  },
+  [JSON.stringify(galleass)],
+);
+await legacy.goto("http://localhost:8765/sea.html", { waitUntil: "networkidle" });
+await legacy.waitForTimeout(900);
+await legacy.keyboard.down("w");
+await legacy.waitForTimeout(2600);
+await legacy.keyboard.up("w");
+
+const legacyRow = legacy.locator("#hud-oars-row");
+check(
+  await legacyRow.isVisible(),
+  "S159-I: a save written before the oars existed must still row, the row is hidden",
+);
+const legacySave = await savedSea(legacy);
+check(
+  typeof legacySave?.ship?.id === "string" && legacySave.ship.id.length > 0,
+  `S159-I: the sea must give the captain her identity back from the fleet sheet, it has ${legacySave?.ship?.id}`,
+);
+check(
+  legacySave?.ship?.hullId === "galeaza",
+  `S159-I: the restored captain must keep her hull, it has ${legacySave?.ship?.hullId}`,
+);
+check(
+  typeof legacySave?.oarEffort?.[legacySave.ship.id] === "number" &&
+    legacySave.oarEffort[legacySave.ship.id] < 1,
+  `S159-I: a restored crew must row and spend effort, the save says ${JSON.stringify(legacySave?.oarEffort)}`,
+);
+await legacy.close();
+
+/* ------------------------------------- 4: a hull with no banks is offered no oars */
 
 const noBanks = await seaWith(galleon);
 await noBanks.keyboard.down("w");
@@ -187,4 +258,4 @@ if (failures.length > 0) {
   for (const failure of failures) console.error(`  - ${failure}`);
   process.exit(1);
 }
-console.log("smoke-oars: 8 checks passed");
+console.log(`smoke-oars: ${checksPassed} checks passed`);

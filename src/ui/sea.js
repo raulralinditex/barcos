@@ -3415,7 +3415,19 @@ function boot() {
   }
 
   // A new captain keeps the sea's location, but sails at her own speed and turn rate.
-  world = { ...world, ship: { ...world.ship, speedKn: runtimeShip.speedKn, turnFactor: shipTurnFactor(runtimeShip.hullId, runtimeShip.loadFraction) } };
+  // Her identity comes with that too (S159): a save written before the oars existed carries
+  // no `id` and no `hullId`, so the captain who loaded it would never row a stroke. The
+  // fleet sheet knows who she is, and it is the authority for her hull and her crew.
+  world = {
+    ...world,
+    ship: {
+      ...world.ship,
+      speedKn: runtimeShip.speedKn,
+      turnFactor: shipTurnFactor(runtimeShip.hullId, runtimeShip.loadFraction),
+      id: runtimeShip.id,
+      ...hullSpec(runtimeShip),
+    },
+  };
 
   gold = normaliseGold(savedGame?.gold);
   goldSynced = gold;
