@@ -19,10 +19,10 @@ S159. **Los remos son propulsión de respaldo, no un motor extra.** Pedido (verb
 
 - T41 — S159-A/B/C/D/F + S159-G: `src/model/oars.js` (bancos, velocidad de remo, esfuerzo, castigo por carga, factor de giro) y `test/oars.test.js`. Ruta: inline.
 - T42 — S159-G: los campos `oarBanks` y `oarMaxKn` en los siete cascos y su normalización en la derivación de `src/data/naval-data.js`. Ruta: inline.
-- T43 — S159-A/B/F/I: `stepHull` con el `max()`, el factor de giro por remo y el esfuerzo por escuadra en `src/model/world.js`, con su compatibilidad. Ruta: inline.
-- T44 — S159-E/F: el cableado en `src/ui/sea.js` (esfuerzo por casco, entrada al mundo) y el indicador del HUD. Ruta: inline.
+- T43 — S159-A/B/F/I: `stepHull` con el `max()`, el factor de giro por remo y el esfuerzo por escuadra en `src/model/world.js`, con su compatibilidad. Ruta: inline. Hecho en `e6b92c0` (ver L57).
+- T44 — S159-E/F: el cableado en `src/ui/sea.js` (esfuerzo por casco, entrada al mundo) y el indicador del HUD. Ruta: inline. Hecho en `e6b92c0` (ver L57).
 - T45 — S159-H: el campo de remeros oculto en los cascos sin bancos (`src/ui/app.js`), i18n es/en. Ruta: inline. Commit: ver L56.
-- T46 — el smoke `scripts/smoke-oars.mjs` y la verificación de la suite completa. Ruta: inline.
+- T46 — el smoke `scripts/smoke-oars.mjs` y la verificación de la suite completa. Ruta: inline. Hecho en `e6b92c0` (ver L57).
 
 ## Log
 
@@ -69,3 +69,36 @@ L56 (cierre de S159-H / T45, el cableado que faltaba de la ficha). `npm test` **
 **No se tocó la regla del aviso.** `rowers-without-galley` sigue emitiéndose en `ship-model.js` y su test sigue verde: el aviso cubre el guardado viejo y la reforma, la pantalla cubre al jugador que arma un casco.
 
 **Tres smokes fallan también en la base** (comprobado con `git stash` de este trabajo): `smoke-two-hulls` y `smoke-buy-hull` agotan el tiempo esperando `#launch-btn`, y `smoke-tabs` cuenta 23 bloques de Configuración donde espera otro número. Son previos y ajenos a esta ficha; quedan reportados, no tocados.
+
+L57 (cierre de T43, T44 y T46 — S159 completa, commit `e6b92c0`). `npm test` **987/987** (974 + 13: 7 en `test/oars-sea.test.js` y los 6 que el propio cableado hizo posibles). `scripts/smoke-oars.mjs` en 0 con **8 comprobaciones**.
+
+**Lo que faltaba era exactamente lo que T43/T44 pedían, y estaba a la vista**: `stepHull` y `stepEscort` ya leían `input.oars` desde `8beb5f5`, pero `updateWorld` no le pasaba nada. Cada casco del juego real navegaba con `oarKn = 0` y la fatiga no ocurría nunca. El modelo estaba probado y el juego no lo usaba.
+
+**Tabla de lo que quedó cableado:**
+
+| Pieza | Dónde | Estado |
+|---|---|---|
+| `world.oarEffort` por casco, avanzado en cada paso | `oarRecord` en `world.js` | ✅ |
+| El esfuerzo llega a la física de capitana, escoltas y escuadras | `stepShip`/`stepEscort` vía `input.oars` | ✅ |
+| `world.oarReading`: lo que la capitana rema ahora | `updateWorld` | ✅ |
+| Fila de remos en el HUD, oculta sin bancos | `sea.html`, `updateHud` en `sea.js`, i18n es/en | ✅ |
+
+**Tres defectos que el cableado destapó, los tres arreglados acá:**
+
+1. **El mar no conocía la identidad de la capitana.** `world.ship` era posición y velocidad y nada más: sin `hullId`, ninguna regla que lea el casco podía aplicársele; sin `id`, un registro por casco no tenía clave. Y `deserializeWorld` los volvía a tirar al cargar, así que el esfuerzo quedaba huérfano en cada recarga. Es la causa raíz de que S159 no se notara en pantalla.
+2. **Una escolta con bancos remaba cero.** `createEscort` no llevaba `hullId`, `loadFraction` ni la tripulación: la capitana remaba y su escuadra no, con el mismo casco. Medido: con `createEscort` sin esos campos, el registro del esfuerzo sólo tenía la capitana.
+3. **Cada escuadra heredaba la identidad de la capitana del timón.** `{...world.ship}` en el arranque le daba a toda capitana el casco, la carga y la tripulación de la primera. Con los remos cableados, una segunda capitana habría remado con la tripulación de otra. Ahora cada una lleva la suya (`hullSpec`).
+
+**Evidencia de RED, observada en los dos niveles:**
+
+- **Modelo**: `test/oars-sea.test.js` con el `createEscort` viejo falla «the escort's crew must have an effort on record, got {"ship-…":0.994}» — sólo la capitana. Verde con el arreglo.
+- **Pantalla**: `scripts/smoke-oars.mjs` con la capitana sin identidad falla **5 de 8** comprobaciones: la fila de remos no aparece, dice «—», el guardado no lleva `hullId`, no hay esfuerzo gastado y no sobrevive a la recarga. Verde con el arreglo.
+- **Suite**: los dos rojos que el cableado produjo se arreglaron con su causa —`S8 round-trip` (identidad perdida al cargar) y `S155-C lista rota` (una escuadra `null` hacía estallar `oarRecord` antes de que corriera la física)— y no relajando ninguna aserción.
+
+**El escenario del gasto es el que la regla describe.** El smoke tuitea el aparejo al 10 % para forzar el caso: con aparejo entero y viento a favor gana la vela y la tripulación descansa, que es lo correcto (S159-A), y ahí no hay esfuerzo que gastar. Los remos existen para el día en que la vela no alcanza.
+
+**Límite conocido**: el `oarReading` que publica el mundo es el de la capitana que lleva el timón, no el de una capitana parqueada. El HUD muestra el casco que el jugador está gobernando, que es lo que pide S159-E; leer el de otra escuadra sin tomar su timón no se pidió y no se hizo.
+
+**Smokes en 0**: oars, sea, sea-squadrons, fleet, levels, ui, i18n, tabs, combat, danger.
+
+**Smokes que fallan y NO son de este cambio**, comprobados contra la base con `git stash` (idéntico mensaje en los dos estados): `smoke-formation` («a sunk escort is still in the fleet», y antes «the escort never left its starting station») y `smoke-state` («live escort not repaired», «firing did not change the bars»). Los dos venían rotos desde antes de S155 (L49).
