@@ -1,0 +1,30 @@
+odd/tasks/minimapa-elige-capitana.md
+  s_f3e7c3b3b1b693::t_a5618a393ca20d 1-27
+  s_f3e7c3b3b1b693::t_f5143cf53fd632 28-30
+src/model/world.js
+  s_f3e7c3b3b1b693::t_1b99bb0b66ca55 329-355
+  s_f3e7c3b3b1b693::t_dfd7768e102064 328
+scripts/smoke-minimap-pick.mjs
+  s_f3e7c3b3b1b693::t_9f92e883a07aaa 1-158
+src/ui/sea.js
+  s_f3e7c3b3b1b693::t_c8e68908906e0b 118,1873-1928
+  s_f3e7c3b3b1b693::t_335a33c70d2998 1929
+test/minimap-pick.test.js
+  s_f3e7c3b3b1b693::t_c6bc9caccc8181 1-87
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.6",
+  "base_commit_sha": "cfa4b5f45d03e40cc89f86344cb18727dc0c2ccb",
+  "prompts": {},
+  "sessions": {
+    "s_f3e7c3b3b1b693": {
+      "agent_id": {
+        "tool": "pi",
+        "id": "01a1f822-2360-71e3-a9a2-e0945b49ae1f",
+        "model": "deepseek-v4.1-flash_high"
+      },
+      "human_author": "Raul Ripoll <raulral@ext.inditex.com>"
+    }
+  }
+}
