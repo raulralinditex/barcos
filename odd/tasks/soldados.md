@@ -58,3 +58,29 @@ DBG-IDS  500:-:c?,502:-:c?,510:-:c?                                        ← 5
 **Lo que sí quedó probado en el modelo**: `canBoard` con 40 soldados contra 9 hombres da `{allowed: true, mine: 40, theirs: 9, needed: 9}`, y el fuego de cubierta rinde a un barco con la tripulación a 33 %.
 
 **Siguiente paso para retomar**: instrumentar `applyDamage` en la pantalla para ver a qué objeto llega el daño, o comparar la identidad del `combat` del enemigo entre `deckFireVolley` y `resolveDefeatedEnemies`. La sospecha es que `processCombat` reemplaza el `combat` del encuentro en algún paso del bucle.
+
+L59 (cierre de S160, commit `fad9f84`). `npm test` **992/992**; `scripts/smoke-soldiers.mjs` en 0 con **los dos casos**, en tres corridas seguidas.
+
+**El defecto (1) de L56 no era del fuego de cubierta.** El fuego de cubierta funcionaba desde `b66204d`: con 40 soldados a 51 m da `crew: 12` por andanada, seis andanadas rinden al patache y `canBoard` la autoriza (`{allowed: true, mine: 40, theirs: 6, needed: 6}`). Lo que estaba roto era **el smoke que lo vigilaba**, y detrás de él, dos defectos reales que la cacería destapó.
+
+**La cadena medida, en orden:**
+
+1. **El fixture del smoke no le daba velocidad al enemigo.** `combat.maxSpeedKn` ausente → `aiStep` calculaba `maxSpeedKn * speedFactor` = `NaN` → `encounter.x/y` = `NaN` → el filtro de despawn de `updateWorld` compara `Math.hypot(NaN - x, NaN - y) <= 3400`, que es `false` para NaN → **el casco desaparece del mar**. La presa se borraba antes de poder rendirse. Medido en el navegador con instrumentación real sobre el archivo: `DBG-NAN id=501 result.enemy.x=NaN`.
+2. **El mar no clampeaba `dt` por abajo.** `const dt = Math.min(0.1, (now - lastTime) / 1000)`: si `requestAnimationFrame` entrega un timestamp anterior a `lastTime` —cosa que pasa al cargar el módulo y al volver de una pestaña en segundo plano— el paso es **negativo** y el mar entero corre hacia atrás. Medido: `dt=-0.013` en el primer frame.
+3. **El smoke abría la segunda página sobre el `localStorage` de la primera.** `localStorage` se comparte por origen, así que el caso «con soldados» heredaba la flota del caso «sin soldados»: el casco que disparaba desde la cubierta era el que no tenía soldados. Medido: `DBG-DECK hull=Sin soldados ... crew=0` mientras el fixture decía 40.
+4. **El smoke leía la flota después de que la captura ya había ocurrido.** La presa está a 51 m y ya rendida, así que la captura cae en el primer segundo; `fleetCount(page)` después de 1200 ms medía el resultado, no el punto de partida.
+
+**Los arreglos:**
+
+| Pieza | Cambio |
+|---|---|
+| `src/model/combat.js` | `aiStep` resuelve la velocidad (`combat.maxSpeedKn` → `enemy.speedKn` → 5) y pasa **ese** valor a `stepHull`, no el campo crudo |
+| `src/ui/sea.js` | `dt` acotado a `[0, 0.1]` |
+| `scripts/smoke-soldiers.mjs` | `maxSpeedKn: 5` y `crewDamagePool: 0` en el enemigo; `level`/`levelEnemies`/`order`/`squadrons` en el mundo; `browser.newContext` por caso; `FLEET_AT_OPEN` como línea base |
+| `test/enemy-restore.test.js` | 4 tests nuevos |
+
+**Evidencia de RED, medida:** el smoke sobre el fixture viejo reporta «fleet went 1 → 1» sin anuncio de captura; la suite sin los arreglos del modelo da **991/992** (el test de `aiStep` en rojo). Verde con ellos: 992/992 y smoke en 0.
+
+**Lo que esto significa para el punto (2) de L56** —«la captura de punta a punta no se puede verificar»—: **queda cerrado**. La captura se verifica de punta a punta en el navegador real: el banner dice «¡Patache capturada! Se suma a tu flota» y la flota pasa de `["Con soldados"]` a `["Con soldados","Patache"]`.
+
+**Smokes en 0**: soldiers, combat, oars, sea, levels.
