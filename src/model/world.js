@@ -326,6 +326,34 @@ export function nearestShipyard(point, radiusM = WORLD.pickupRadiusM) {
 }
 
 /**
+ * The captain a click on the CHART names, or null (S164-A).
+ *
+ * The minimap draws the whole sea into a small canvas, so a click there covers far more
+ * water than a click on the screen: the reach is given in world metres by the caller, which
+ * is the only way the chart's own scale can decide it. This is a different gesture from
+ * `nearestSquadron` (the sea's 90 m pick) and it exists because the player asked to be able
+ * to go where her captains are: "tendremos que poder ir donde estan".
+ *
+ * A broken point or reach names nobody, so a click on empty water leaves the helm alone.
+ */
+export function squadronOnChart(world, point, radiusM) {
+  const x = Number(point?.x);
+  const y = Number(point?.y);
+  const radius = Number(radiusM);
+  if (!Number.isFinite(x) || !Number.isFinite(y) || !Number.isFinite(radius) || radius <= 0) return null;
+  let best = null;
+  let bestDistance = radius;
+  for (const squadron of afloatSquadrons(world)) {
+    const distance = Math.hypot(squadron.ship.x - x, squadron.ship.y - y);
+    if (distance <= bestDistance) {
+      best = squadron;
+      bestDistance = distance;
+    }
+  }
+  return best;
+}
+
+/**
  * Distance from `point` to the closest hull of any squadron afloat (S155-C). The enemies
  * use it to decide what is near them: with several commands on the water, a hostile is
  * not forgotten because the squadron she is chasing is not the one holding the helm.

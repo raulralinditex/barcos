@@ -115,6 +115,7 @@ import {
   nearestEncounter,
   nearestShipyard,
   recordVictory,
+  squadronOnChart,
   serializeWorld,
   updateWorld,
   zoneAtRadius,
@@ -1868,6 +1869,63 @@ function drawEscortShip(ctx, escort, { active = true } = {}) {
   });
   ctx.restore();
 }
+
+/**
+ * The reach of a click on the chart, in world metres (S164-C).
+ *
+ * The chart draws `WORLD.radiusM` into `MINIMAP_RADIUS - 6` pixels, so one pixel of the
+ * chart is far more sea than one pixel of the screen. The reach is derived from that scale
+ * with a comfortable margin: the player aims at a small mark on a 170 px map, and a captain
+ * drawn there is a dot. `MINIMAP_PICK_PX` is how close, in chart pixels, a click has to land.
+ */
+const MINIMAP_PICK_PX = 9;
+
+function minimapReachM() {
+  const scale = (MINIMAP_RADIUS - 6) / WORLD.radiusM;
+  return MINIMAP_PICK_PX / scale;
+}
+
+/**
+ * The captain a click on the chart names, or null (S164-A).
+ *
+ * The chart has its own geometry: it is centred on the sea's origin, not on the camera, and
+ * it is drawn with its own scale. So the click is converted back through that geometry
+ * instead of the screen's `toWorld`, which would read a chart click as a point of the sea
+ * near the camera.
+ */
+function minimapAtPointer(event) {
+  if (!world || !els.minimap) return null;
+  const rect = els.minimap.getBoundingClientRect();
+  const size = els.minimap.width;
+  const center = size / 2;
+  const scale = (MINIMAP_RADIUS - 6) / WORLD.radiusM;
+  // The canvas is scaled by CSS to fit its box, so the click is mapped back into the
+  // canvas's own pixel space first.
+  const px = ((event.clientX - rect.left) / rect.width) * size;
+  const py = ((event.clientY - rect.top) / rect.height) * size;
+  return squadronOnChart(world, { x: (px - center) / scale, y: (py - center) / scale }, minimapReachM());
+}
+
+/**
+ * The chart picks a captain (S164-A). It does not give orders and it does not open shipyards:
+ * the player chose "Elegir la capitana que está ahí", and that the sea's anchor is the only
+ * way into a yard (S164-B).
+ */
+els.minimap?.addEventListener("click", (event) => {
+  if (!world || gameOver) return;
+  const picked = minimapAtPointer(event);
+  if (picked) chooseSquadron(picked.id);
+});
+
+/** The chart says it responds: the cursor changes over a captain (S164-E). */
+els.minimap?.addEventListener("mousemove", (event) => {
+  if (!world || !els.minimap) return;
+  els.minimap.style.cursor = minimapAtPointer(event) ? "pointer" : "";
+});
+
+els.minimap?.addEventListener("mouseleave", () => {
+  if (els.minimap) els.minimap.style.cursor = "";
+});
 
 function drawMinimap() {
   const ctx = els.minimap.getContext("2d");
