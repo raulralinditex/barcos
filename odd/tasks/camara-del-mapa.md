@@ -28,7 +28,7 @@ L74 (corrección de alcance, verbatim del turno anterior): "Con varias capitanas
 
 L75 (estado medido antes de tocar nada): el mar centraba **todo** en `world.ship`: dos bloques de dibujo hacían `ctx.translate(-world.ship.x, -world.ship.y)`, y `toScreen`/`toWorld` restaban o sumaban `world.ship`. No había ninguna noción de cámara. Eran cuatro puntos, no más, así que la cámara se pudo introducir sin tocar el resto del dibujo.
 
-L76 (cierre de S166, commit `SIN_COMMIT`). `npm test` **1021/1021** (1016 + 5 en `test/sea-camera.test.js`; el total baja de 1026 porque se retiraron los 5 de `test/minimap-pick.test.js`, que fijaban S164). `scripts/smoke-minimap-camera.mjs` en 0.
+L76 (cierre de S166, commit `c3a7895`). `npm test` **1021/1021** (1016 + 5 en `test/sea-camera.test.js`; el total baja de 1026 porque se retiraron los 5 de `test/minimap-pick.test.js`, que fijaban S164). `scripts/smoke-minimap-camera.mjs` en 0.
 
 **La regla vive en el modelo** (`sea-camera.js`) porque la distinción que importa es de producto y no de pintado: **la capitana es donde está el viaje, la cámara es donde mira el jugador**. `cameraFor` resuelve el punto de dibujo, `clampCamera` lo acota al mar conocido, y una cámara rota o ausente significa «seguir a la capitana».
 
