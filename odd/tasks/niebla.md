@@ -33,7 +33,7 @@ L79 (estado medido antes de tocar nada): el mar no tiene ninguna noción de visi
 
 L80 (reporte del jugador sobre la primera versión, verbatim): "cuando activo la niebla no la veo". **Causa medida:** la primera versión abría un guardado sin registro de descubrimiento como `complete: true` (mapa entero descubierto), y el primer autoguardado lo grababa para siempre. La partida en curso del jugador era de esas, así que el interruptor no tenía nada que tapar. Reproducido: `guardado viejo abre con complete = true` y «tras un autoguardado sigue complete = true». Era un defecto de mi diseño, no de la pantalla: pensé en «no estropear partidas viejas» olvidando que la niebla es opcional y que quien la enciende quiere verla. **Segunda causa, vista en la captura:** el minimapa no tenía niebla (mostraba el mapa entero y los tres astilleros) y el ancla del puerto asomaba bajo el velo.
 
-L81 (cierre de S167, commit `SIN_COMMIT`). `npm test` **1033/1033** (1021 + 11 en `test/fog.test.js` + 1 de la corrección). `scripts/smoke-fog.mjs` en 0.
+L81 (cierre de S167, commit `38a0090`). `npm test` **1033/1033** (1021 + 11 en `test/fog.test.js` + 1 de la corrección). `scripts/smoke-fog.mjs` en 0.
 
 **Lo que quedó:** `src/model/fog.js` (rejilla de celdas de 200 m, `revealAround`, `isVisible` con las dos reglas, `fogEnabled`), el descubrimiento en `updateWorld` y en el guardado del mar, el bloque `fog` en Configuración (interruptor, radio, distancia de contacto y regla; rama «El mar y el mundo»), y en pantalla el velo sobre el mar, el velo sobre el minimapa, y los barcos y astilleros ocultos fuera del dibujo, del panel de combate, del aviso de cercanía y del clic de apuntar.
 
