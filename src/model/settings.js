@@ -27,6 +27,7 @@ import { ESCORT } from "./formation.js";
 import { TRAIL } from "./damage-trail.js";
 import { BAR_SCALE } from "./sea-hud.js";
 import { AUTOFIRE_DEFAULT } from "./autofire.js";
+import { FOG } from "./fog.js";
 import { LEVELS } from "./levels.js";
 import { OARS } from "./oars.js";
 import { DANGER } from "./danger.js";
@@ -143,6 +144,14 @@ export const SETTINGS_FIELDS = [
   // hidden; the voyage itself is unchanged, so this is a visibility switch.
   { group: "voyage", key: "showTravelButton", label: "settings.voyage.showTravelButton", scale: "factor", min: 0, max: 1, step: 1, control: "switch", target: "voyage", targetKey: "showTravelButton" },
 
+  // The fog of war (S167): whether it is on, how much sea a hull lights, and which of the
+  // two visibility rules is in force. Both rules were asked for by the player, "elegibles en
+  // la configuracion", and the radius "configurable, con un valor de partida".
+  { group: "fog", key: "enabled", label: "settings.fog.enabled", scale: "factor", min: 0, max: 1, step: 1, control: "switch", target: "fog", targetKey: "enabled" },
+  { group: "fog", key: "revealRadiusM", label: "settings.fog.revealRadius", scale: "metres", min: 100, max: 3000, step: 50, target: "fog", targetKey: "revealRadiusM" },
+  { group: "fog", key: "contactM", label: "settings.fog.contact", scale: "metres", min: 100, max: 3000, step: 50, target: "fog", targetKey: "contactM" },
+  { group: "fog", key: "rule", label: "settings.fog.rule", scale: "factor", min: 0, max: 1, step: 1, control: "switch", target: "fog", targetKey: "rule" },
+
   // S113/S115: the trade. What a sunk hold still pays, how much an enemy carries, and
   // the two prices of each zone. The spread between a zone's buy and sell is the whole
   // economy, so it is the first thing a player who finds the run too rich will move.
@@ -218,7 +227,7 @@ export const SETTINGS_FIELDS = [
 /** The automatic-fire switch as a live block, so it is a setting like any other (S88). */
 export const AUTOFIRE = { enabled: AUTOFIRE_DEFAULT ? 1 : 0 };
 
-export const SETTINGS_BLOCKS = { oars: OARS, wind: WIND, world: WORLD, combat: COMBAT, repair: REPAIR, prices: PRICES, gunnery: GUNNERY, gunners: GUNNERY.gunnersPerGun, zones: ZONE_DAMAGE, loot: LOOT, sales: SALES, time: GAME_TIME, fort: FORT, fortUpgrade: FORT_UPGRADE, start: START, turning: TURNING, escort: ESCORT, trail: TRAIL, bars: BAR_SCALE, autofire: AUTOFIRE, sinking: SINKING, refit: REFIT, voyage: VOYAGE, commerce: COMMERCE, markets: MARKETS, yardMarkets: YARD_MARKETS, levels: LEVELS, danger: DANGER };
+export const SETTINGS_BLOCKS = { oars: OARS, wind: WIND, world: WORLD, combat: COMBAT, repair: REPAIR, prices: PRICES, gunnery: GUNNERY, gunners: GUNNERY.gunnersPerGun, zones: ZONE_DAMAGE, loot: LOOT, sales: SALES, time: GAME_TIME, fort: FORT, fortUpgrade: FORT_UPGRADE, start: START, turning: TURNING, escort: ESCORT, trail: TRAIL, bars: BAR_SCALE, autofire: AUTOFIRE, sinking: SINKING, refit: REFIT, voyage: VOYAGE, fog: FOG, commerce: COMMERCE, markets: MARKETS, yardMarkets: YARD_MARKETS, levels: LEVELS, danger: DANGER };
 
 /**
  * The design constant blocks S79 promises to expose, by name.

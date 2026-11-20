@@ -22,7 +22,7 @@ export const SETTINGS_BRANCHES = [
   {
     id: "sea",
     label: "settings.branch.sea",
-    groups: ["world", "wind", "time", "levels", "voyage"],
+    groups: ["world", "wind", "time", "levels", "voyage", "fog"],
   },
   {
     id: "fight",

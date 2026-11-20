@@ -121,6 +121,7 @@ import {
   currentShipyard,
 } from "../model/world.js";
 import { cameraFor, clampCamera, isFollowingCaptain } from "../model/sea-camera.js";
+import { FOG, cellOf, fogEnabled, isDiscovered, isVisible, normaliseDiscovered, visibilityRule } from "../model/fog.js";
 import { toughnessForLevel } from "../model/levels.js";
 import { canBoard, deckFire } from "../model/boarding.js";
 import {
@@ -962,6 +963,8 @@ function drawSea(ctx) {
   // Every shipyard, from the table (S112): a new yard appears here without touching
   // this function, which is the whole point of the list being data.
   for (const yard of SHIPYARDS) {
+    // A quay she has not lit is not on her sea yet (S167-E).
+    if (!yardKnown(yard)) continue;
     // An anchor under the pointer says it can be entered (S163-G): a ring around the quay
     // and a brighter mark, so the player sees the sea answering her before she clicks.
     if (yard.id === hoveredYardId) {
@@ -1012,6 +1015,11 @@ function drawSea(ctx) {
 
   ctx.restore();
 
+  // The fog goes over the sea and under the HUD (S167-B): it is a veil on the water, not a
+  // panel. It is drawn after the world restore so it can be painted in screen space, cell by
+  // cell, and it only covers water the player has not lit.
+  drawFog(ctx);
+
   // The floating bars are drawn in screen space, so a bar stays readable at any
   // camera scale instead of shrinking with the hull it belongs to (S21).
   drawShipBars(ctx);
@@ -1027,6 +1035,125 @@ function drawSea(ctx) {
     for (const escort of squadron.escorts ?? []) drawEscortShip(ctx, escort, { active: false });
   }
   ctx.restore();
+}
+
+/**
+ * The fog of war, painted over the water (S167-B).
+ *
+ * The player asked for it (verbatim): "todo el mapa tiene niebla y no se ve ningun barco,
+ * segun van navegando tus barcos vas descubriendo el mapa". So the sea starts covered and the
+ * holes in the veil are exactly the cells the voyage has lit.
+ *
+ * The veil is drawn in SCREEN space, cell by cell, from the same grid the save uses: the
+ * world is 5200 m across and a cell is 200 m, so the whole chart is 52 cells wide and the
+ * loop is cheap. Only cells inside the known sea are painted, and the ones the player has
+ * discovered are skipped — that is what makes the veil a map of her voyage rather than a
+ * rectangle of paint over the screen.
+ */
+function drawFog(ctx) {
+  if (!world || !fogEnabled()) return;
+  const known = normaliseDiscovered(world.discovered);
+  if (known.complete) return;
+
+  const size = FOG.cellM;
+  const radius = WORLD.radiusM;
+  const lit = new Set(known.cells);
+
+  ctx.save();
+  ctx.fillStyle = "rgba(9,14,22,0.93)";
+  for (let cx = Math.floor(-radius / size); cx <= Math.floor(radius / size); cx += 1) {
+    for (let cy = Math.floor(-radius / size); cy <= Math.floor(radius / size); cy += 1) {
+      if (lit.has(`${cx}:${cy}`)) continue;
+      // Only the cells that actually lie inside the known sea: the chart is a circle, and
+      // painting its bounding box would draw fog over water that does not exist.
+      const centre = { x: cx * size + size / 2, y: cy * size + size / 2 };
+      if (Math.hypot(centre.x, centre.y) > radius + size) continue;
+      const a = toScreen(cx * size, cy * size);
+      const b = toScreen(cx * size + size, cy * size + size);
+      const x = Math.min(a.x, b.x);
+      const y = Math.min(a.y, b.y);
+      const w = Math.abs(b.x - a.x) + 1;
+      const h = Math.abs(b.y - a.y) + 1;
+      // Off screen cells cost nothing to skip, and most of them are.
+      if (x + w < 0 || y + h < 0 || x > window.innerWidth || y > window.innerHeight) continue;
+      ctx.fillRect(x, y, w, h);
+    }
+  }
+  ctx.restore();
+}
+
+/** Whether a shipyard lies in water the player has lit (S167-E); always, with the fog off. */
+function yardKnown(yard) {
+  if (!world || !fogEnabled()) return true;
+  return isDiscovered(world.discovered, yard);
+}
+
+/**
+ * The fog over the minimap (S167-B). The canvas is already in world metres here, so each
+ * undiscovered cell is one rectangle of the same grid the sea veil uses.
+ */
+function drawMinimapFog(ctx) {
+  if (!world || !fogEnabled()) return;
+  const lit = new Set(normaliseDiscovered(world.discovered).cells);
+  const size = FOG.cellM;
+  const radius = WORLD.radiusM;
+  ctx.save();
+  ctx.fillStyle = "rgba(6,10,16,0.9)";
+  for (let cx = Math.floor(-radius / size); cx <= Math.floor(radius / size); cx += 1) {
+    for (let cy = Math.floor(-radius / size); cy <= Math.floor(radius / size); cy += 1) {
+      if (lit.has(`${cx}:${cy}`)) continue;
+      ctx.fillRect(cx * size, cy * size, size + 1, size + 1);
+    }
+  }
+  ctx.restore();
+}
+
+/**
+ * Whether a hostile is already in the fight with any of our hulls (S167-G).
+ *
+ * The fog hides sails, not fights: once a hostile has engaged, she is shooting at the player
+ * and disappearing from the panel would be the screen lying about the danger.
+ */
+function engagedWithFleet(encounter) {
+  if (encounter?.combat?.status !== "fighting") return false;
+  const hulls = [world.ship, ...escorts, ...squadrons.flatMap((squadron) => [squadron.ship, ...(squadron.escorts ?? [])])];
+  return hulls.some((hull) => Math.hypot(hull.x - encounter.x, hull.y - encounter.y) <= COMBAT.engageRadiusM);
+}
+
+/** The nearest enemy the player can actually see (S167-E), for the proximity warning. */
+function nearestVisibleEnemy() {
+  if (!world) return null;
+  let best = null;
+  let bestDistance = Infinity;
+  for (const encounter of world.encounters) {
+    if (encounter.type !== "enemy") continue;
+    if (!encounterVisible(encounter) && !engagedWithFleet(encounter)) continue;
+    const distance = Math.hypot(encounter.x - world.ship.x, encounter.y - world.ship.y);
+    if (distance < bestDistance) {
+      best = encounter;
+      bestDistance = distance;
+    }
+  }
+  return best ? { encounter: best, distance: bestDistance } : null;
+}
+
+/**
+ * Whether the player may see this encounter right now (S167-E).
+ *
+ * With the fog off, always. With it on, a hull in water she has not lit is not hers to see,
+ * and in water she has lit it depends on the rule she picked in the settings.
+ */
+function encounterVisible(encounter) {
+  if (!world || !fogEnabled()) return true;
+  const fleet = [world.ship, ...escorts, ...squadrons.flatMap((squadron) => [squadron.ship, ...(squadron.escorts ?? [])])];
+  return isVisible({
+    enabled: true,
+    known: world.discovered,
+    rule: visibilityRule(),
+    hull: encounter,
+    fleet,
+    contactM: FOG.contactM,
+  });
 }
 
 /**
@@ -1512,6 +1639,7 @@ function drawShipBars(ctx) {
 
   const targets = [];
   for (const encounter of world.encounters) {
+    if (!encounterVisible(encounter)) continue;
     if (encounter.type !== "enemy" || !encounter.combat) continue;
     if (encounter.combat.status !== "fighting") continue;
     if (!inGunshot(encounter)) continue;
@@ -1604,6 +1732,8 @@ function drawShipBars(ctx) {
 function drawEncounters(ctx) {
   const now = performance.now();
   for (const encounter of world.encounters) {
+    // What she has not lit is not hers to see (S167-E).
+    if (!encounterVisible(encounter)) continue;
     if (encounter.type === "treasure") {
       const pulse = 14 + Math.sin(now / 350 + encounter.id) * 5;
       ctx.beginPath();
@@ -1990,6 +2120,11 @@ function drawMinimap() {
     ctx.stroke();
   }
 
+  // The chart is a map of what the player knows (S167-B): the fog covers it too, cell by
+  // cell, from the same record the sea uses. It goes under the yards and the sails, which
+  // are only drawn when discovered, so nothing she has not seen shows through.
+  drawMinimapFog(ctx);
+
   // Every shipyard on the chart (S118): the market is a place, so the player has to be
   // able to see where the next one lies before deciding to cross for a price.
   //
@@ -2000,6 +2135,7 @@ function drawMinimap() {
   // chart and be unreadable.
   const markPx = 1 / scale;
   for (const yard of SHIPYARDS) {
+    if (!yardKnown(yard)) continue;
     const held = yard.home && fortCombat && fortHeldByEnemy(fortCombat);
     ctx.beginPath();
     ctx.arc(yard.x, yard.y, 120, 0, Math.PI * 2);
@@ -2023,6 +2159,9 @@ function drawMinimap() {
   }
 
   for (const encounter of world.encounters) {
+    // The chart is a map of what the player knows (S167-E): a sail she has not lit is not
+    // on it, exactly as she is not on the water.
+    if (!encounterVisible(encounter)) continue;
     ctx.beginPath();
     ctx.arc(encounter.x, encounter.y, 90, 0, Math.PI * 2);
     ctx.fillStyle =
@@ -2161,7 +2300,10 @@ function hitOccupiedFort(damage) {
 function firePlayerBroadside(side, { auto = false } = {}) {
   if (!playerCombat || gameOver || playerCombat.status !== "fighting") return;
 
-  const hit = targetForSide(world.ship, world.encounters, side, playerMaxRangeM(), [occupiedFortTarget()].filter(Boolean));
+  // Only what the player can see is a target (S167-E): a gun does not aim at a sail the
+  // fog is still hiding.
+  const seen = world.encounters.filter((encounter) => encounterVisible(encounter) || engagedWithFleet(encounter));
+  const hit = targetForSide(world.ship, seen, side, playerMaxRangeM(), [occupiedFortTarget()].filter(Boolean));
   if (!hit) {
     // The automatic fire looks every tick: it stays silent when nothing bears.
     if (!auto) showBanner(t("sea.banner.noTarget", { side: t(`sea.sides.${side}`) }), "info", 1500);
@@ -3076,7 +3218,9 @@ function updateDuelPanel() {
   }
 
   const hostile = world.encounters
-    .filter((encounter) => encounter.type === "enemy" && encounter.combat)
+    // A hostile the player cannot see is not in her panel (S167-E). One already firing at
+    // her stays visible whatever the fog says (S167-G): a fight is not a place to hide.
+    .filter((encounter) => encounter.type === "enemy" && encounter.combat && (encounterVisible(encounter) || engagedWithFleet(encounter)))
     .map((encounter) => ({
       id: encounter.id,
       name: localisedHull(encounter.hullId, t)?.name ?? t("sea.target.hostileSail"),
@@ -3540,7 +3684,7 @@ function frame(now) {
   }
 
   // enemy proximity warning, at most every 6 s
-  const nearest = nearestEncounter(world, "enemy");
+  const nearest = nearestVisibleEnemy();
   if (nearest && nearest.distance < COMBAT.engageRadiusM && now - ui.lastEnemyWarning > 6000) {
     ui.lastEnemyWarning = now;
     showBanner(

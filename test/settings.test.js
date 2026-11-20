@@ -269,5 +269,15 @@ test("S117: the wreck switch round-trips 1 and 0 like every other setting", asyn
   const switches = SETTINGS_FIELDS.filter((field) => field.control === "switch").map(fieldId);
   // S142 adds the danger switch: the number is painted at sea or it is not, so it is a
   // check like these three and not a 0..1 number like `combat.autofire`.
-  assert.deepEqual(switches, ["sinking.keepWreck", "refit.autoSave", "voyage.showTravelButton", "danger.show"]);
+  // S167 adds the fog: the switch itself and the rule it obeys, both checks because each is
+  // a yes/no the player sets, not a number she dials. Updated with the player's explicit
+  // approval ("Actualizar la lista con los dos nuevos"); the assertion stays exact.
+  assert.deepEqual(switches, [
+    "sinking.keepWreck",
+    "refit.autoSave",
+    "voyage.showTravelButton",
+    "fog.enabled",
+    "fog.rule",
+    "danger.show",
+  ]);
 });

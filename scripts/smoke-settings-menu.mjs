@@ -83,8 +83,8 @@ check(
 // Nothing is chosen yet, so the first branch is showing and nothing else is.
 const first = await shownBlocks();
 check(
-  first.sort().join(",") === "levels,time,voyage,wind,world",
-  `the first branch must show its five blocks, got ${first.join(",")}`,
+  first.sort().join(",") === "fog,levels,time,voyage,wind,world",
+  `the first branch must show its six blocks, got ${first.join(",")}`,
 );
 check(
   JSON.stringify(await markedEntry()) === JSON.stringify(["Mar y mundo"]),
@@ -97,7 +97,7 @@ check(
 
 // The blocks of the other branches are hidden, not gone: they are still in the DOM.
 const mounted = await page.locator(".settings-card").count();
-check(mounted === 23, `every block must stay mounted, found ${mounted}`);
+check(mounted === 24, `every block must stay mounted, found ${mounted}`);
 check(
   (await page.locator(".settings-card .settings-row").count()) > 20,
   "the rows of the hidden blocks must still be in the DOM",
@@ -186,10 +186,10 @@ check(
 // never to an empty screen: a lost block falls back to its own branch, a lost branch to
 // the first one, and a block asked for under the wrong branch to that branch.
 const staleCases = [
-  { saved: "ghost", expected: "levels,time,voyage,wind,world", why: "an unknown branch" },
-  { saved: "nope/nope", expected: "levels,time,voyage,wind,world", why: "an unknown branch and block" },
+  { saved: "ghost", expected: "fog,levels,time,voyage,wind,world", why: "an unknown branch" },
+  { saved: "nope/nope", expected: "fog,levels,time,voyage,wind,world", why: "an unknown branch and block" },
   { saved: "fight/ghost", expected: "bars,combat,danger,escort,oars,trail,turning,zones", why: "a block that no longer exists" },
-  { saved: "sea/danger", expected: "levels,time,voyage,wind,world", why: "a block of another branch" },
+  { saved: "sea/danger", expected: "fog,levels,time,voyage,wind,world", why: "a block of another branch" },
 ];
 for (const { saved, expected, why } of staleCases) {
   await page.evaluate(([key, value]) => localStorage.setItem(key, value), [NAV_KEY, saved]);

@@ -23,6 +23,7 @@ import {
   speedUnderOars,
 } from "./oars.js";
 import { windAt, windEffect } from "./wind.js";
+import { FOG, discoveredWith, fogEnabled, normaliseDiscovered, revealAround, serializeDiscovered } from "./fog.js";
 
 export const KN_TO_MS = 1852 / 3600;
 
@@ -798,6 +799,10 @@ export function updateWorld(world, input = {}, dt = 0) {
     // captain's own oars are contributing right now, for the HUD (S159-E).
     oarEffort: oars.effort,
     oarReading: oars.captain,
+    // The sea her ships have lit as they sail (S167-C). Every hull of every squadron
+    // discovers, not only the one under the helm: they are all the player's ships. The
+    // record only ever grows, so a place once seen is never dark again (S167-B).
+    discovered: revealFleet(world.discovered, [ship, ...escorts, ...squadrons.flatMap((squadron) => [squadron.ship, ...(squadron.escorts ?? [])])]),
   };
 
   // A level is cleared by victories, not by an empty sea (S150). The player chose "Por
@@ -883,6 +888,20 @@ function oarRecord(world, input, wind, dt) {
     // hull with no banks simply has no reading at all.
     captain: records.get(world.ship?.id) ?? null,
   };
+}
+
+/**
+ * The discovery record with this step's fleet lighting the sea (S167-C).
+ *
+ * The fog is a screen rule, but the discovery is a fact of the voyage and belongs with the
+ * rest of the sea save: reloading must not put the dark back over water the player already
+ * crossed (S167-F). With the fog off the record is left alone, so a player who never turns
+ * it on never pays for the cells.
+ */
+function revealFleet(known, hulls) {
+  if (!fogEnabled()) return normaliseDiscovered(known);
+  const radius = Number(FOG.revealRadiusM);
+  return discoveredWith(known, hulls.filter(isShip), Number.isFinite(radius) && radius > 0 ? radius : FOG.revealRadiusM);
 }
 
 /**
@@ -1114,6 +1133,8 @@ export function serializeWorld(world) {
     levelVictories: normaliseVictories(world.levelVictories),
     // The effort left in every crew at the oars (S159-D): a hull that sprinted stays tired.
     oarEffort: normaliseEffort(world.oarEffort),
+    // The sea the player has lit (S167-F). What she has seen, she keeps.
+    discovered: serializeDiscovered(world.discovered),
   });
 }
 
@@ -1178,6 +1199,10 @@ export function deserializeWorld(json) {
       levelVictories: normaliseVictories(data.levelVictories),
       // A save written before the oars existed opens with rested crews (S159-I).
       oarEffort: normaliseEffort(data.oarEffort),
+      // A save written before the fog opens with nothing discovered (S167-F). The fog is
+      // opt-in, so it costs an old save nothing while it is off, and the player who turns it
+      // on wants to see it.
+      discovered: normaliseDiscovered(data.discovered),
     };
   } catch {
     return null;
