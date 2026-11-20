@@ -1,0 +1,30 @@
+src/ui/sea.js
+  s_f3e7c3b3b1b693::t_7d84cff1737dff 123,1054-1058,1060-1066,1082-1084,1086-1090,1106-1135
+  s_f3e7c3b3b1b693::t_71590f1fb01681 1136-1137
+scripts/smoke-fog.mjs
+  s_f3e7c3b3b1b693::t_71672faffaf3e3 111-128,165-166
+test/fog.test.js
+  s_f3e7c3b3b1b693::t_2b0dbcf322954a 133-149,152-211
+  s_f3e7c3b3b1b693::t_0dc0fd95d9e7f4 150-151
+src/model/fog.js
+  s_f3e7c3b3b1b693::t_4292c32ee56be4 161-203,205-232,256-257
+  s_f3e7c3b3b1b693::t_0dc0fd95d9e7f4 204,233-255
+odd/tasks/niebla.md
+  s_f3e7c3b3b1b693::t_1ceee605f582fa 62-69
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.6",
+  "base_commit_sha": "486ad114e44513e545823b2fbb75ad0060207eaf",
+  "prompts": {},
+  "sessions": {
+    "s_f3e7c3b3b1b693": {
+      "agent_id": {
+        "tool": "pi",
+        "id": "01a1f822-2360-71e3-a9a2-e0945b49ae1f",
+        "model": "claude-sonnet-5.5"
+      },
+      "human_author": "Raul Ripoll <raulral@ext.inditex.com>"
+    }
+  }
+}
