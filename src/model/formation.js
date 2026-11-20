@@ -106,6 +106,14 @@ export function createEscort(spec = {}, captain = {}, index = 0) {
     speedKn,
     // The hull's share of the base turn rate (S48); omitted when the caller has none.
     ...(Number.isFinite(spec.turnFactor) && spec.turnFactor > 0 ? { turnFactor: spec.turnFactor } : {}),
+    // What her own oars need to know (S159-A): which hull she is, how loaded she sails, and
+    // the crew actually aboard. Without them a hull with banks rowed nothing at all, and an
+    // escort — always built from a fleet entry, never from the sea — never had them.
+    ...(typeof spec.hullId === "string" ? { hullId: spec.hullId } : {}),
+    ...(Number.isFinite(spec.loadFraction) ? { loadFraction: spec.loadFraction } : {}),
+    ...(spec.crew && typeof spec.crew === "object" && !Array.isArray(spec.crew)
+      ? { crew: { ...spec.crew } }
+      : {}),
   };
 }
 

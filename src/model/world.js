@@ -9,12 +9,19 @@
  * (canvas y grows downward). Distances are metres; speeds are knots.
  */
 
-import { ZONES, HULLS, SHIPYARDS, shipyardAt } from "../data/naval-data.js";
+import { ZONES, HULLS, SHIPYARDS, hullById, shipyardAt } from "../data/naval-data.js";
 import { enemiesPerZone, normaliseLevel, victoriesForLevel } from "./levels.js";
 import { createEscort, escortStation, stepEscort } from "./formation.js";
 import { seaSquadrons, shipsSailingAtSea, squadrons } from "./fleet.js";
 import { referenceSpeedKn } from "./ship-model.js";
-import { oarTurnFactor, speedUnderOars } from "./oars.js";
+import {
+  effortStep,
+  hasOarBanks,
+  oarSpeedKn,
+  oarTurnFactor,
+  rowingTarget,
+  speedUnderOars,
+} from "./oars.js";
 import { windAt, windEffect } from "./wind.js";
 
 export const KN_TO_MS = 1852 / 3600;
@@ -479,6 +486,12 @@ export function createWorld(seed, ship, gold = 0, fleet = null) {
       heading: 0,
       currentSpeedKn: 0,
       speedKn: ship.speedKn ?? 5,
+      // Her identity and her load travel with her (S159). Without them the sea knew a
+      // position and a speed and nothing else: `hullId` was gone, so no rule that reads the
+      // hull could ever apply to the captain, and `id` was gone, so a per-hull record (the
+      // effort at the oars) had nothing to be keyed by.
+      id: ship.id ?? null,
+      ...hullSpec(ship),
     },
     /** The rest of the fleet, in formation behind the captain (S36). */
     escorts: [],
@@ -506,24 +519,52 @@ export function createWorld(seed, ship, gold = 0, fleet = null) {
   const ownCommand = new Set((leading?.ships ?? []).map((entry) => entry.id));
   world.escorts = shipsSailingAtSea(fleet)
     .filter((entry) => entry.id !== own && ownCommand.has(entry.id))
-    .map((entry, index) => createEscort(entry, world.ship, index));
+    .map((entry, index) => createEscort({ ...entry, ...hullSpec(entry) }, world.ship, index));
   // Every other captain puts to sea too, each with her own formation and her own station
   // apart from the first, so the sea shows every command at once (S155-C).
   const others = seaSquadrons(fleet).filter((squadron) => squadron.captain.id !== own);
   world.squadrons = others.map((squadron, index) => {
-    const at = { ...world.ship, ...squadronStation(world.ship, index) };
+    // Her own identity, not the captain-of-the-helm's (S159): spreading `world.ship` here
+    // gave every command the first captain's hull, crew and load, so a second captain would
+    // have rowed with another woman's crew.
+    const at = { ...world.ship, ...squadronStation(world.ship, index), ...hullSpec(squadron.captain) };
     return {
       id: squadron.captain.id,
       ship: at,
       escorts: squadron.ships
         .filter((entry) => entry.id !== squadron.captain.id)
-        .map((entry, station) => createEscort(entry, at, station)),
+        .map((entry, station) => createEscort({ ...entry, ...hullSpec(entry) }, at, station)),
       order: { throttle: 0, turn: 0 },
     };
   });
   // The first level is seeded here, because the level is the only source of enemies
   // (S140): a fresh sea holds exactly the level 1 quota.
   return updateWorld(seedLevel(world, 1), {}, 0);
+}
+
+/**
+ * What a fleet entry contributes to the sea beyond her position (S159).
+ *
+ * The hull she is, how loaded she sails and the men actually aboard: the three things her
+ * own oars are read from. A fleet entry that carries none of them yields an empty record, so
+ * the hull behaves exactly as she did before the rule existed (S159-I).
+ */
+export function hullSpec(entry) {
+  if (!entry || typeof entry !== "object") return {};
+  // The living crew is the one that pulls: `crewAlive` shrinks with casualties (S22/S23)
+  // and the bought complement only says what she was rigged with.
+  const aboard = crewObject(entry.crewAlive) ?? crewObject(entry.crew);
+  return {
+    ...(typeof entry.hullId === "string" ? { hullId: entry.hullId } : {}),
+    ...(Number.isFinite(entry.loadFraction) ? { loadFraction: entry.loadFraction } : {}),
+    ...(aboard ? { crew: aboard } : {}),
+  };
+}
+
+/** A crew record as a plain copy, or null when the value is not one. */
+function crewObject(value) {
+  if (!value || typeof value !== "object" || Array.isArray(value)) return null;
+  return { ...value };
 }
 
 /**
@@ -553,9 +594,17 @@ export function updateWorld(world, input = {}, dt = 0) {
   const timeS = (world.timeS ?? 0) + dt;
   // The wind the ship feels right now; the caller may override it (tests, replay).
   const wind = input.wind ?? windAt(world.seed, timeS);
+  // The effort left in every crew at the oars (S159-D), and the record that carries it into
+  // the physics (S159-A). A hull that declares no banks gets an empty record and sails
+  // exactly as she did before the rule existed (S159-I).
+  const oars = oarRecord(world, input, wind, dt);
   // `rigging` carries the captain's combat state, so her shredded sails slow her too
   // (S89); a caller that knows nothing about combat sails with a whole rig.
-  const ship = stepShip(world.ship, { ...input, wind, rigging: input.rigging ?? world.playerCombat }, dt);
+  const ship = stepShip(
+    world.ship,
+    { ...input, wind, oars: oars.forHull(world.ship), rigging: input.rigging ?? world.playerCombat },
+    dt,
+  );
 
   // The rest of the fleet keeps its station relative to the captain, each hull with
   // its own speed, so a slow escort really does fall behind (S36).
@@ -563,7 +612,7 @@ export function updateWorld(world, input = {}, dt = 0) {
     stepEscort(
       escort,
       escortStation(ship, index),
-      { wind, captainSpeedKn: ship.currentSpeedKn },
+      { wind, captainSpeedKn: ship.currentSpeedKn, oars: oars.forHull(escort) },
       dt,
     ),
   );
@@ -572,7 +621,7 @@ export function updateWorld(world, input = {}, dt = 0) {
   // this a second captain would be a drawing on the water instead of a command.
   const squadrons = (Array.isArray(world.squadrons) ? world.squadrons : [])
     .filter(isSquadron)
-    .map((squadron) => stepSquadron(squadron, wind, dt));
+    .map((squadron) => stepSquadron(squadron, wind, dt, oars));
   let rngState = world.rngState;
   let nextId = world.nextId;
   const rnd = () => {
@@ -717,6 +766,10 @@ export function updateWorld(world, input = {}, dt = 0) {
     level,
     levelEnemies,
     levelVictories,
+    // The effort left in every crew at the oars, after this step (S159-D), and what the
+    // captain's own oars are contributing right now, for the HUD (S159-E).
+    oarEffort: oars.effort,
+    oarReading: oars.captain,
   };
 
   // A level is cleared by victories, not by an empty sea (S150). The player chose "Por
@@ -733,19 +786,96 @@ export function updateWorld(world, input = {}, dt = 0) {
 }
 
 /**
+ * The oar record of every hull afloat (S159-A/D/E/F), advanced one step.
+ *
+ * The oars are a reserve propulsion, not an extra engine: the hull makes way at the greater
+ * of sail and oars, never their sum. That decision, the speed it yields and the effort it
+ * costs are all the oars model's business; this only gathers what the sea knows about each
+ * hull and hands it over, because `stepHull` and `stepEscort` are pure and cannot look a hull
+ * up.
+ *
+ * The effort lives in `world.oarEffort`, keyed by hull id, exactly as the provisions do
+ * (S132): a galleass that sprinted has less left in her than a fresh one, and a hull that
+ * rested has recovered. A hull that declares no banks carries no record at all, so she sails
+ * exactly as she did before the rule existed (S159-I).
+ */
+function oarRecord(world, input, wind, dt) {
+  const effortIn = normaliseEffort(world.oarEffort);
+  const next = { ...effortIn };
+  const hulls = [
+    { hull: world.ship, combat: input.rigging ?? world.playerCombat, throttle: input.throttle ?? 0 },
+    ...(Array.isArray(world.escorts) ? world.escorts : [])
+      .filter(isShip)
+      .map((escort) => ({ hull: escort, combat: escort.combat, throttle: 1 })),
+    // A save may hold a broken squadron list, and the sea already ignores those entries
+    // everywhere else (S155-C). Reading one here threw before the physics ever ran, so the
+    // list is filtered by the same rule the rest of the model uses.
+    ...(Array.isArray(world.squadrons) ? world.squadrons : [])
+      .filter(isSquadron)
+      .flatMap((squadron) => [
+        { hull: squadron.ship, combat: squadron.combat, throttle: squadron.order?.throttle ?? 0 },
+        ...(Array.isArray(squadron.escorts) ? squadron.escorts : [])
+          .filter(isShip)
+          .map((escort) => ({ hull: escort, combat: escort.combat, throttle: 1 })),
+      ]),
+  ];
+
+  const records = new Map();
+  for (const { hull, combat, throttle } of hulls) {
+    const id = hull?.id;
+    if (!id) continue;
+    const spec = hullById(hull.hullId);
+    if (!hasOarBanks(spec)) continue;
+    const effort = Number.isFinite(effortIn[id]) ? effortIn[id] : 1;
+    const loadFraction = Number.isFinite(hull.loadFraction) ? hull.loadFraction : 0;
+    const oarKn = oarSpeedKn(spec, combat?.crew ?? hull.crew, { effort, loadFraction });
+    // The sail speed this hull would make with no oars at all, computed the way `stepHull`
+    // does so the `max()` is decided on the same numbers the physics will use. The throttle
+    // is NOT folded in: it scales both propulsions equally, and folding it here made a hull
+    // at rest look like a hull under oars, spending her crew's effort while going nowhere.
+    const windFactor = wind ? windEffect(wind, hull.heading ?? 0).speedFactor : 1;
+    const rigFactor = riggingSpeedFactor(combat);
+    const sailKn = (Number(hull.speedKn) || 0) * windFactor * rigFactor;
+    // Nobody pulls an oar on a hull whose captain has the way off her.
+    const underway = (Number(throttle) || 0) > 0;
+    const rowing = underway && rowingTarget({ sailKn, oarKn });
+    next[id] = effortStep(effort, { rowing, dt });
+    records.set(id, { speedKn: oarKn, effort, rowing });
+  }
+
+  return {
+    effort: next,
+    forHull: (hull) => records.get(hull?.id) ?? null,
+    // What the captain's oars are doing this tick, for the HUD to read (S159-E). The player
+    // asked that the screen say how much the oars are adding when they add anything, and a
+    // hull with no banks simply has no reading at all.
+    captain: records.get(world.ship?.id) ?? null,
+  };
+}
+
+/**
  * Advance one squadron that is not holding the helm (S155-D).
  *
  * She obeys her standing orders: the sail she carries and the helm she holds. Her escorts
  * keep their station behind her with their own hulls, exactly as the active squadron's do,
  * so a second command looks and moves like the first one.
  */
-function stepSquadron(squadron, wind, dt) {
+function stepSquadron(squadron, wind, dt, oars = null) {
   const order = normaliseOrder(squadron.order);
-  const ship = stepShip(squadron.ship, { throttle: order.throttle, turn: order.turn, wind }, dt);
+  const ship = stepShip(
+    squadron.ship,
+    { throttle: order.throttle, turn: order.turn, wind, oars: oars?.forHull(squadron.ship) ?? null },
+    dt,
+  );
   const escorts = (Array.isArray(squadron.escorts) ? squadron.escorts : [])
     .filter(isShip)
     .map((escort, index) =>
-      stepEscort(escort, escortStation(ship, index), { wind, captainSpeedKn: ship.currentSpeedKn }, dt),
+      stepEscort(
+        escort,
+        escortStation(ship, index),
+        { wind, captainSpeedKn: ship.currentSpeedKn, oars: oars?.forHull(escort) ?? null },
+        dt,
+      ),
     );
   return { ...squadron, ship, escorts, order };
 }
@@ -975,6 +1105,11 @@ export function deserializeWorld(json) {
         heading: Number.isFinite(data.ship.heading) ? data.ship.heading : 0,
         currentSpeedKn: Number.isFinite(data.ship.currentSpeedKn) ? data.ship.currentSpeedKn : 0,
         speedKn: Number.isFinite(data.ship.speedKn) ? data.ship.speedKn : 5,
+        // Her identity and her load come back with her (S159). The effort at the oars is
+        // keyed by hull id and read from the hull she is: dropping either on load left the
+        // record orphaned and the captain rowing nothing after every reload (S159-I).
+        id: typeof data.ship.id === "string" ? data.ship.id : null,
+        ...hullSpec(data.ship),
       },
       // A save written before the formation existed has no escorts: it sails with
       // the captain alone, which is exactly what it did (S39).

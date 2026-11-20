@@ -110,6 +110,7 @@ import {
   ZONE_BANDS,
   createWorld,
   deserializeWorld,
+  hullSpec,
   markDefeated,
   nearestEncounter,
   recordVictory,
@@ -181,6 +182,8 @@ const els = {
   crew: $("#hud-crew"),
   rounds: $("#hud-rounds"),
   ammo: $("#hud-ammo"),
+  oarsRow: $("#hud-oars-row"),
+  oars: $("#hud-oars"),
   banner: $("#banner"),
   duelPanel: $("#duel-panel"),
   duelRoster: $("#duel-roster"),
@@ -2562,6 +2565,10 @@ function handOverCommand() {
     ship: {
       x: next.x, y: next.y, heading: next.heading, currentSpeedKn: next.currentSpeedKn,
       speedKn: next.speedKn, turnFactor: shipTurnFactor(runtimeShip.hullId, runtimeShip.loadFraction),
+      // The new captain brings her own hull, her own load and her own crew (S159): carrying
+      // the lost one's over would have her rowing with another woman's men.
+      id: runtimeShip.id,
+      ...hullSpec(runtimeShip),
     },
     escorts: escorts.map(({ combat, ...rest }) => rest),
   };
@@ -3206,6 +3213,21 @@ function updateHud() {
   // of sail is the screen lying about the sea.
   const sailShown = activeOrder ? 1 : ui.throttle;
   els.throttle.textContent = `${fmtInt.format(sailShown * 100)} %`;
+  // The oars are automatic (S159-E), so the screen says what they are doing instead of
+  // offering a key: how fast they are pulling when they pull, and the effort left in the
+  // crew either way. A hull with no banks has no reading and the row stays hidden (S159-H).
+  if (els.oarsRow && els.oars) {
+    const oars = world.oarReading;
+    if (!oars) {
+      els.oarsRow.classList.add("is-hidden");
+    } else {
+      els.oarsRow.classList.remove("is-hidden");
+      const effort = `${fmtInt.format(Math.round((Number(oars.effort) || 0) * 100))}`;
+      els.oars.textContent = oars.rowing
+        ? t("sea.oars.rowing", { knots: fmtOne.format(Number(oars.speedKn) || 0), effort })
+        : t("sea.oars.resting", { effort });
+    }
+  }
   els.speed.textContent = `${fmtOne.format(world.ship.currentSpeedKn)} kn`;
   const degrees = ((world.ship.heading * 180) / Math.PI + 360) % 360;
   els.heading.textContent = `${String(Math.round(degrees)).padStart(3, "0")}°`;
@@ -3460,7 +3482,13 @@ function boot() {
     refreshStatus(combatant);
     const place = (world.escorts ?? []).find((entry) => entry.id === ship.id);
     const escort = createEscort(
-      { id: ship.id, speedKn: ship.speedKn, turnFactor: shipTurnFactor(ship.hullId, ship.loadFraction) },
+      {
+        id: ship.id,
+        speedKn: ship.speedKn,
+        turnFactor: shipTurnFactor(ship.hullId, ship.loadFraction),
+        // Her own oars are read from the hull, the load and the crew actually aboard (S159).
+        ...hullSpec(ship),
+      },
       world.ship,
       index,
     );
