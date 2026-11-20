@@ -23,7 +23,7 @@ L70 (pedido, verbatim): "en la pantalla tu flota del astillero, no mostrar el pa
 
 L71 (estado medido antes de tocar nada): los paneles `.panel-ship` y `.panel-build` los movía `showScreen` con una regla **por sala** (`standIn = next !== "configuracion" && next !== "astillero" && next !== "mercado"`), sin mirar la selección. Medido en el navegador: al abrir «Tu flota» sin elegir nada, `{"shipPanel":true,"rigPanel":true,"detail":false}` — los paneles estaban a la vista con los datos de la capitana que el boot pone en el editor (S109), mientras el detalle de la flota sí estaba oculto. Tras «nueva nave»: `{"shipPanel":true,"rigPanel":true,"detail":false}`, el mismo defecto.
 
-L72 (cierre de S165, commit `SIN_COMMIT`). `npm test` **1021/1021** (1016 + 5 en `test/fleet-builder-panels.test.js`). `scripts/smoke-fleet-panels.mjs` en 0.
+L72 (cierre de S165, commit `5e5f20d`). `npm test` **1021/1021** (1016 + 5 en `test/fleet-builder-panels.test.js`). `scripts/smoke-fleet-panels.mjs` en 0.
 
 **La regla quedó en el modelo** (`showsBuilderPanels`), no en la pantalla, porque es una decisión de producto y no un detalle de pintado: tres salas de lectura nunca los toman, «comprar» siempre los toma, y «flota» depende de la selección. La pantalla sólo la aplica (`layoutBuilderPanels`).
 
