@@ -1,0 +1,19 @@
+odd/tasks/remeros-y-velocidad.md
+  s_f3e7c3b3b1b693::t_c79354d0dbbb4e 105-123
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.6",
+  "base_commit_sha": "745207876cb2d7cbc03dd2b72f26849b74da60bd",
+  "prompts": {},
+  "sessions": {
+    "s_f3e7c3b3b1b693": {
+      "agent_id": {
+        "tool": "pi",
+        "id": "01a1f822-2360-71e3-a9a2-e0945b49ae1f",
+        "model": "deepseek-v4.1-flash_high"
+      },
+      "human_author": "Raul Ripoll <raulral@ext.inditex.com>"
+    }
+  }
+}
