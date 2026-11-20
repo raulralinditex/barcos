@@ -1,0 +1,21 @@
+src/model/world.js
+  s_f3e7c3b3b1b693::t_10ec956d64c5e6 804-808
+test/oars-sea.test.js
+  s_f3e7c3b3b1b693::t_fcbf661501c572 191-230
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.6",
+  "base_commit_sha": "873830c8d43fc7f57d0ef69b2c2c45f71329d586",
+  "prompts": {},
+  "sessions": {
+    "s_f3e7c3b3b1b693": {
+      "agent_id": {
+        "tool": "pi",
+        "id": "01a1f822-2360-71e3-a9a2-e0945b49ae1f",
+        "model": "deepseek-v4.1-flash_high"
+      },
+      "human_author": "Raul Ripoll <raulral@ext.inditex.com>"
+    }
+  }
+}
