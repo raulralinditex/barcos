@@ -32,6 +32,23 @@ const ship = toRuntimeShip(
   { name: "Alfa" },
 );
 
+const beta = toRuntimeShip(
+  buildShip(
+    {
+      hullId: "galeon-pequeno",
+      batteries: [{ pieceId: "minion", qty: 3, side: "babor", shotsPerPiece: 25, ammoId: "bala-hierro" }],
+      crew: { marino: 34, artillero: 10, soldado: 10 },
+      days: 45,
+      cargoKg: 0,
+      ballastKg: 3_000,
+      equipmentKg: 2_500,
+      reserveKg: 1_500,
+    },
+    12000,
+  ),
+  { name: "Beta" },
+);
+
 const CAPTAIN_AT = { x: 900, y: 300 };
 
 const world = () => ({
@@ -47,7 +64,15 @@ const world = () => ({
   levelEnemies: [],
   levelVictories: 0,
   order: { throttle: 0, turn: 0 },
-  squadrons: [],
+  // A second command far from the first, so taking her helm is a real change of place.
+  squadrons: [
+    {
+      id: beta.id,
+      ship: { x: -2000, y: 1800, heading: 0, currentSpeedKn: 0, speedKn: beta.speedKn, id: beta.id },
+      escorts: [],
+      order: { throttle: 0, turn: 0 },
+    },
+  ],
   encounters: [],
   activeId: ship.id,
 });
@@ -73,7 +98,14 @@ await page.addInitScript(
     localStorage.setItem("barcos:game:v1", JSON.stringify({ gold: 20000, world: worldJson }));
   },
   [
-    JSON.stringify({ v: 1, captainId: ship.id, ships: [{ ...ship, commandId: ship.id, yardId: null }] }),
+    JSON.stringify({
+      v: 1,
+      captainId: ship.id,
+      ships: [
+        { ...ship, commandId: ship.id, yardId: null },
+        { ...beta, commandId: beta.id, yardId: null },
+      ],
+    }),
     JSON.stringify(world()),
   ],
 );
@@ -145,6 +177,27 @@ check(
 );
 const back = await seaPixels();
 check(back !== after, "S166: coming back must change the sea on screen again");
+
+/* ------------------------- 4: taking another captain's helm brings the view to her */
+
+// Look somewhere neutral, far from both commands, then hand the helm to Beta with C. The
+// player took the wheel of a captain she cannot see: the view has to follow the helm, or she
+// steers a hull that is thousands of metres off screen.
+const neutral = onChart(2500, -2000);
+await page.mouse.click(neutral.x, neutral.y);
+await page.waitForTimeout(600);
+check(
+  await page.evaluate(() => document.querySelector("#hud-ship-name").classList.contains("is-viewing-elsewhere")),
+  "S166: the smoke must be looking away before it changes captain",
+);
+await page.keyboard.press("c");
+await page.waitForTimeout(700);
+const handedOver = (await page.locator("#hud-ship-name").textContent()) ?? "";
+check(/Beta/.test(handedOver), `S166: C must hand the helm to Beta, the title reads "${handedOver}"`);
+check(
+  !(await page.evaluate(() => document.querySelector("#hud-ship-name").classList.contains("is-viewing-elsewhere"))),
+  "S166: taking another captain's helm must bring the view to her, it stayed on a far corner of the sea",
+);
 
 await context.close();
 await browser.close();

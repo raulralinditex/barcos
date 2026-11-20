@@ -46,3 +46,16 @@ L81 (cierre de S167, commit `38a0090`). `npm test` **1033/1033** (1021 + 11 en `
 **Smokes que había que actualizar y se actualizaron con OK explícito del jugador:** `smoke-tabs` (23→24 bloques) y `smoke-settings-menu` (23→24 y la rama «fog,levels,time,voyage,wind,world»); sólo números y lista. También el test de S117, con OK explícito, que fija la lista exacta de interruptores.
 
 **Límites conocidos:** (a) la regla `contacto` está cubierta por tests de modelo pero no tiene smoke de pantalla; (b) el borde de lo descubierto sale en bloques de 200 m, sin suavizar; (c) el disparo automático de las escoltas no consulta la niebla, aunque en la práctica un hostil a su alcance ya está descubierto por ellas mismas.
+
+L82 (revisión normal del delta `dfc4e1d..HEAD`, 1640 líneas en 29 archivos). Sin revisión nativa: el candidato fijado por RDD es otra vez la rama entera (`base-ref 7ace33b`, 70 archivos) y ya falló tres veces con `lens_context_budget_exceeded` sin crear autoridad. Esta vez el target del recordatorio coincidió con el de `inspect`.
+
+**Sano, medido:** `updateWorld` con la niebla encendida y el mar entero descubierto (2809 celdas, 23 KB) cuesta 0,104 ms por paso, contra 0,019 apagada; el registro pesa lo que pesa en el peor caso y se escribe cada 3 s. Las únicas líneas eliminadas en `test/` son las de `test/minimap-pick.test.js` (retirado entero al reemplazar S164 por S166, anotado en su ficha) y la lista de interruptores de `test/settings.test.js` (con OK explícito).
+
+**Dos defectos reales encontrados, los dos míos y los dos con RED medido:**
+
+1. **S166, la vista no seguía al timón.** `chooseSquadron` no tocaba la cámara: con la vista en una zona lejana, `C` pasaba el timón a Beta (6000 m fuera de pantalla) y la vista se quedaba donde estaba; gobernabas un casco que no veías. Mi primera reproducción era mala (miré justo la posición de Beta y se veía por casualidad); con una zona neutra quedó claro. Arreglo: tomar el mando de una capitana lleva la vista a ella. RED: `smoke-minimap-camera` falla un check, el resto pasa.
+2. **S167-G, la niebla escondía un combate.** Con un radio de descubrimiento chico (el mínimo configurable es 100 m) un hostil trabado a 450 m quedaba en agua sin descubrir: el panel de combate lo listaba («Patache 339 · 450 m») porque usaba `engagedWithFleet`, pero el mar no lo dibujaba, el minimapa no lo marcaba y el velo lo cubría, así que te atacaba algo que no veías. Rompía mi propia regla S167-G. Con el radio por defecto (700 m) no se nota. Arreglo en un solo punto: `encounterVisible` incluye el combate, y el velo deja un claro alrededor de cada hostil trabado, en el mar y en el minimapa. RED: sin el claro, el píxel junto al enemigo vale 66 (oscuro) y `smoke-fog` falla.
+
+**Limpieza:** `nearestEncounter` y `cellOf` quedaron importados sin uso en `sea.js` por mis cambios; retirados.
+
+**Sin arreglar, reportado:** un guardado editado a mano con una lista de celdas enorme no tiene tope (`normaliseDiscovered` no acota el largo); no es alcanzable jugando.

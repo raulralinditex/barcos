@@ -112,7 +112,6 @@ import {
   deserializeWorld,
   hullSpec,
   markDefeated,
-  nearestEncounter,
   nearestShipyard,
   recordVictory,
   serializeWorld,
@@ -121,7 +120,7 @@ import {
   currentShipyard,
 } from "../model/world.js";
 import { cameraFor, clampCamera, isFollowingCaptain } from "../model/sea-camera.js";
-import { FOG, cellOf, fogEnabled, isDiscovered, isVisible, normaliseDiscovered, visibilityRule } from "../model/fog.js";
+import { FOG, fogEnabled, isDiscovered, isVisible, normaliseDiscovered, visibilityRule } from "../model/fog.js";
 import { toughnessForLevel } from "../model/levels.js";
 import { canBoard, deckFire } from "../model/boarding.js";
 import {
@@ -1058,6 +1057,7 @@ function drawFog(ctx) {
   const size = FOG.cellM;
   const radius = WORLD.radiusM;
   const lit = new Set(known.cells);
+  const holes = engagedHostiles();
 
   ctx.save();
   ctx.fillStyle = "rgba(9,14,22,0.93)";
@@ -1068,6 +1068,8 @@ function drawFog(ctx) {
       // painting its bounding box would draw fog over water that does not exist.
       const centre = { x: cx * size + size / 2, y: cy * size + size / 2 };
       if (Math.hypot(centre.x, centre.y) > radius + size) continue;
+      // A sail in the fight is seen, so the veil is open around her (S167-G).
+      if (holes.some((hole) => Math.hypot(hole.x - centre.x, hole.y - centre.y) <= size * 1.5)) continue;
       const a = toScreen(cx * size, cy * size);
       const b = toScreen(cx * size + size, cy * size + size);
       const x = Math.min(a.x, b.x);
@@ -1097,11 +1099,14 @@ function drawMinimapFog(ctx) {
   const lit = new Set(normaliseDiscovered(world.discovered).cells);
   const size = FOG.cellM;
   const radius = WORLD.radiusM;
+  const holes = engagedHostiles();
   ctx.save();
   ctx.fillStyle = "rgba(6,10,16,0.9)";
   for (let cx = Math.floor(-radius / size); cx <= Math.floor(radius / size); cx += 1) {
     for (let cy = Math.floor(-radius / size); cy <= Math.floor(radius / size); cy += 1) {
       if (lit.has(`${cx}:${cy}`)) continue;
+      const centre = { x: cx * size + size / 2, y: cy * size + size / 2 };
+      if (holes.some((hole) => Math.hypot(hole.x - centre.x, hole.y - centre.y) <= size * 1.5)) continue;
       ctx.fillRect(cx * size, cy * size, size + 1, size + 1);
     }
   }
@@ -1120,6 +1125,12 @@ function engagedWithFleet(encounter) {
   return hulls.some((hull) => Math.hypot(hull.x - encounter.x, hull.y - encounter.y) <= COMBAT.engageRadiusM);
 }
 
+/** The hostiles already in the fight with the fleet: the fog opens a clearing around each. */
+function engagedHostiles() {
+  if (!world) return [];
+  return world.encounters.filter((encounter) => encounter.type === "enemy" && engagedWithFleet(encounter));
+}
+
 /** The nearest enemy the player can actually see (S167-E), for the proximity warning. */
 function nearestVisibleEnemy() {
   if (!world) return null;
@@ -1127,7 +1138,7 @@ function nearestVisibleEnemy() {
   let bestDistance = Infinity;
   for (const encounter of world.encounters) {
     if (encounter.type !== "enemy") continue;
-    if (!encounterVisible(encounter) && !engagedWithFleet(encounter)) continue;
+    if (!encounterVisible(encounter)) continue;
     const distance = Math.hypot(encounter.x - world.ship.x, encounter.y - world.ship.y);
     if (distance < bestDistance) {
       best = encounter;
@@ -1145,6 +1156,11 @@ function nearestVisibleEnemy() {
  */
 function encounterVisible(encounter) {
   if (!world || !fogEnabled()) return true;
+  // A hostile already in the fight is never hidden (S167-G). This is the one place that says
+  // so, so the sea, the chart, the panel, the warning and the guns cannot disagree: with a
+  // small reveal radius the panel listed a sail that was shooting at the player while the
+  // water where she lay was painted over.
+  if (engagedWithFleet(encounter)) return true;
   const fleet = [world.ship, ...escorts, ...squadrons.flatMap((squadron) => [squadron.ship, ...(squadron.escorts ?? [])])];
   return isVisible({
     enabled: true,
@@ -2302,7 +2318,7 @@ function firePlayerBroadside(side, { auto = false } = {}) {
 
   // Only what the player can see is a target (S167-E): a gun does not aim at a sail the
   // fog is still hiding.
-  const seen = world.encounters.filter((encounter) => encounterVisible(encounter) || engagedWithFleet(encounter));
+  const seen = world.encounters.filter((encounter) => encounterVisible(encounter));
   const hit = targetForSide(world.ship, seen, side, playerMaxRangeM(), [occupiedFortTarget()].filter(Boolean));
   if (!hit) {
     // The automatic fire looks every tick: it stays silent when nothing bears.
@@ -2443,6 +2459,10 @@ function chooseSquadron(id) {
   const chosen = afloatSquadrons(world).find((squadron) => squadron.id === id);
   const previousId = world.activeId ?? runtimeShip?.id;
   if (!chosen || chosen.id === previousId) return false;
+  // Taking a captain's helm brings the view to her (S166). The chart can have the player
+  // looking at a far corner of the sea, and handing her the wheel of a hull that is thousands
+  // of metres off screen would leave her steering something she cannot see.
+  camera = null;
 
   // The squadron that loses the helm keeps everything she is doing: her position, her
   // formation, her sail and her combatant, so she goes on sailing and fighting without him.
@@ -3220,7 +3240,7 @@ function updateDuelPanel() {
   const hostile = world.encounters
     // A hostile the player cannot see is not in her panel (S167-E). One already firing at
     // her stays visible whatever the fog says (S167-G): a fight is not a place to hide.
-    .filter((encounter) => encounter.type === "enemy" && encounter.combat && (encounterVisible(encounter) || engagedWithFleet(encounter)))
+    .filter((encounter) => encounter.type === "enemy" && encounter.combat && encounterVisible(encounter))
     .map((encounter) => ({
       id: encounter.id,
       name: localisedHull(encounter.hullId, t)?.name ?? t("sea.target.hostileSail"),

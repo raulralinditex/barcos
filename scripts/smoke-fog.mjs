@@ -173,6 +173,70 @@ check(
 );
 await off.context.close();
 
+/* ------------------------- 6: a fight is not hidden, whatever the reveal radius */
+
+// The smallest radius the settings allow is 100 m, and a hostile engages from far beyond it.
+// The combat panel listed a sail that was shooting at her while the water where it lay was
+// painted over: the fog hides sails, not a battle (S167-G).
+const fighting = {
+  id: 601,
+  type: "enemy",
+  x: 1350,
+  y: 300,
+  hullId: "patache",
+  zoneId: "costera",
+  level: 1,
+  engaged: true,
+  heading: 0,
+  currentSpeedKn: 0,
+  drift: { heading: 0, speedKn: 0 },
+  combat: {
+    name: "Patache",
+    status: "fighting",
+    condition: { hull: 95, rigging: 95, crew: 100, morale: 100 },
+    crew: { marino: 14, artillero: 2, soldado: 4 },
+    initialCrew: 20,
+    crewMin: 6,
+    hullToughness: 1,
+    maxSpeedKn: 0.01,
+    pieces: [],
+    damageDealt: { babor: 0, estribor: 0 },
+    crewDamagePool: 0,
+  },
+};
+const fight = await browser.newContext({ viewport: { width: 1000, height: 700 }, locale: "es-AR" });
+const fightPage = await fight.newPage();
+fightPage.on("pageerror", (err) => errors.push(`pageerror: ${err.message}`));
+await fightPage.addInitScript(
+  ([fleetJson, worldJson]) => {
+    if (localStorage.getItem("barcos:fleet:v1")) return;
+    localStorage.setItem("barcos:lang:v1", "es");
+    localStorage.setItem("barcos:fleet:v1", fleetJson);
+    localStorage.setItem("barcos:game:v1", JSON.stringify({ gold: 20000, world: worldJson }));
+    localStorage.setItem("barcos:settings:v1", JSON.stringify({ "fog.enabled": 1, "fog.revealRadiusM": 100 }));
+  },
+  [
+    JSON.stringify({ v: 1, captainId: ship.id, ships: [{ ...ship, commandId: ship.id, yardId: null }] }),
+    JSON.stringify({ ...oldWorld(), levelEnemies: [601], encounters: [fighting] }),
+  ],
+);
+await fightPage.goto("http://localhost:8765/sea.html", { waitUntil: "networkidle" });
+await fightPage.waitForTimeout(800);
+check(
+  /Patache/.test((await fightPage.locator("#duel-roster").textContent()) ?? ""),
+  "S167-G: the combat panel must list the sail that is fighting",
+);
+// 450 m east of the ship at 0.4 px/m is 180 px to the right of the centre; a little below the
+// sail is open water inside the clearing the fog leaves around a hostile in the fight.
+const beside = await fightPage.evaluate(() => {
+  const ctx = document.querySelector("#sea-canvas").getContext("2d");
+  const dpr = window.devicePixelRatio || 1;
+  const [r, g, b] = ctx.getImageData(Math.round((window.innerWidth / 2 + 180) * dpr), Math.round((window.innerHeight / 2 + 50) * dpr), 1, 1).data;
+  return r + g + b;
+});
+check(beside > 120, `S167-G: the water around a hostile in the fight must not be painted over, the pixel is ${beside}`);
+await fight.close();
+
 await browser.close();
 
 if (errors.length > 0) {
