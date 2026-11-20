@@ -691,7 +691,7 @@ export const en = {
   "shipyard.yard.rename": "Rename the shipyard",
   "shipyard.yard.namePlaceholder": "Shipyard name",
   "shipyard.yard.renamed": "The shipyard is now called {name}.",
-  "shipyard.yard.visitNote": "You are visiting {name}: buying, selling, refitting, repairing and sailing need the captain there.",
+  "shipyard.yard.visitNote": "You are visiting {name}: selling, refitting, repairing and sailing need the captain there. Buying a hull you can.",
   "shipyard.yard.travel": "Sail to {name}",
   "shipyard.yard.travelConfirm": "Confirm the voyage to {name}",
   "shipyard.yard.travelQuote": "Voyage to {name}: {distance} m, {days} days, {supply} supply days and {gold} doubloons of wages. Press again to sail.",

@@ -298,6 +298,34 @@ export function nearestSquadron(world, point, radiusM = WORLD.pickupRadiusM) {
 }
 
 /**
+ * The shipyard whose anchor a click on the sea names, or null (S163-G).
+ *
+ * The sea draws every yard of the table, but nothing read a click on one: the only way into
+ * a shipyard was to sail into the home port and let the arrival rule fire. The anchor is
+ * drawn 110 m wide, which at the camera's 0.4 px/m is 44 px on screen, so the radius here is
+ * generous for the same reason the captain pick is: hitting a small mark on a moving sea is
+ * a game of reflexes, not a choice.
+ *
+ * A broken point or radius names nothing, so a click on open water leaves the voyage alone.
+ */
+export function nearestShipyard(point, radiusM = WORLD.pickupRadiusM) {
+  const x = Number(point?.x);
+  const y = Number(point?.y);
+  const radius = Number(radiusM);
+  if (!Number.isFinite(x) || !Number.isFinite(y) || !Number.isFinite(radius) || radius <= 0) return null;
+  let best = null;
+  let bestDistance = radius;
+  for (const yard of SHIPYARDS) {
+    const distance = Math.hypot(yard.x - x, yard.y - y);
+    if (distance <= bestDistance) {
+      best = yard;
+      bestDistance = distance;
+    }
+  }
+  return best;
+}
+
+/**
  * Distance from `point` to the closest hull of any squadron afloat (S155-C). The enemies
  * use it to decide what is near them: with several commands on the water, a hostile is
  * not forgotten because the squadron she is chasing is not the one holding the helm.

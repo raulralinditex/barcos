@@ -113,6 +113,7 @@ import {
   hullSpec,
   markDefeated,
   nearestEncounter,
+  nearestShipyard,
   recordVictory,
   serializeWorld,
   updateWorld,
@@ -940,9 +941,19 @@ function drawSea(ctx) {
   // Every shipyard, from the table (S112): a new yard appears here without touching
   // this function, which is the whole point of the list being data.
   for (const yard of SHIPYARDS) {
+    // An anchor under the pointer says it can be entered (S163-G): a ring around the quay
+    // and a brighter mark, so the player sees the sea answering her before she clicks.
+    if (yard.id === hoveredYardId) {
+      ctx.beginPath();
+      ctx.arc(yard.x, yard.y, yard.mooringM * 1.25, 0, Math.PI * 2);
+      ctx.strokeStyle = "rgba(255,226,150,0.9)";
+      ctx.lineWidth = 26;
+      ctx.stroke();
+      ctx.lineWidth = 1;
+    }
     ctx.beginPath();
     ctx.arc(yard.x, yard.y, yard.mooringM, 0, Math.PI * 2);
-    ctx.fillStyle = "#8a7a55";
+    ctx.fillStyle = yard.id === hoveredYardId ? "#a08e63" : "#8a7a55";
     ctx.fill();
     ctx.beginPath();
     ctx.arc(yard.x, yard.y, yard.mooringM * 0.64, 0, Math.PI * 2);
@@ -1203,7 +1214,82 @@ function squadronAtPointer(event) {
   return nearestSquadron(world, at, CAPTAIN_CLICK_RADIUS_M);
 }
 
+/**
+ * The reach of a click on an anchor, in metres (S163-G).
+ *
+ * The anchor is drawn 110 m across, which is 44 px at the camera's 0.4 px/m. A yard has no
+ * hurry and no helm to take, so the reach is generous on purpose: the player aims at a mark
+ * on a moving sea, and the sea has nothing else at an anchor to confuse it with.
+ */
+const YARD_CLICK_RADIUS_M = 320;
+
+/** The yard the pointer is over right now, so the anchor says it can be entered (S163-G). */
+let hoveredYardId = null;
+
+/**
+ * The room a shipyard opens on when entered from the water (S163-D).
+ *
+ * From the sea a captain may well be far from the yard she is looking at, and the only room
+ * that works without a hull tied up there is the one that buys one. Opening on the fleet, as
+ * the shipyard does when the player walks in, would greet her with a list of actions every
+ * one of which is refused.
+ */
+const SHIPYARD_ENTRY_SCREEN = "comprar";
+
+/** The shipyard whose anchor the pointer is over, or null (S163-G). */
+function yardAtPointer(event) {
+  if (!world || !els.canvas) return null;
+  const rect = els.canvas.getBoundingClientRect();
+  const at = toWorld(event.clientX - rect.left, event.clientY - rect.top);
+  return nearestShipyard(at, YARD_CLICK_RADIUS_M);
+}
+
+/**
+ * Enter a shipyard from the water (S163-A).
+ *
+ * The player asked for it (verbatim): "cuando estamos en el mar, si cliqueamos en el icono de
+ * un astillero, entrar en el". So a click on an anchor is a way into that yard, from wherever
+ * the captain happens to be. Whether she is tied up there or merely visiting is the
+ * shipyard's business, not this click's: the yard is opened on that id and decides.
+ *
+ * The voyage is saved first, exactly as the arrival rule does, so the shipyard reads the sea
+ * as it stands. Nothing is moved: a visit does not sail the captain anywhere (S163-C).
+ */
+function enterShipyard(yard) {
+  if (!world || !yard) return false;
+  saveGame();
+  // The yard on screen travels in the hash, so the shipyard opens on the one that was
+  // clicked instead of falling back to the captain's own water (S163-A).
+  window.location.href = `./index.html#${SHIPYARD_ENTRY_SCREEN}:${yard.id}`;
+  return true;
+}
+
+/**
+ * The anchor under the pointer lights up, and the cursor says it is a way in (S163-G).
+ *
+ * Without this the sea gave no sign that an anchor was anything but scenery: the only way
+ * into a shipyard was to sail into the home port and let the arrival rule fire.
+ */
+els.canvas?.addEventListener("mousemove", (event) => {
+  if (!world || !els.canvas) return;
+  const yard = yardAtPointer(event);
+  hoveredYardId = yard?.id ?? null;
+  els.canvas.style.cursor = yard ? "pointer" : "";
+});
+
+els.canvas?.addEventListener("mouseleave", () => {
+  hoveredYardId = null;
+  if (els.canvas) els.canvas.style.cursor = "";
+});
+
 els.canvas?.addEventListener("click", (event) => {
+  // The anchor wins over a captain standing on it: a hull moored at a yard is not a
+  // command to take, and the player aiming at the anchor means the yard.
+  const yard = yardAtPointer(event);
+  if (yard) {
+    enterShipyard(yard);
+    return;
+  }
   const picked = squadronAtPointer(event);
   if (picked) chooseSquadron(picked.id);
 });

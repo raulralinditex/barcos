@@ -22,6 +22,23 @@ function yardOf(ship) {
   return shipyardById(ship?.yardId)?.id ?? homeYardId();
 }
 
+/**
+ * The yard the fleet's captain is tied up at, or null when she is under way (S163-E).
+ *
+ * `yardOf` answers "which yard does this hull belong to", and an older save with no
+ * `yardId` at all has always belonged to the home port. That is right for a hull sitting
+ * in a yard and wrong for a captain at sea: the sea writes `yardId: null` for a hull that
+ * sails, and the shipyard read that as "home", so a captain on the open water looked tied
+ * up at the home port and every presence action was enabled on a hull that was not there.
+ *
+ * A missing `yardId` (an old save) still resolves to home. An explicit `null` is the sea.
+ */
+export function captainYardId(fleet) {
+  const captain = (fleet?.ships ?? []).find((ship) => ship && ship.id === fleet?.captainId);
+  if (!captain) return null;
+  return yardOf(captain);
+}
+
 /** Set a non-captain's yard, or clear it for sea. Unknown hulls and yards are refused. */
 export function withShipYard(fleet, shipId, yardId) {
   const ships = fleet?.ships ?? [];
@@ -31,10 +48,17 @@ export function withShipYard(fleet, shipId, yardId) {
 }
 
 /** The sea's observed position overrides only the captain's saved mooring (S130). */
-export function reconcileCaptainPosition(fleet, position) {
+export function reconcileCaptainPosition(fleet, position, { freshlyBought = null } = {}) {
   if (!Number.isFinite(position?.x) || !Number.isFinite(position?.y)) return fleet;
   const captain = captainShip(fleet);
   if (!captain || isWreck(captain)) return fleet;
+  // A hull bought a moment ago is moored where she was bought (S163-D), whatever the sea
+  // save says about the captain before her. Buying a hull makes her the fleet's captain
+  // (S7), and the save still holds the OLD captain's position out on the water: reconciling
+  // against it wrote `yardId: null` over the yard she was just bought at, so a hull bought
+  // in Cala del abismo came out floating in open sea. The caller names the hull it just
+  // bought, so this stays a rule about THAT purchase and not about the captain at all.
+  if (freshlyBought && captain.id === freshlyBought && shipyardById(captain.yardId)) return fleet;
   const yardId = shipyardAt(position)?.id ?? null;
   if (captain.yardId === yardId) return fleet;
   return {

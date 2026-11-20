@@ -688,7 +688,7 @@ export const es = {
   "shipyard.yard.rename": "Cambiar el nombre del astillero",
   "shipyard.yard.namePlaceholder": "Nombre del astillero",
   "shipyard.yard.renamed": "El astillero ahora se llama {name}.",
-  "shipyard.yard.visitNote": "Estás de visita en {name}: comprar, vender, reformar, reparar y zarpar necesitan que la capitana esté allí.",
+  "shipyard.yard.visitNote": "Estás de visita en {name}: vender, reformar, reparar y zarpar necesitan que la capitana esté allí. Comprar un buque sí podés.",
   "shipyard.yard.travel": "Viajar a {name}",
   "shipyard.yard.travelConfirm": "Confirmar viaje a {name}",
   "shipyard.yard.travelQuote": "Viaje a {name}: {distance} m, {days} días, {supply} días de suministro y {gold} doblones de jornales. Volvé a pulsar para zarpar.",

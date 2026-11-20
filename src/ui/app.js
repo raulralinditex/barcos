@@ -44,6 +44,7 @@ import { nextImageIndex, shipImagePaths } from "../model/ship-image.js";
 import {
   addShip,
   captainShip,
+  captainYardId,
   deserializeFleet,
   departYard,
   fleetUpkeep,
@@ -1199,6 +1200,7 @@ function launch() {
 
   const name = state.shipName.trim() || defaultShipName(ship.hull);
   const runtime = { ...toRuntimeShip(ship, { name }), yardId: screenShipyard()?.id ?? null };
+  freshlyBoughtId = runtime.id;
 
   // The new captain is built here; preserve the voyage location and the old captain's
   // combat record rather than replacing the sea save with a home-port start.
@@ -1276,6 +1278,23 @@ document.querySelectorAll(".tab").forEach((tab) => {
 
 /** The screen's four rooms. The ship+rig panels are one DOM (S99): re-parented, not cloned. */
 const SCREENS = ["flota", "comprar", "astillero", "mercado", "configuracion"];
+
+/**
+ * Read the hash the sea hands over when it enters a shipyard (S163-A).
+ *
+ * Two forms are accepted. `#comprar` is the room alone, which is what the arrival rule has
+ * always written. `#comprar:cala-del-abismo` names the yard as well, so a click on an anchor
+ * opens THAT yard instead of falling back to the captain's own water. A yard id that is not
+ * a real yard is no pick: the room still opens, on the captain's water.
+ */
+function parseEntryHash(hash) {
+  const raw = String(hash ?? "").replace(/^#/, "");
+  const [room, yardId] = raw.split(":");
+  return {
+    screen: SCREENS.includes(room) ? room : null,
+    yardId: shipyardById(yardId)?.id ?? null,
+  };
+}
 let activeScreen = "flota";
 /** Where the ship+rig column lives while nobody is building (user S105). */
 let builderScreen = "comprar";
@@ -1370,12 +1389,27 @@ function savedCaptainPosition() {
 }
 
 /** The yard the captain's hull is moored at right now (S133-C). */
+/**
+ * The yard the captain's hull is tied up at, or null when she is under way (S163-E).
+ *
+ * Two records can answer, and they have to agree. The fleet sheet says whether she is
+ * moored at all (`captainYardId`: an explicit `null` is the sea, a missing one is an older
+ * save and means home). The sea save says where she actually floats. The sea is the fresher
+ * record while a voyage is on, so a captain whose fleet entry claims a yard but who is
+ * floating in open water is at sea, and the screen must not pretend otherwise: it was
+ * falling back to the home port, and every presence action was enabled on a hull that was
+ * not there.
+ */
 function captainYard() {
+  const mooredAt = captainYardId(fleet);
+  if (mooredAt === null) return null;
   const ship = savedCaptainPosition();
-  const yard = ship && Number.isFinite(ship.x) && Number.isFinite(ship.y)
+  const at = ship && Number.isFinite(ship.x) && Number.isFinite(ship.y)
     ? currentShipyard({ x: ship.x, y: ship.y })
     : null;
-  return yard ?? SHIPYARDS.find((entry) => entry.home) ?? SHIPYARDS[0] ?? null;
+  // The sea save knows a position the fleet sheet does not: if she is floating, she sails.
+  if (ship && !at) return null;
+  return shipyardById(at?.id) ?? shipyardById(mooredAt);
 }
 
 /* ---------------------------------------------------------------- yard selector (S133) */
@@ -1408,7 +1442,10 @@ function saveYardNames() {
 }
 
 function screenShipyard() {
-  return shipyardById(viewedYardId) ?? captainYard();
+  // The picked yard wins; with none picked the screen shows the captain's own water, or the
+  // home port when she is at sea and therefore has none (S163-E). The fallback is what keeps
+  // a screen with no pick showing a real yard instead of nothing.
+  return shipyardById(viewedYardId) ?? captainYard() ?? SHIPYARDS.find((entry) => entry.home) ?? SHIPYARDS[0] ?? null;
 }
 
 /** The name the selector shows: the player's own, else the one the yard shipped with. */
@@ -1422,8 +1459,13 @@ function yardName(yard) {
  */
 function visitingYard() {
   const shown = screenShipyard();
+  if (!shown) return false;
   const moored = captainYard();
-  return Boolean(shown && moored && shown.id !== moored.id);
+  // A captain under way is moored nowhere, so every yard on screen is a visit (S163-B).
+  // The old test demanded `moored` to be truthy, which made a captain at sea read as
+  // "present" in every yard on the chart and enabled actions on a hull that was not there.
+  if (!moored) return true;
+  return shown.id !== moored.id;
 }
 
 /** The reason a presence action is refused right now, in the player's language. */
@@ -1730,8 +1772,17 @@ if (els.yardTravelBtn) {
 }
 
 /** Persist only a real change, before any room reads its local fleet. */
+/**
+ * The hull bought a moment ago (S163-D), so the reconciliation leaves her mooring alone.
+ *
+ * `launch` makes her the fleet's captain, and the sea save still holds the previous
+ * captain's position out on the water. Without this the next `showScreen` reconciled her
+ * against that position and wiped the yard she was bought at.
+ */
+let freshlyBoughtId = null;
+
 function reconcileSavedCaptain() {
-  const next = reconcileCaptainPosition(fleet, savedCaptainPosition());
+  const next = reconcileCaptainPosition(fleet, savedCaptainPosition(), { freshlyBought: freshlyBoughtId });
   if (next === fleet) return false;
   fleet = next;
   if (refitId && !localFleet().ships.some((ship) => ship.id === refitId)) refitId = null;
@@ -1748,7 +1799,12 @@ function localFleet() {
   const yard = screenShipyard();
   // The visitors' window is the yard the captain is moored at (S130): a visit to another
   // yard shows her own moored hulls, never the squadron that is sailing elsewhere.
-  return { ...fleet, ships: shipsAvailableAtYard(fleet, yard?.id, captainYard()?.id) };
+  const mooredAt = captainYard();
+  // With the captain under way there is no yard to scope to (S163-E), and scoping anyway
+  // emptied the fleet panel: she would open the shipyard and read "sin naves" while her
+  // whole fleet existed. The window narrows to a yard only when she is tied up at one.
+  if (!mooredAt) return fleet;
+  return { ...fleet, ships: shipsAvailableAtYard(fleet, yard?.id, mooredAt.id) };
 }
 
 function marketShip() {
@@ -1965,8 +2021,17 @@ for (const tab of document.querySelectorAll(".screen-tab")) {
   });
 }
 
+// Buying a hull does NOT need the captain's presence (S163-D). The player asked for it in
+// those words: from the sea, clicking a yard's anchor should let her do "todo menos lo que
+// necesitemos un barco como mercado etc." A hull is bought FOR that yard and is built with
+// her id, so it is tied up there the moment it exists; nothing about it needs a hull already
+// floating at the quay.
+//
+// Refitting is the other half of this same button and DOES need presence: she is the hull
+// that would be taken apart, and she is not at that quay. The guard is here because
+// `saveRefit` does not check it.
 els.launchBtn.addEventListener("click", () => {
-  if (refuseVisit()) return;
+  if (refitId && refuseVisit()) return;
   launch();
 });
 
@@ -2055,7 +2120,24 @@ els.marketBoard?.addEventListener("pointerdown", (event) => {
  * repairs but not the sailing (S92), because from inside the shipyard there was no other way
  * out and blocking it locked the whole save.
  */
+/**
+ * Whether the captain is already under way (S163-F).
+ *
+ * She has no yard, and the sea save still holds her position. Going back to the water is
+ * then not "sail from this yard": it is returning to the voyage she was on, untouched.
+ */
+function captainIsUnderWay() {
+  return captainYard() === null;
+}
+
 function sailOut() {
+  // Under way, Escape is simply the way back to the sea (S163-F): the player entered a
+  // shipyard to look at it, and leaving must not be refused just because every yard is a
+  // visit to a captain who is sailing. Nothing is departed and nothing is moved.
+  if (captainIsUnderWay()) {
+    window.location.href = "./sea.html";
+    return true;
+  }
   // A visit does not sail (S133-C): the voyage to that yard is the travel button's job.
   if (refuseVisit()) return false;
   const game = (() => {
@@ -2088,6 +2170,8 @@ function sailOut() {
  */
 function canSailOut() {
   const captain = captainShip(fleet);
+  // Under way there is nothing to refuse: she goes back to the voyage she was on (S163-F).
+  if (captainIsUnderWay()) return true;
   const local = localFleet();
   return !visitingYard() && local.ships.some((ship) => ship.id === captain?.id && !isWreck(ship));
 }
@@ -2261,8 +2345,9 @@ function renderFleet() {
   const captain = captainShip(fleet);
   const local = localFleet();
   // A visit reads the yard but does not sail from it (S133-C): the captain is elsewhere.
-  els.setSailBtn.disabled = visitingYard() || !local.ships.some((ship) => ship.id === captain?.id && !isWreck(ship));
-  els.setSailBtn.title = visitingYard() ? visitReason() : "";
+  const underWay = captainIsUnderWay();
+  els.setSailBtn.disabled = !underWay && (visitingYard() || !local.ships.some((ship) => ship.id === captain?.id && !isWreck(ship)));
+  els.setSailBtn.title = !underWay && visitingYard() ? visitReason() : "";
   renderFort();
   // Country remains locked by the whole fleet, not just this yard.
   renderCountry();
@@ -3059,7 +3144,10 @@ render();
 // is what the sea relies on when she lands the player back on the buy room (S109).
 // Old settings links land on their room too: config.html now redirects with the hash.
 const entryScreen = captain ? "flota" : "comprar";
-const targetScreen = SCREENS.includes(window.location.hash.slice(1)) ? window.location.hash.slice(1) : entryScreen;
+const entry = parseEntryHash(window.location.hash);
+// A yard named in the hash is the yard on screen (S163-A): the player clicked her anchor.
+if (entry.yardId) viewedYardId = entry.yardId;
+const targetScreen = entry.screen ?? entryScreen;
 showScreen(targetScreen);
 try {
   arrivalNotice = parseArrivalNotice(localStorage.getItem(ARRIVAL_NOTICE_KEY));
