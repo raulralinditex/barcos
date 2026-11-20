@@ -45,6 +45,11 @@ const struckSea = (ship) => ({
   timeS: 0,
   ship: { x: 210, y: 70, heading: 0, currentSpeedKn: 0, speedKn: ship.speedKn },
   escorts: [],
+  level: 1,
+  levelEnemies: [501],
+  levelVictories: 0,
+  order: { throttle: 0, turn: 0 },
+  squadrons: [],
   encounters: [
     {
       id: 501,
@@ -68,6 +73,7 @@ const struckSea = (ship) => ({
         hullToughness: 1,
         pieces: [],
         damageDealt: { babor: 0, estribor: 0 },
+        crewDamagePool: 0,
       },
     },
   ],
@@ -81,7 +87,8 @@ const check = (ok, message) => {
 };
 
 const open = async (ship) => {
-  const page = await browser.newPage({ viewport: { width: 1400, height: 950 }, locale: "es-AR" });
+  const context = await browser.newContext({ viewport: { width: 1400, height: 950 }, locale: "es-AR" });
+  const page = await context.newPage();
   page.on("console", (msg) => {
     if (msg.type() === "error") errors.push(msg.text());
   });
@@ -105,11 +112,20 @@ const open = async (ship) => {
 const fleetCount = (page) =>
   page.evaluate(() => JSON.parse(localStorage.getItem("barcos:fleet:v1")).ships.length);
 
+/**
+ * The fleet the fixture wrote: the captain alone.
+ *
+ * The capture lands inside the first second of the voyage (the prize is 51 m away and
+ * already struck), so reading the fleet once the page has settled measures a capture that
+ * has ALREADY happened. The baseline is the one the fixture seeded.
+ */
+const FLEET_AT_OPEN = 1;
+
 /* ------------------------------------- 1: no soldiers, no prize (S160-B) */
 
 const bare = build(0);
 let page = await open(bare);
-const beforeBare = await fleetCount(page);
+const beforeBare = FLEET_AT_OPEN;
 let banner = "";
 for (let i = 0; i < 60; i += 1) {
   await page.waitForTimeout(300);
@@ -125,13 +141,13 @@ check(
   afterBare === beforeBare,
   `S160-B: a hull with no soldiers must NOT take the prize, fleet went ${beforeBare} → ${afterBare}`,
 );
-await page.close();
+await page.context().close();
 
 /* ------------------------------------- 2: with soldiers, the prize is taken */
 
 const armed = build(40);
 page = await open(armed);
-const beforeArmed = await fleetCount(page);
+const beforeArmed = FLEET_AT_OPEN;
 let taken = "";
 for (let i = 0; i < 60; i += 1) {
   await page.waitForTimeout(300);
@@ -144,7 +160,7 @@ check(
   `S160-B: a hull with soldiers must take the prize, fleet went ${beforeArmed} → ${afterArmed}`,
 );
 check(/capturada|suma a tu flota/i.test(taken), `S160-B: the capture must be announced, banner said "${taken}"`);
-await page.close();
+await page.context().close();
 
 await browser.close();
 console.log(JSON.stringify({ errors, failures }, null, 2));

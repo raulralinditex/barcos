@@ -3278,7 +3278,12 @@ let lastTime = performance.now();
 
 function frame(now) {
   if (!world) return;
-  const dt = Math.min(0.1, (now - lastTime) / 1000);
+  // `dt` is clamped at both ends: `requestAnimationFrame` hands a timestamp that can be
+  // BEHIND `lastTime` (the module loads, the first frame fires with an earlier clock, a tab
+  // comes back from the background), and a negative step ran the whole sea backwards. It
+  // reached the enemy AI, which placed the hull at NaN, and the despawn filter then dropped
+  // her: a sail vanished from the sea on the first frame.
+  const dt = Math.min(0.1, Math.max(0, (now - lastTime) / 1000));
   lastTime = now;
 
   const before = goldEarned;

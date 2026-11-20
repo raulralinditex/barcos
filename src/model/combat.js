@@ -836,7 +836,18 @@ export function aiStep(enemy, playerPos, dt, rnd, { wind = null } = {}) {
 
   const distance = distanceBetween(enemy, playerPos);
   const bearing = bearingTo(enemy, playerPos);
-  const maxSpeed = combat.maxSpeedKn * speedFactor(combat);
+  // A combatant restored from a save may carry no declared speed (S160). `maxSpeedKn *
+  // speedFactor` was then `NaN`, which propagated into the hull's position and made the
+  // despawn filter drop her: measured, an enemy fired from the deck and vanished mid-fight.
+  // The hull's own speed is the honest fallback, and a hull with none still moves.
+  const declaredSpeed = Number(combat.maxSpeedKn);
+  const hullSpeed = Number(enemy.speedKn);
+  const maxSpeed =
+    (Number.isFinite(declaredSpeed) && declaredSpeed > 0
+      ? declaredSpeed
+      : Number.isFinite(hullSpeed) && hullSpeed > 0
+        ? hullSpeed
+        : 5) * speedFactor(combat);
 
   let turn = 0;
   let throttle = 0;
@@ -870,7 +881,7 @@ export function aiStep(enemy, playerPos, dt, rnd, { wind = null } = {}) {
   // function decides the heading, the speed and the drift, so the two can never drift
   // apart again. Its own hull's turn factor is included, as it is for the captain (S48).
   const stepped = stepHull(
-    { ...enemy, speedKn: combat.maxSpeedKn, turnFactor: hullTurnFactor(enemy.hullId) },
+    { ...enemy, speedKn: maxSpeed, turnFactor: hullTurnFactor(enemy.hullId) },
     // Her own rigging, not the player's: a dismasted enemy is slow too (S89).
     { turn, throttle, wind, rigging: combat },
     dt,
