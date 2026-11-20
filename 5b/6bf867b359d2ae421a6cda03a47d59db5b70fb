@@ -1,0 +1,22 @@
+test/enemy-rigging.test.js
+  s_f3e7c3b3b1b693::t_f8b8b869f6025e 74-81,84,86-87,89-90,92-93,99-112
+  s_f3e7c3b3b1b693::t_cfb4fbdae3640c 1-73,82-83,85,88,91,94-98,113
+src/model/combat.js
+  s_f3e7c3b3b1b693::t_de8d8cbdf4ec83 839-848,851-855
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.6",
+  "base_commit_sha": "5b6bf867b359d2ae421a6cda03a47d59db5b70fb",
+  "prompts": {},
+  "sessions": {
+    "s_f3e7c3b3b1b693": {
+      "agent_id": {
+        "tool": "pi",
+        "id": "01a1f822-2360-71e3-a9a2-e0945b49ae1f",
+        "model": "deepseek-v4.1-flash_high"
+      },
+      "human_author": "Raul Ripoll <raulral@ext.inditex.com>"
+    }
+  }
+}
