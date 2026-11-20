@@ -1,0 +1,28 @@
+src/model/combat.js
+  s_f3e7c3b3b1b693::t_620f3015a0f981 884
+  s_f3e7c3b3b1b693::t_ac1be0515a1b78 839-850
+scripts/smoke-soldiers.mjs
+  s_f3e7c3b3b1b693::t_c1ef5126eb0c17 90-91,144,163
+  s_f3e7c3b3b1b693::t_045fadc6795ab4 115-123,128,150
+  s_f3e7c3b3b1b693::t_33aee5dad85b05 48-52,76
+src/ui/sea.js
+  s_f3e7c3b3b1b693::t_fd2f051e760dbc 3281-3286
+test/enemy-restore.test.js
+  s_f3e7c3b3b1b693::t_9061f8da4dd97c 1-120
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.6",
+  "base_commit_sha": "fad9f84c4ac14b32acb7f9a23292279e044af070",
+  "prompts": {},
+  "sessions": {
+    "s_f3e7c3b3b1b693": {
+      "agent_id": {
+        "tool": "pi",
+        "id": "01a1f822-2360-71e3-a9a2-e0945b49ae1f",
+        "model": "deepseek-v4.1-flash_high"
+      },
+      "human_author": "Raul Ripoll <raulral@ext.inditex.com>"
+    }
+  }
+}
