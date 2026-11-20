@@ -1,0 +1,38 @@
+src/model/sea-camera.js
+  s_f3e7c3b3b1b693::t_12ccef510f6377 1-52
+src/ui/styles.css
+  s_f3e7c3b3b1b693::t_df8a1a2ba1ff9c 2808-2814
+scripts/smoke-minimap-camera.mjs
+  s_f3e7c3b3b1b693::t_62ac37b642c8d9 1-161
+src/i18n/es.js
+  s_f3e7c3b3b1b693::t_df8a1a2ba1ff9c 223-224
+src/i18n/en.js
+  s_f3e7c3b3b1b693::t_df8a1a2ba1ff9c 226-227
+test/sea-camera.test.js
+  s_f3e7c3b3b1b693::t_6eea36bf821b13 1-57
+src/ui/sea.js
+  s_f3e7c3b3b1b693::t_e00f5719d6474a 822-826
+  s_f3e7c3b3b1b693::t_df8a1a2ba1ff9c 3408-3410
+  s_f3e7c3b3b1b693::t_6b36272fce6df6 123,158-170
+  s_f3e7c3b3b1b693::t_a03709f1936139 1914,1918-1927,1931-1934,1937-1950,1952,1954-1955
+  s_f3e7c3b3b1b693::t_80615807fad5a8 919,922,1021,1024,1205,1207-1208,1218,1220-1221
+  s_f3e7c3b3b1b693::t_1145a6dbb51968 171
+odd/tasks/camara-del-mapa.md
+  s_f3e7c3b3b1b693::t_45a344c8f88ad0 1-41
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.6",
+  "base_commit_sha": "c3a7895cf2af274c909a857a3933faaab42ee7c9",
+  "prompts": {},
+  "sessions": {
+    "s_f3e7c3b3b1b693": {
+      "agent_id": {
+        "tool": "pi",
+        "id": "01a1f822-2360-71e3-a9a2-e0945b49ae1f",
+        "model": "deepseek-v4.1-flash_high"
+      },
+      "human_author": "Raul Ripoll <raulral@ext.inditex.com>"
+    }
+  }
+}
