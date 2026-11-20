@@ -102,3 +102,22 @@ L57 (cierre de T43, T44 y T46 — S159 completa, commit `e6b92c0`). `npm test` *
 **Smokes en 0**: oars, sea, sea-squadrons, fleet, levels, ui, i18n, tabs, combat, danger.
 
 **Smokes que fallan y NO son de este cambio**, comprobados contra la base con `git stash` (idéntico mensaje en los dos estados): `smoke-formation` («a sunk escort is still in the fleet», y antes «the escort never left its starting station») y `smoke-state` («live escort not repaired», «firing did not change the bars»). Los dos venían rotos desde antes de S155 (L49).
+
+L58 (revisión de la unidad S159, commits `873830c` y `8142ba9`). La revisión nativa de RDD **no se pudo ejecutar**: `gentle_review` ofrecía `review.start` pero el proveedor rechazó el candidato con `lens_context_budget_exceeded` —el candidato fijado era la rama entera, 24 commits y 5286 líneas— y sin crear autoridad (`lineage_created: false`, `mutation_outcome: not_started`). La ruta reducida (`baseRef` + `committedOnly`) no se pudo ni intentar: el harness no logra pasarle a `inspect` el `input` como string, y el CLI `gentle-ai` no existe en este entorno. Se hizo revisión normal sobre la unidad concreta.
+
+**Rango revisado**: `31e08bc..da65056` (610 líneas, 9 archivos), más los dos arreglos que la revisión produjo.
+
+**Dos defectos reales encontrados y arreglados, los dos con RED medido:**
+
+1. **`873830c` — el mapa de esfuerzo nunca se podaba.** `oarRecord` copiaba `world.oarEffort` entero hacia adelante y le sumaba. Medido: cuarenta presas por un viaje dejaban **41 entradas para 1 casco a flote**, y las 41 viajaban en el guardado del mar para siempre (1227 bytes de esfuerzo para una tripulación). Ahora sólo los cascos a flote conservan su fila, que es la regla que las provisiones ya seguían (S132). RED: con el copiado viejo el test reporta seis ids para un casco. Verde: 1 entrada, guardado 1196 bytes más chico.
+2. **`8142ba9` — un guardado anterior a S159 no remaba nunca.** El boot del mar tomaba del astillero la velocidad y el giro de la capitana y nada más. Un guardado sin `id` ni `hullId` abría con `id: null`, así que el mapa de esfuerzo no tenía clave, la fila de remos quedaba oculta y la capitana no daba un remo. **Es el mismo defecto que L57 arregló al cargar, visto desde el otro lado**: `deserializeWorld` devolvía la identidad, pero el boot la pisaba después. RED: 4 de 15 comprobaciones del smoke fallan (fila oculta, `ship.id` null, `hullId` undefined, esfuerzo vacío).
+
+**Lo que la revisión confirmó sano, medido y no afirmado:**
+
+- **Doce formas hostiles del guardado** (sin campos, `oarEffort` como string/array/null/negativo/NaN-string, `crew` como array/string, `loadFraction` string o 99, `id` numérico, `hullId` inexistente): ninguna lanza, ninguna produce NaN en `x`/`y`/`currentSpeedKn`.
+- **El test de la escolta puede fallar de verdad**: quitando de `createEscort` los tres campos nuevos, «S159-A: an escort with banks rows too» va a rojo. No es un test que pasa igual.
+- **No se relajó ninguna aserción existente**: el diff de `31e08bc..HEAD` sobre `test/sea-squadrons.test.js`, `test/world.test.js`, `test/oars.test.js`, `test/boarding.test.js`, `test/combat.test.js` y `test/zone-quota.test.js` no elimina **ni una línea**. La afirmación de L57 era cierta.
+
+**Verificación final**: `npm test` **988/988**; `smoke-oars` en 0 con **15 comprobaciones**. Smokes en 0: sea, sea-squadrons, fleet, levels, ui, i18n.
+
+**Límite de esta revisión**: las lentes de riesgo y de tests las hice yo inline, no un revisor independiente; los dos `gentle-ai-verify` que lancé se colgaron por un `rtk binary not found in PATH` y uno se canceló. La revisión externa de la rama entera sigue pendiente y necesita candidatos más chicos.
