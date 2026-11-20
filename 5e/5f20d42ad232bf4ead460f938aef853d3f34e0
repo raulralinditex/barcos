@@ -1,0 +1,31 @@
+test/fleet-builder-panels.test.js
+  s_f3e7c3b3b1b693::t_20b58dfdf98f35 1-55
+src/ui/app.js
+  s_f3e7c3b3b1b693::t_2ef3db8531b1d4 2639-2645,2777-2778
+  s_f3e7c3b3b1b693::t_3ced8e52b8131b 63,1312-1329,1351-1355
+scripts/smoke-fleet-panels.mjs
+  s_f3e7c3b3b1b693::t_004460e0f9ae22 1-81,84-86,89-99,101,115-143
+  s_f3e7c3b3b1b693::t_dc6c32b4959113 100,102-114
+  s_f3e7c3b3b1b693::t_ea2fe9684ba070 82-83,87-88
+src/model/fleet-panels.js
+  s_f3e7c3b3b1b693::t_c66d8f0caf1c9b 1-28,31-36
+  s_f3e7c3b3b1b693::t_f5c1d911c2e492 29-30
+odd/tasks/panel-aparejo-sin-nave.md
+  s_f3e7c3b3b1b693::t_1208e88dcf9530 1-36
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.6",
+  "base_commit_sha": "5e5f20d42ad232bf4ead460f938aef853d3f34e0",
+  "prompts": {},
+  "sessions": {
+    "s_f3e7c3b3b1b693": {
+      "agent_id": {
+        "tool": "pi",
+        "id": "01a1f822-2360-71e3-a9a2-e0945b49ae1f",
+        "model": "deepseek-v4.1-flash_high"
+      },
+      "human_author": "Raul Ripoll <raulral@ext.inditex.com>"
+    }
+  }
+}
