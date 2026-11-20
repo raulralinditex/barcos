@@ -84,3 +84,20 @@ L59 (cierre de S160, commit `fad9f84`). `npm test` **992/992**; `scripts/smoke-s
 **Lo que esto significa para el punto (2) de L56** —«la captura de punta a punta no se puede verificar»—: **queda cerrado**. La captura se verifica de punta a punta en el navegador real: el banner dice «¡Patache capturada! Se suma a tu flota» y la flota pasa de `["Con soldados"]` a `["Con soldados","Patache"]`.
 
 **Smokes en 0**: soldiers, combat, oars, sea, levels.
+
+L60 (revisión del delta de S160). Sin revisión nativa por la misma razón que L58: RDD fija como candidato la rama entera (`base-ref 7ace33b`, 52 paths) y eso ya falló dos veces con `lens_context_budget_exceeded` sin crear autoridad. Revisión normal sobre el delta `7452078..HEAD` (186 líneas, 5 archivos).
+
+**El delta verificado, medido contra la base real (`7452078`) y no contra el árbol de trabajo:**
+
+| Caso | Base | Con el cambio |
+|---|---|---|
+| Enemigo normal (`maxSpeedKn: 5`) | 2,500 kn | **2,500 kn** — sin cambio |
+| Enemigo sin `maxSpeedKn` | **NaN**, posición NaN | **2,500 kn**, posición real |
+
+Eso es lo que el commit afirma, y sólo eso: el fallback no toca a nadie que ya declaraba su velocidad.
+
+**Un defecto PREEXISTENTE encontrado, no introducido acá, y no arreglado:** el aparejo se aplica **dos veces** a la velocidad del enemigo. `aiStep` calcula `maxSpeed = maxSpeedKn * speedFactor(combat)` y después `stepHull` vuelve a aplicar `riggingSpeedFactor(input.rigging)`, que es la misma curva. Medido con aparejo al 50 %: el enemigo hace **1,06 kn** donde le tocaría ~1,63 — el factor 0,65 entra al cuadrado (0,42). Con aparejo al 100 % no se nota, que es por qué nadie lo había visto. Comprobado idéntico en `7452078` y en `HEAD`: **no es de este cambio**. Queda reportado como follow-up; arreglarlo cambia el equilibrio del combate (un enemigo desarbolado sería un 54 % más rápido) y eso es decisión del jugador, no de una revisión.
+
+**Una nota de método que casi me hace concluir lo contrario:** `git stash` sobre un archivo ya commiteado no guarda nada, así que la primera comparación «base contra cambio» fue en realidad el cambio contra sí mismo y dio idéntico. La comparación válida se hace con `git show <commit>:<archivo>`. Ya me pasó algo parecido en L59 con `git checkout`; conviene comprobar con `grep` que el árbol tiene el cambio que se cree estar midiendo.
+
+**Verificación**: `npm test` **992/992**; `smoke-soldiers` en 0. Cero líneas eliminadas en `test/` desde `7452078`: no se relajó ninguna aserción.
