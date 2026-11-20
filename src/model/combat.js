@@ -836,18 +836,23 @@ export function aiStep(enemy, playerPos, dt, rnd, { wind = null } = {}) {
 
   const distance = distanceBetween(enemy, playerPos);
   const bearing = bearingTo(enemy, playerPos);
-  // A combatant restored from a save may carry no declared speed (S160). `maxSpeedKn *
-  // speedFactor` was then `NaN`, which propagated into the hull's position and made the
-  // despawn filter drop her: measured, an enemy fired from the deck and vanished mid-fight.
-  // The hull's own speed is the honest fallback, and a hull with none still moves.
+  // Her speed for a WHOLE rig. The torn canvas is `stepHull`'s business, and it applies it
+  // once from `input.rigging` below: folding `speedFactor` in here too applied the same
+  // curve twice to the enemy and once to the player, so a dismasted enemy was up to 2.7x
+  // slower than the rule says (measured: 1.06 kn at 50 % rigging where the curve asks for
+  // 1.63, and 0.34 kn at 10 % where it asks for 0.93). The curve is `riggingSpeedFactor`
+  // in world.js, and it is the same numbers as `speedFactor` here — see the test.
+  //
+  // A combatant restored from a save may carry no declared speed (S160): `maxSpeedKn` was
+  // then `NaN`, which propagated into the hull's position and made the despawn filter drop
+  // her. The hull's own speed is the honest fallback, and a hull with none still moves.
   const declaredSpeed = Number(combat.maxSpeedKn);
   const hullSpeed = Number(enemy.speedKn);
-  const maxSpeed =
-    (Number.isFinite(declaredSpeed) && declaredSpeed > 0
-      ? declaredSpeed
-      : Number.isFinite(hullSpeed) && hullSpeed > 0
-        ? hullSpeed
-        : 5) * speedFactor(combat);
+  const maxSpeed = Number.isFinite(declaredSpeed) && declaredSpeed > 0
+    ? declaredSpeed
+    : Number.isFinite(hullSpeed) && hullSpeed > 0
+      ? hullSpeed
+      : 5;
 
   let turn = 0;
   let throttle = 0;
