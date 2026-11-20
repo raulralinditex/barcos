@@ -1,0 +1,51 @@
+src/i18n/en.js
+  s_f3e7c3b3b1b693::t_da891ff056f129 694
+src/i18n/es.js
+  s_f3e7c3b3b1b693::t_da891ff056f129 691
+src/ui/app.js
+  s_f3e7c3b3b1b693::t_3bf38d8ec2b9a7 2123-2132,2134-2140,2173-2174,2348-2350
+  s_f3e7c3b3b1b693::t_e28c8dd1c9c2c2 2028-2032
+  s_f3e7c3b3b1b693::t_63102d9d03fd44 1445-1448,1462,1464-1468
+  s_f3e7c3b3b1b693::t_34c123a568c633 47,1392-1402,1404-1405,1407,1410-1412
+  s_f3e7c3b3b1b693::t_6668a0fd77c77a 1203,1775-1783,1785
+  s_f3e7c3b3b1b693::t_a4751ef0b0d84e 1281-1297,3147-3150
+  s_f3e7c3b3b1b693::t_0d75e37f8529da 2024-2027,2034
+  s_f3e7c3b3b1b693::t_b34fbcf4d1e890 1802-1807
+src/ui/sea.js
+  s_f3e7c3b3b1b693::t_8ee3265a83d5a4 944-953,956,1226-1228,1266-1283
+  s_f3e7c3b3b1b693::t_f9538ac83a24e5 116,1217-1225,1239-1265,1284,1286-1292
+  s_f3e7c3b3b1b693::t_52b19572e44a21 1229-1238
+src/model/world.js
+  s_f3e7c3b3b1b693::t_27d5bb6bba6de5 301-327
+  s_f3e7c3b3b1b693::t_ac125084ccbdc2 300
+odd/tasks/astillero-desde-el-mar.md
+  s_f3e7c3b3b1b693::t_8cdedae7d38e16 1-32
+  s_f3e7c3b3b1b693::t_12d09531ef4746 33-35
+test/yard-presence.test.js
+  s_f3e7c3b3b1b693::t_8a6bdccc4bdd70 1-15,17-71
+  s_f3e7c3b3b1b693::t_6dbc99e57d9469 16,107-119,121-133
+  s_f3e7c3b3b1b693::t_633ccd70d5dc9f 72-89,92,95,100-106,134
+  s_f3e7c3b3b1b693::t_1c337ca466def3 90-91,93-94,96-99
+  s_f3e7c3b3b1b693::t_fb91629350ae81 120
+scripts/smoke-shipyard-from-sea.mjs
+  s_f3e7c3b3b1b693::t_bd7fa6e685e576 1-189
+src/model/fleet.js
+  s_f3e7c3b3b1b693::t_fb91629350ae81 51,55-61
+  s_f3e7c3b3b1b693::t_03c9fe58f4cfee 25-41
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.6",
+  "base_commit_sha": "e533090f5783bf21ee1828db7298f927a37afae6",
+  "prompts": {},
+  "sessions": {
+    "s_f3e7c3b3b1b693": {
+      "agent_id": {
+        "tool": "pi",
+        "id": "01a1f822-2360-71e3-a9a2-e0945b49ae1f",
+        "model": "deepseek-v4.1-flash_high"
+      },
+      "human_author": "Raul Ripoll <raulral@ext.inditex.com>"
+    }
+  }
+}
