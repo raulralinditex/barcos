@@ -158,3 +158,100 @@ export function serializeDiscovered(known) {
   const record = normaliseDiscovered(known);
   return { complete: record.complete, cells: [...record.cells] };
 }
+
+/**
+ * How dark the veil is over every cell of the chart, with a soft edge.
+ *
+ * Painting the veil cell by cell left the border of what the player had lit as a staircase of
+ * 200 m squares. The mask is the same grid turned into a number per cell (0 clear, 1 solid)
+ * and then feathered: a few passes of a small blur across the grid, so the border between lit
+ * and dark water becomes a gradient the screen can stretch smoothly.
+ *
+ * The blur only ever mixes a cell with its neighbours using non-negative weights, so lighting
+ * more sea can never darken any cell. That matters on screen: a fleet that sails must make the
+ * fog lift, not make its edge flicker.
+ *
+ * `holes` are points the fog must open around, in metres: a hostile already in the fight is
+ * never hidden, so the veil leaves a clearing around her. `softness` is how many blur passes
+ * to run, and 0 gives the hard grid back.
+ */
+export function fogMask({ known, radiusM, softness = 2, holes = [], cellM = FOG.cellM } = {}) {
+  const size = Number(cellM) > 0 ? Number(cellM) : FOG.cellM;
+  const radius = Number(radiusM);
+  if (!Number.isFinite(radius) || radius <= 0) {
+    return { x0: 0, y0: 0, n: 0, cellM: size, alpha: new Float32Array(0) };
+  }
+
+  const lo = Math.floor(-radius / size);
+  const hi = Math.floor(radius / size);
+  const n = hi - lo + 1;
+  const lit = new Set(normaliseDiscovered(known).cells);
+  const clearings = (Array.isArray(holes) ? holes : []).filter(
+    (hole) => Number.isFinite(Number(hole?.x)) && Number.isFinite(Number(hole?.y)),
+  );
+
+  let dark = new Float32Array(n * n);
+  const outside = new Uint8Array(n * n);
+  for (let iy = 0; iy < n; iy += 1) {
+    for (let ix = 0; ix < n; ix += 1) {
+      const cx = lo + ix;
+      const cy = lo + iy;
+      const centre = { x: cx * size + size / 2, y: cy * size + size / 2 };
+      const at = iy * n + ix;
+      // The chart is a circle: the corners of its bounding box are not sea and are never
+      // painted, however the blur reaches them.
+      if (Math.hypot(centre.x, centre.y) > radius + size) outside[at] = 1;
+      dark[at] = lit.has(`${cx}:${cy}`) ? 0 : 1;
+    }
+  }
+
+  // Feather: a [1 2 1] / 4 pass along each axis, repeated. Edges repeat the nearest cell, so
+  // the rim of the chart does not fade to clear just because the grid stops there.
+  const passes = Math.max(0, Math.min(6, Math.floor(Number(softness) || 0)));
+  for (let pass = 0; pass < passes; pass += 1) {
+    const horizontal = new Float32Array(n * n);
+    for (let iy = 0; iy < n; iy += 1) {
+      for (let ix = 0; ix < n; ix += 1) {
+        const left = dark[iy * n + Math.max(0, ix - 1)];
+        const mid = dark[iy * n + ix];
+        const right = dark[iy * n + Math.min(n - 1, ix + 1)];
+        horizontal[iy * n + ix] = (left + 2 * mid + right) / 4;
+      }
+    }
+    const vertical = new Float32Array(n * n);
+    for (let iy = 0; iy < n; iy += 1) {
+      for (let ix = 0; ix < n; ix += 1) {
+        const up = horizontal[Math.max(0, iy - 1) * n + ix];
+        const mid = horizontal[iy * n + ix];
+        const down = horizontal[Math.min(n - 1, iy + 1) * n + ix];
+        vertical[iy * n + ix] = (up + 2 * mid + down) / 4;
+      }
+    }
+    dark = vertical;
+  }
+
+  // The clearings go in AFTER the feathering. A clearing is a handful of cells wide, and the
+  // blur erodes anything that small: measured, a 4-cell clearing came out only 39 % open, so a
+  // hostile in the fight would still have been under the veil. Each one is its own round
+  // gradient instead, fully open within 1.5 cells and fading back to the fog by 3.5.
+  for (let iy = 0; iy < n; iy += 1) {
+    for (let ix = 0; ix < n; ix += 1) {
+      const at = iy * n + ix;
+      if (outside[at]) {
+        dark[at] = 0;
+        continue;
+      }
+      if (clearings.length === 0) continue;
+      const cx = (lo + ix) * size + size / 2;
+      const cy = (lo + iy) * size + size / 2;
+      let open = 1;
+      for (const hole of clearings) {
+        const d = Math.hypot(Number(hole.x) - cx, Number(hole.y) - cy);
+        const t = Math.max(0, Math.min(1, (d - size * 1.5) / (size * 2)));
+        open = Math.min(open, t * t * (3 - 2 * t));
+      }
+      dark[at] *= open;
+    }
+  }
+  return { x0: lo, y0: lo, n, cellM: size, alpha: dark };
+}

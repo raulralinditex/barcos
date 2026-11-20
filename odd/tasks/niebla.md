@@ -59,3 +59,11 @@ L82 (revisión normal del delta `dfc4e1d..HEAD`, 1640 líneas en 29 archivos). S
 **Limpieza:** `nearestEncounter` y `cellOf` quedaron importados sin uso en `sea.js` por mis cambios; retirados.
 
 **Sin arreglar, reportado:** un guardado editado a mano con una lista de celdas enorme no tiene tope (`normaliseDiscovered` no acota el largo); no es alcanzable jugando.
+
+L83 (pedido, verbatim): "suaviza el borde de la niebla". El borde de lo descubierto salía en bloques de 200 m (el límite que L81 ya anotaba).
+
+**Cómo:** la máscara (cuánto oscurece cada celda) pasa al modelo (`fogMask`, con su test) y se difumina con dos pasadas de un núcleo [1 2 1]/4 por eje, con pesos no negativos, de modo que descubrir más mar nunca oscurece ninguna celda (el borde no parpadea al navegar). La pantalla pinta esa máscara en un canvas de un píxel por celda y lo **escala con interpolación**: eso, y no sólo el desenfoque, es lo que quita la escalera. Se reconstruye sólo cuando cambia (celdas descubiertas o posición de un hostil trabado, a 50 m); el resto de los cuadros reutiliza la imagen.
+
+**Un hallazgo en el camino:** el claro alrededor de un hostil trabado (S167-G) no puede pasar por el difuminado, porque son cuatro celdas y el desenfoque las erosiona: medido, un claro de 4 celdas quedaba abierto sólo al 39 %, o sea el enemigo seguía tapado. Se aplica después, como un degradé redondo (abierto del todo a 300 m, de vuelta a la niebla hacia 700 m).
+
+**Medido:** el salto máximo de brillo entre píxeles vecinos cruzando el borde baja de **266** (rectángulos) a **42**. **Un RED que no valía:** con `softness: 0` el smoke seguía pasando, porque la interpolación del navegador ya reparte el borde en una celda; el check distingue «rectángulos» de «imagen escalada», no «con desenfoque» de «sin él». El RED honesto es contra la versión de rectángulos (`HEAD`), que da 266 y falla. El desenfoque en sí lo fijan los 8 tests de `fogMask`.

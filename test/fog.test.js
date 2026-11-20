@@ -130,3 +130,82 @@ test("S167: the defaults are a starting point the player can tune", () => {
   assert.ok([0, 1, "revelado", "contacto"].includes(FOG.rule), "the rule must default to one of the two");
   assert.ok(FOG.contactM > 0, "the contact radius must have a starting value");
 });
+
+/* ------------------------------------------------ a soft edge (the player asked to smooth it) */
+
+import { fogMask } from "../src/model/fog.js";
+
+/** The mask's darkness at a point of the sea, 0 (clear) to 1 (fully fogged). */
+const darknessAt = (mask, point) => {
+  const ix = Math.floor(point.x / mask.cellM) - mask.x0;
+  const iy = Math.floor(point.y / mask.cellM) - mask.y0;
+  return mask.alpha[iy * mask.n + ix];
+};
+
+const litAround = (x, y, radiusM) => revealAround({}, { x, y }, radiusM);
+
+test("fog edge: deep in the lit water the veil is clear, deep in the dark it is solid", () => {
+  const mask = fogMask({ known: litAround(0, 0, 1200), radiusM: 5200, softness: 2 });
+  assert.ok(darknessAt(mask, { x: 0, y: 0 }) < 0.02, "the middle of the lit water is clear");
+  // (3000, 3000) is inside the chart; (4000, 4000) is past its rim and is never painted.
+  assert.ok(darknessAt(mask, { x: 3000, y: 3000 }) > 0.98, "far from anything lit is solid fog");
+});
+
+test("fog edge: the border between lit and dark is a gradient, not a step", () => {
+  const known = litAround(0, 0, 1200);
+  const hard = fogMask({ known, radiusM: 5200, softness: 0 });
+  const soft = fogMask({ known, radiusM: 5200, softness: 2 });
+  // The biggest jump between two neighbouring cells along a line through the edge.
+  const stepOf = (mask) => {
+    let worst = 0;
+    for (let x = -2000; x < 2000; x += mask.cellM) {
+      const a = darknessAt(mask, { x, y: 0 });
+      const b = darknessAt(mask, { x: x + mask.cellM, y: 0 });
+      worst = Math.max(worst, Math.abs(a - b));
+    }
+    return worst;
+  };
+  assert.ok(stepOf(hard) > 0.95, "without softening the edge is a full step, which is what the player saw");
+  assert.ok(stepOf(soft) < 0.45, `softened, no two neighbouring cells may differ by much, the worst step is ${stepOf(soft).toFixed(2)}`);
+});
+
+test("fog edge: softening never hides what is lit, it only feathers the border", () => {
+  // A cell that is lit stays mostly clear at its centre, so a hull in the middle of her own
+  // lit water is never greyed out by the blur.
+  const mask = fogMask({ known: litAround(0, 0, 1200), radiusM: 5200, softness: 2 });
+  for (const x of [-600, -300, 0, 300, 600]) {
+    assert.ok(darknessAt(mask, { x, y: 0 }) < 0.2, `the lit water at x=${x} must stay clear`);
+  }
+});
+
+test("fog edge: lighting more sea never darkens any part of the veil", () => {
+  // Monotonic: discovery only grows, so the fog can only lift. A blur that let a newly lit
+  // cell darken its neighbour would make the edge flicker as the fleet sails.
+  const before = fogMask({ known: litAround(0, 0, 900), radiusM: 5200, softness: 2 });
+  const after = fogMask({ known: revealAround(litAround(0, 0, 900), { x: 800, y: 0 }, 900), radiusM: 5200, softness: 2 });
+  assert.equal(before.n, after.n);
+  for (let i = 0; i < before.alpha.length; i += 1) {
+    assert.ok(after.alpha[i] <= before.alpha[i] + 1e-9, `cell ${i} got darker after more sea was lit`);
+  }
+});
+
+test("fog edge: a hostile in the fight opens a clearing in the veil", () => {
+  const known = litAround(0, 0, 300);
+  const without = fogMask({ known, radiusM: 5200, softness: 2 });
+  const withHole = fogMask({ known, radiusM: 5200, softness: 2, holes: [{ x: 2000, y: 0 }] });
+  assert.ok(darknessAt(without, { x: 2000, y: 0 }) > 0.9, "unlit water is fogged");
+  assert.ok(darknessAt(withHole, { x: 2000, y: 0 }) < 0.2, "a sail in the fight is seen, so the veil opens around her");
+});
+
+test("fog edge: nothing is painted beyond the known sea", () => {
+  const mask = fogMask({ known: {}, radiusM: 5200, softness: 2 });
+  const corner = darknessAt(mask, { x: -mask.cellM * (mask.n / 2 - 1), y: -mask.cellM * (mask.n / 2 - 1) });
+  assert.ok(corner < 0.05, "the far corner of the bounding box lies outside the chart and must stay clear");
+});
+
+test("fog edge: a broken record or radius gives an empty mask, not a crash", () => {
+  for (const args of [{}, { known: null, radiusM: 0 }, { known: "roto", radiusM: NaN }]) {
+    const mask = fogMask(args);
+    assert.ok(mask.n >= 0 && mask.alpha.length === mask.n * mask.n, `a broken input (${JSON.stringify(args)}) must still give a consistent mask`);
+  }
+});

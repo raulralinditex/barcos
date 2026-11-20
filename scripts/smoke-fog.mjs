@@ -108,6 +108,24 @@ const cornerIsDark = (page) =>
     return r + g + b < 120;
   });
 
+/**
+ * The biggest jump in brightness between two neighbouring pixels along the row through the
+ * ship, from just right of her to the edge of the screen: where the lit water meets the fog.
+ * A staircase of 200 m squares jumps by well over 200 in one pixel; a feathered edge spreads
+ * the same change over dozens of pixels.
+ */
+const edgeStep = (page) =>
+  page.evaluate(() => {
+    const ctx = document.querySelector("#sea-canvas").getContext("2d");
+    const dpr = window.devicePixelRatio || 1;
+    const y = Math.round((window.innerHeight / 2) * dpr);
+    const row = ctx.getImageData(Math.round(600 * dpr), y, Math.round(380 * dpr), 1).data;
+    const luma = (k) => row[k * 4] + row[k * 4 + 1] + row[k * 4 + 2];
+    let worst = 0;
+    for (let i = 1; i < row.length / 4; i += 1) worst = Math.max(worst, Math.abs(luma(i) - luma(i - 1)));
+    return worst;
+  });
+
 /* ------------------------- 1: the switch, turned on the way the player does */
 
 const on = await open();
@@ -144,6 +162,8 @@ check(
   `S167-C: the fleet must light the water around it and no more, it lit ${opened?.cells?.length} cells`,
 );
 check(await cornerIsDark(on.page), "S167-B: the water far from the fleet must be painted over by the fog");
+const edge = await edgeStep(on.page);
+check(edge < 90, `S167-B: the edge of the lit water must be soft, the biggest one-pixel jump is ${edge}`);
 
 /* ------------------------- 4: sailing lights more, and keeps what it lit */
 

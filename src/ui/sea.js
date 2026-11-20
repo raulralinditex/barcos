@@ -120,7 +120,7 @@ import {
   currentShipyard,
 } from "../model/world.js";
 import { cameraFor, clampCamera, isFollowingCaptain } from "../model/sea-camera.js";
-import { FOG, fogEnabled, isDiscovered, isVisible, normaliseDiscovered, visibilityRule } from "../model/fog.js";
+import { FOG, fogEnabled, fogMask, isDiscovered, isVisible, normaliseDiscovered, visibilityRule } from "../model/fog.js";
 import { toughnessForLevel } from "../model/levels.js";
 import { canBoard, deckFire } from "../model/boarding.js";
 import {
@@ -1051,36 +1051,19 @@ function drawSea(ctx) {
  */
 function drawFog(ctx) {
   if (!world || !fogEnabled()) return;
-  const known = normaliseDiscovered(world.discovered);
-  if (known.complete) return;
-
-  const size = FOG.cellM;
-  const radius = WORLD.radiusM;
-  const lit = new Set(known.cells);
-  const holes = engagedHostiles();
-
+  const layer = fogLayer();
+  if (!layer.mask.n) return;
+  const { mask, canvas } = layer;
+  const origin = toScreen(mask.x0 * mask.cellM, mask.y0 * mask.cellM);
+  const side = mask.n * mask.cellM * PX_PER_M;
   ctx.save();
-  ctx.fillStyle = "rgba(9,14,22,0.93)";
-  for (let cx = Math.floor(-radius / size); cx <= Math.floor(radius / size); cx += 1) {
-    for (let cy = Math.floor(-radius / size); cy <= Math.floor(radius / size); cy += 1) {
-      if (lit.has(`${cx}:${cy}`)) continue;
-      // Only the cells that actually lie inside the known sea: the chart is a circle, and
-      // painting its bounding box would draw fog over water that does not exist.
-      const centre = { x: cx * size + size / 2, y: cy * size + size / 2 };
-      if (Math.hypot(centre.x, centre.y) > radius + size) continue;
-      // A sail in the fight is seen, so the veil is open around her (S167-G).
-      if (holes.some((hole) => Math.hypot(hole.x - centre.x, hole.y - centre.y) <= size * 1.5)) continue;
-      const a = toScreen(cx * size, cy * size);
-      const b = toScreen(cx * size + size, cy * size + size);
-      const x = Math.min(a.x, b.x);
-      const y = Math.min(a.y, b.y);
-      const w = Math.abs(b.x - a.x) + 1;
-      const h = Math.abs(b.y - a.y) + 1;
-      // Off screen cells cost nothing to skip, and most of them are.
-      if (x + w < 0 || y + h < 0 || x > window.innerWidth || y > window.innerHeight) continue;
-      ctx.fillRect(x, y, w, h);
-    }
-  }
+  // One pixel of the layer is one cell of the grid, and stretching it with smoothing is what
+  // turns the staircase of 200 m squares into a soft edge: the browser interpolates between
+  // the centres of neighbouring cells instead of repeating each one as a block.
+  ctx.imageSmoothingEnabled = true;
+  ctx.imageSmoothingQuality = "high";
+  ctx.globalAlpha = 0.93;
+  ctx.drawImage(canvas, origin.x, origin.y, side, side);
   ctx.restore();
 }
 
@@ -1096,20 +1079,15 @@ function yardKnown(yard) {
  */
 function drawMinimapFog(ctx) {
   if (!world || !fogEnabled()) return;
-  const lit = new Set(normaliseDiscovered(world.discovered).cells);
-  const size = FOG.cellM;
-  const radius = WORLD.radiusM;
-  const holes = engagedHostiles();
+  const layer = fogLayer();
+  if (!layer.mask.n) return;
+  const { mask, canvas } = layer;
   ctx.save();
-  ctx.fillStyle = "rgba(6,10,16,0.9)";
-  for (let cx = Math.floor(-radius / size); cx <= Math.floor(radius / size); cx += 1) {
-    for (let cy = Math.floor(-radius / size); cy <= Math.floor(radius / size); cy += 1) {
-      if (lit.has(`${cx}:${cy}`)) continue;
-      const centre = { x: cx * size + size / 2, y: cy * size + size / 2 };
-      if (holes.some((hole) => Math.hypot(hole.x - centre.x, hole.y - centre.y) <= size * 1.5)) continue;
-      ctx.fillRect(cx * size, cy * size, size + 1, size + 1);
-    }
-  }
+  ctx.imageSmoothingEnabled = true;
+  ctx.imageSmoothingQuality = "high";
+  ctx.globalAlpha = 0.9;
+  // The chart canvas is already in world metres here, so the layer lands where its cells are.
+  ctx.drawImage(canvas, mask.x0 * mask.cellM, mask.y0 * mask.cellM, mask.n * mask.cellM, mask.n * mask.cellM);
   ctx.restore();
 }
 
@@ -1123,6 +1101,38 @@ function engagedWithFleet(encounter) {
   if (encounter?.combat?.status !== "fighting") return false;
   const hulls = [world.ship, ...escorts, ...squadrons.flatMap((squadron) => [squadron.ship, ...(squadron.escorts ?? [])])];
   return hulls.some((hull) => Math.hypot(hull.x - encounter.x, hull.y - encounter.y) <= COMBAT.engageRadiusM);
+}
+
+/**
+ * The fog as a small image, one pixel per cell, rebuilt only when it changes (S167).
+ *
+ * The mask is computed in the model and painted here. It changes when the fleet lights more
+ * sea or when a hostile in the fight moves, so the key is the count of lit cells (discovery
+ * only grows, so the same count is the same sea) plus where each hostile sits to the nearest
+ * 50 m. Everything else, including every frame the camera moves, reuses the same image.
+ */
+let fogLayerCache = { key: "", canvas: null, mask: { n: 0 } };
+
+function fogLayer() {
+  const known = normaliseDiscovered(world.discovered);
+  const holes = engagedHostiles();
+  const key = `${known.cells.length}|${holes.map((hole) => `${Math.round(hole.x / 50)},${Math.round(hole.y / 50)}`).join(";")}`;
+  if (fogLayerCache.key === key && fogLayerCache.canvas) return fogLayerCache;
+  const mask = fogMask({ known, radiusM: WORLD.radiusM, softness: 2, holes });
+  const canvas = fogLayerCache.canvas ?? document.createElement("canvas");
+  canvas.width = Math.max(1, mask.n);
+  canvas.height = Math.max(1, mask.n);
+  const layer = canvas.getContext("2d");
+  const image = layer.createImageData(canvas.width, canvas.height);
+  for (let at = 0; at < mask.alpha.length; at += 1) {
+    image.data[at * 4] = 9;
+    image.data[at * 4 + 1] = 14;
+    image.data[at * 4 + 2] = 22;
+    image.data[at * 4 + 3] = Math.round(mask.alpha[at] * 255);
+  }
+  layer.putImageData(image, 0, 0);
+  fogLayerCache = { key, canvas, mask };
+  return fogLayerCache;
 }
 
 /** The hostiles already in the fight with the fleet: the fog opens a clearing around each. */
