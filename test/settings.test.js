@@ -268,11 +268,16 @@ test("S117: the wreck switch round-trips 1 and 0 like every other setting", asyn
   const { SETTINGS_FIELDS, fieldId } = await import("../src/model/settings.js");
   const switches = SETTINGS_FIELDS.filter((field) => field.control === "switch").map(fieldId);
   // S142 adds the danger switch: the number is painted at sea or it is not, so it is a
-  // check like these three and not a 0..1 number like `combat.autofire`.
+  // check like these three.
   // S167 adds the fog: the switch itself and the rule it obeys, both checks because each is
   // a yes/no the player sets, not a number she dials. Updated with the player's explicit
   // approval ("Actualizar la lista con los dos nuevos"); the assertion stays exact.
+  // S168 adds the two the player named: `combat.showRange` and `combat.autofire` were the
+  // last yes/no fields still drawn as numbers. Updated with her explicit approval; the
+  // assertion stays exact, so a switch that appears or disappears without a decision fails.
   assert.deepEqual(switches, [
+    "combat.showRange",
+    "combat.autofire",
     "sinking.keepWreck",
     "refit.autoSave",
     "voyage.showTravelButton",

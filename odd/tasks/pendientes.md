@@ -77,6 +77,16 @@ Las tres preguntas que bloqueaban el comercio se contestaron en esa ficha (L1-L1
 - `scripts/smoke-escort-hud.mjs` es **flaky**: puede fallar la lectura del minimapa ("S42: the escort is missing") bajo carga y pasar al reintentar. No es una regresión de nada.
 - El árbol de trabajo está limpio: todo lo cerrado hasta S122 está commiteado.
 
+## Abierto: tres smokes rojos que nadie arregló (medidos, sin tocar)
+
+Reproducidos al cerrar S168 (`editores-binarios.md`, L89). Ninguno se tocó: la regla global pide OK explícito por artefacto y son smokes existentes, fuera del alcance de la ficha que los encontró.
+
+1. **`scripts/smoke-settings.mjs:94`** — espera 22 bloques de ajustes y hay 24. Faltan «Niebla» (S167) y «Peligro» (S142) en la cuenta. Ya estaba rojo en `HEAD` antes de S168.
+2. **`scripts/smoke-autofire.mjs:95`** — hace `field.fill("0")` sobre `combat.autofire`, que desde S168 es una casilla: `fill` no aplica y da timeout de 30 s. **Es consecuencia de S168.** Hay que probar los dos estados con `uncheck()`/`check()` y abrir antes la rama `fight`, como ya hace `smoke-shipyard-layout`.
+3. **`scripts/smoke-refit-autosave.mjs:89`** — hace `uncheck()` sobre `refit.autoSave` sin abrir la rama `yard`, y la pantalla abre en `sea`: timeout de 30 s. Ya estaba rojo en `HEAD`.
+
+Patrón común de los dos timeouts, y es la trampa del harness, no del juego: `config.html` abre en la rama `sea`, y los campos de las otras ramas están en el DOM pero **no visibles**. Leer atributos con `evaluate()` no pide visibilidad; hacer `fill`/`check`/`uncheck` sí, y Playwright espera 30 s antes de fallar.
+
 ## Cerrado: las escoltas hacían bolutas (S96)
 
 Reporte (verbatim): "los barcos que siguen a la capitana parece que no siguen las normas de la velocidad, hacen muchas bolutas".

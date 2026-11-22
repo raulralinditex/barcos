@@ -58,25 +58,35 @@ const settings = await browser.newPage({ viewport: { width: 1500, height: 1200 }
 settings.on("pageerror", (err) => errors.push(`settings pageerror: ${err.message}`));
 await settings.goto("http://localhost:8765/config.html", { waitUntil: "networkidle" });
 await settings.waitForTimeout(700);
+// S168: the screen opens on the `sea` branch and `combat` lives under `fight`, so the field is
+// in the DOM but not visible. Reading its attributes did not need it on screen; ticking it
+// does, and Playwright waits 30 s for visibility before failing.
+await settings.click('[data-branch-pick="fight"]');
 
 const field = settings.locator("#field-combat\\.autofire");
 check((await field.count()) === 1, "the settings screen has no automatic-fire field");
-const label = await settings.evaluate(() => {
+// S168: the field is a checkbox now, so it is read as one. A checkbox carries no `min`/`max`
+// and its `value` is always "on"; the 0..1 range it answers to lives in the model, not in
+// these attributes, so the smoke proves the two states by ticking it, not by reading them.
+const state = await settings.evaluate(() => {
   const input = document.querySelector("#field-combat\\.autofire");
   return {
-    value: input?.value,
+    type: input?.type,
+    checked: input?.checked,
     label: input?.closest(".settings-row")?.querySelector(".settings-label")?.textContent?.trim() ?? "",
-    min: input?.min,
-    max: input?.max,
   };
 });
-check(label.value === "1", `the switch must ship on, got "${label.value}"`);
-check(/autom/i.test(label.label), `the field has no readable label: "${label.label}"`);
-check(label.min === "0" && label.max === "1", `the switch is not a two-state field (${label.min}..${label.max})`);
+check(state.type === "checkbox", `the switch must be a checkbox, it is a ${state.type}`);
+check(state.checked === true, "the switch must ship on");
+check(/autom/i.test(state.label), `the field has no readable label: "${state.label}"`);
+await field.uncheck();
+check((await field.isChecked()) === false, "the switch cannot be turned off");
+await field.check();
+check((await field.isChecked()) === true, "the switch cannot be turned back on");
 
 await browser.close();
 
-const result = { errors, yard, label, failures };
+const result = { errors, yard, state, failures };
 console.log(JSON.stringify(result, null, 2));
 
 if (errors.length) failures.push(`console errors: ${errors.join(" | ")}`);

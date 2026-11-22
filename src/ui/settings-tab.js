@@ -121,10 +121,14 @@ function showStatus(message, kind = "ok") {
 
 /**
  * Whether a field is a switch rather than a number (S117). It is declared on the field
- * (`control: "switch"`) instead of guessed from its range: `combat.autofire` has exactly
- * the same 0..1 shape and is deliberately still a number, so a heuristic would quietly
- * change a control the player already knows. The stored value stays the number the model
- * reads; only the control changes.
+ * (`control: "switch"`) instead of guessed from its range, because 0..1 is also the shape of
+ * every percentage and share on this screen: a heuristic on the range would turn a 0.35 into a
+ * checkbox that can only say 0 or 1. What keeps the declaration honest is a test, not this
+ * function: every field that is yes/no by shape (0 to 1 in steps of 1) must declare a switch,
+ * and a switch may only sit on such a field. The player asked for exactly that ("los editores
+ * binarios, hazlos con un check"), which is why `combat.autofire` and `combat.showRange` are
+ * checks now; S117 had kept them as numbers on purpose. The stored value stays the number the
+ * model reads; only the control changes.
  */
 const isSwitch = (field) => field.control === "switch";
 

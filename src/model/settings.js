@@ -61,7 +61,7 @@ export const SETTINGS_FIELDS = [
   { group: "combat", key: "openingDamage", label: "settings.combat.openingDamage", scale: "factor", min: 1, max: 3, step: 0.05, targetKey: "openingDamageBonus" },
   { group: "combat", key: "openingAccuracy", label: "settings.combat.openingAccuracy", scale: "factor", min: 1, max: 2, step: 0.05, targetKey: "openingAccuracyBonus" },
   { group: "combat", key: "ammoReloadPenalty", label: "settings.combat.ammoPenalty", scale: "percent", min: 0, max: 1, step: 0.05 },
-  { group: "combat", key: "showRange", label: "settings.combat.showRange", scale: "factor", min: 0, max: 1, step: 1 },
+  { group: "combat", key: "showRange", label: "settings.combat.showRange", scale: "factor", min: 0, max: 1, step: 1, control: "switch" },
   { group: "combat", key: "engageRadiusM", label: "settings.combat.engage", scale: "metres", min: 100, max: 2000, step: 20 },
   { group: "combat", key: "damageScale", label: "settings.combat.damage", scale: "factor", min: 1, max: 40, step: 1 },
   { group: "combat", key: "baseAccuracy", label: "settings.combat.accuracy", scale: "percent", min: 0.1, max: 1, step: 0.05 },
@@ -127,7 +127,7 @@ export const SETTINGS_FIELDS = [
   { group: "bars", key: "minShare", label: "settings.bars.minShare", scale: "percent", min: 0, max: 1, step: 0.05, target: "bars", targetKey: "minShare" },
 
   // S88: the automatic-fire switch was a checkbox in the fleet panel; it is a setting now.
-  { group: "combat", key: "autofire", label: "settings.combat.autofire", scale: "factor", min: 0, max: 1, step: 1, target: "autofire", targetKey: "enabled" },
+  { group: "combat", key: "autofire", label: "settings.combat.autofire", scale: "factor", min: 0, max: 1, step: 1, control: "switch", target: "autofire", targetKey: "enabled" },
 
   { group: "sales", key: "share", label: "settings.sales.share", scale: "percent", min: 0, max: 1, step: 0.05, target: "sales", targetKey: "share" },
 
