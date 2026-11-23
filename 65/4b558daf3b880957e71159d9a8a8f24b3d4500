@@ -1,0 +1,27 @@
+test/purse-survives-loss.test.js
+  s_33bdafc1f5b8de::t_b9228501534964 1-64
+scripts/smoke-gameover-return.mjs
+  s_33bdafc1f5b8de::t_3364a82111deee 88-94
+odd/tasks/la-bolsa-sobrevive.md
+  s_33bdafc1f5b8de::t_d8085215b60f97 1-41
+src/ui/sea.js
+  s_33bdafc1f5b8de::t_6b8e5c710811d1 65,391-399,3216-3221
+src/model/loss.js
+  s_33bdafc1f5b8de::t_cb53f36ef41879 1-46
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.6",
+  "base_commit_sha": "654b558daf3b880957e71159d9a8a8f24b3d4500",
+  "prompts": {},
+  "sessions": {
+    "s_33bdafc1f5b8de": {
+      "agent_id": {
+        "tool": "pi",
+        "id": "01a2054f-ba19-7336-a8f7-74f16ecc2af7",
+        "model": "deepseek-v4.1-flash_high"
+      },
+      "human_author": "Raul Ripoll <raulral@ext.inditex.com>"
+    }
+  }
+}
