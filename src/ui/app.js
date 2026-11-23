@@ -83,7 +83,9 @@ import {
 } from "../model/commerce.js";
 import { GAME_TIME, burnSupply, supplySeconds } from "../model/game-time.js";
 import { currentShipyard, deserializeWorld, shipyardZone } from "../model/world.js";
-import { levelProgressFromGameSave } from "../model/levels.js";
+// S171: the progress the shipyard shows is the mode's answer, not a rule of its own. The
+// saved record names its mode; a record with none plays the shipped one, as it always did.
+import { modeById } from "../model/modes/index.js";
 import { COMMODITIES, SHIPYARDS, shipyardById } from "../data/naval-data.js";
 // S133: the yard selector of the title bar, the editable names and the automatic voyage.
 import { arriveAt, voyageButtonVisible, voyageQuote } from "../model/voyage.js";
@@ -1544,7 +1546,18 @@ function renderYardTitle(yard) {
  */
 function renderLevelChip() {
   if (!els.brandLevel) return;
-  const { level, done, target } = levelProgressFromGameSave(readFortSave());
+  const record = readFortSave();
+  // S171: the chip asks the mode the save is playing. A record with no mode — every save
+  // written before the refactor — asks "batalla por nivel", which is what it was played as.
+  const mode = modeById(record?.mode);
+  const progress = mode.progressFromSave(record);
+  // A mode with no level of her own has no chip to show.
+  if (!progress) {
+    els.brandLevel.hidden = true;
+    return;
+  }
+  els.brandLevel.hidden = false;
+  const { level, done, target } = progress;
   els.brandLevel.textContent = t("shipyard.level", { level });
   els.brandLevel.title = done > 0
     ? t("shipyard.level.title", { level, done, target })

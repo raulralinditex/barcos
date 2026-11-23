@@ -10,7 +10,8 @@
  */
 
 import { ZONES, HULLS, SHIPYARDS, hullById, shipyardAt } from "../data/naval-data.js";
-import { enemiesPerZone, normaliseLevel, victoriesForLevel } from "./levels.js";
+import { enemiesPerZone, normaliseLevel } from "./levels.js";
+import { DEFAULT_MODE_ID, modeById, modeOf } from "./modes/index.js";
 import { createEscort, escortStation, stepEscort } from "./formation.js";
 import { seaSquadrons, shipsSailingAtSea, squadrons } from "./fleet.js";
 import { referenceSpeedKn } from "./ship-model.js";
@@ -499,8 +500,12 @@ function spawnOne(rnd, ship, type, zone, id) {
  * With a fleet that holds more than one captain afloat, every one of them puts to sea at
  * once (S155-C): the fleet's own captain keeps the helm, and each other squadron takes her
  * own station a little apart from her, so two commands do not start inside each other.
+ *
+ * `modeId` is the game the player picked (S171). It defaults to the shipped one, which is
+ * what every caller written before modes existed keeps, and it is stamped on the world so
+ * the sea and the saves know which rule they are playing.
  */
-export function createWorld(seed, ship, gold = 0, fleet = null) {
+export function createWorld(seed, ship, gold = 0, fleet = null, modeId = DEFAULT_MODE_ID) {
   const world = {
     seed: seed >>> 0,
     rngState: seed >>> 0,
@@ -525,6 +530,11 @@ export function createWorld(seed, ship, gold = 0, fleet = null) {
     /** The rest of the fleet, in formation behind the captain (S36). */
     escorts: [],
     encounters: [],
+    /**
+     * The mode this sea plays (S171). Every world carries her own, so a save written before
+     * modes existed opens as "batalla por nivel", which is what it was played as.
+     */
+    mode: modeById(modeId).id,
     /** The level the sea is on, the sails it owns, and the victories it has won (S140/S150). */
     level: 1,
     levelEnemies: [],
@@ -566,9 +576,9 @@ export function createWorld(seed, ship, gold = 0, fleet = null) {
       order: { throttle: 0, turn: 0 },
     };
   });
-  // The first level is seeded here, because the level is the only source of enemies
-  // (S140): a fresh sea holds exactly the level 1 quota.
-  return updateWorld(seedLevel(world, 1), {}, 0);
+  // A fresh sea opens with the mode's own start (S171): before modes, this was always the
+  // level 1 quota. The mode decides now, and "batalla por nivel" decides exactly that.
+  return updateWorld(modeOf(world).seed(world), {}, 0);
 }
 
 /**
@@ -756,8 +766,13 @@ export function updateWorld(world, input = {}, dt = 0) {
   // cada nivel habra un maximo de enemigos por zona, y se crearan los enemigos de la misma
   // zona que hayan sido undidos o capturados". So the sail you beat is replaced by another
   // of her own water, and no water ever grows past the cap, however long you sail it.
+  //
+  // S171: the cap is the mode's, not the level's. "Batalla por nivel" answers with the
+  // level curve, which is what this line always did; a mode with a different rule answers
+  // with hers, and `updateWorld` never learns which one is playing.
+  const mode = modeOf(world);
   const zone = zoneAtRadius(Math.hypot(ship.x, ship.y));
-  const cap = enemiesPerZone(level);
+  const cap = mode.enemiesPerZone(world);
   const here = encounters.filter((e) => e.type === "enemy" && e.zoneId === zone.id).length;
   // An id is never handed out twice, so the sea cannot hold two sails that answer to the same
   // name: a save whose `nextId` sits behind a live sail would otherwise spawn her twin.
@@ -765,7 +780,7 @@ export function updateWorld(world, input = {}, dt = 0) {
   for (let i = here; i < cap; i += 1) {
     while (finished.has(nextId)) nextId += 1;
     const id = nextId;
-    encounters.push({ ...spawnOne(rnd, ship, "enemy", zone, id), level });
+    encounters.push({ ...spawnOne(rnd, ship, "enemy", zone, id), ...mode.stamp(world) });
     levelEnemies.push(id);
     finished.add(id);
     nextId += 1;
@@ -805,17 +820,11 @@ export function updateWorld(world, input = {}, dt = 0) {
     discovered: revealFleet(world.discovered, [ship, ...escorts, ...squadrons.flatMap((squadron) => [squadron.ship, ...(squadron.escorts ?? [])])]),
   };
 
-  // A level is cleared by victories, not by an empty sea (S150). The player chose "Por
-  // cantidad de victorias" (verbatim), so the level advances when the fights it asks for are
-  // won, whatever is still afloat. Seeding the next level resets the count, so a second tick
-  // cannot advance it twice.
-  //
-  // Before S150 the level advanced when its sails vanished from `encounters`, and a sail that
-  // merely drifted past `despawnRadiusM` vanished: a captain who never fired a shot climbed
-  // levels while the sea kept filling. That is the bug the player reported (verbatim): "los
-  // barcos enemigos siguen apareciendo con el tiempo sin ningun limite".
-  if (levelVictories >= victoriesForLevel(level)) return seedLevel(next, level + 1);
-  return next;
+  // S171: whether the sea advances is the mode's question, not the level's. "Batalla por
+  // nivel" answers exactly what the two lines above used to do — advance when the victories
+  // the level asks for are won — and `advance` returns the next world, or null to stay.
+  const advanced = mode.advance(next);
+  return advanced ?? next;
 }
 
 /**
