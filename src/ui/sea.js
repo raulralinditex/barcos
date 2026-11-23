@@ -62,6 +62,7 @@ import { ARRIVAL_NOTICE_KEY } from "../model/arrival-notice.js";
 import { normaliseGold } from "../model/economy.js";
 import { awardHold, bindGameTime, defeatedHold, enemyHoldFor, normaliseMarkets, recoverMarkets } from "../model/commerce.js";
 import { isWreck, ownWreck } from "../model/sinking.js";
+import { purseAfterLoss } from "../model/loss.js";
 import { isOutOfAmmo } from "../model/rearm.js";
 import { bootSettings } from "../model/settings-storage.js";
 import { bootCatalogue } from "../model/catalogue-storage.js";
@@ -384,6 +385,15 @@ function readChosenMode() {
     return typeof stored === "string" && stored !== "" ? stored : undefined;
   } catch {
     return undefined;
+  }
+}
+
+/** The `barcos:game:v1` record as it stands, or null when it cannot be read (S180). */
+function readGameRecord() {
+  try {
+    return JSON.parse(localStorage.getItem(GAME_KEY) ?? "null");
+  } catch {
+    return null;
   }
 }
 
@@ -3203,7 +3213,12 @@ els.gameoverBack.addEventListener("click", () => {
       : removeShip({ ...fleet, ships: alive }, fleet?.captainId);
     localStorage.setItem(FLEET_KEY, serializeFleet(remaining));
     localStorage.removeItem(SHIP_KEY);
-    localStorage.removeItem(GAME_KEY);
+    // S180: the voyage dies, the purse does not. The player reported it (verbatim): "despues
+    // de que se hunde la capitana, los doblones desaparecen". Removing the whole record took
+    // the gold with it — 50,000 came back as the 12,000 of a new game — because the purse
+    // lives in that same record. What a lost voyage erases is the sea; the fort and the
+    // markets the player built in the shipyard stay as they were.
+    localStorage.setItem(GAME_KEY, JSON.stringify(purseAfterLoss(readGameRecord())));
   } catch {
     /* nothing to remove */
   }

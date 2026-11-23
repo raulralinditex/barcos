@@ -85,8 +85,13 @@ try {
   );
 
   // The unload handler used to write the dead voyage back on the way out, which is what put
-  // the player at the sinking point on the next sail and brought the dialog back.
-  check(back.game === null, "S175: the dead voyage must not be written again on the way out");
+  // the player at the sinking point on the next sail and brought the dialog back. S180 keeps
+  // the purse in that record, so what must be gone is the SEA, not the record itself.
+  const record = back.game ? JSON.parse(back.game) : null;
+  check(record !== null, "S180: the record must survive so the purse can");
+  check(record?.world === undefined, "S175: the dead sea must not be written back");
+  check(record?.combat === undefined, "S175: the dead fight must not be written back");
+  check(record?.gold === 5000, `S180: the purse must survive the loss, it reads ${record?.gold}`);
 
   /* ------------------- 4. a new ship sails from the shipyard, not from the wreck */
 
