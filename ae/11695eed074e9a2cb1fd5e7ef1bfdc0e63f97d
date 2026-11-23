@@ -1,0 +1,30 @@
+src/model/commerce.js
+  s_33bdafc1f5b8de::t_3243072e034387 438-443,447-448,454,458
+  s_33bdafc1f5b8de::t_0355993f754982 357-364,376,399-407
+  s_33bdafc1f5b8de::t_b5c048f46701d7 368-375,377-398
+  s_33bdafc1f5b8de::t_0ecebbf0faedde 295,301,303-333,340,348-353,366-367
+test/prize-value.test.js
+  s_33bdafc1f5b8de::t_150e9b4ef0571e 53-55,58
+  s_33bdafc1f5b8de::t_59927abc1d15dd 1-40,43,45-52,56-57,59-62,66-124
+  s_33bdafc1f5b8de::t_aad6a73633b950 41-42,44,63-65
+test/hold-capacity.test.js
+  s_33bdafc1f5b8de::t_75a4bed5c10ed5 1-92
+odd/tasks/botin-vale-oro-no-peso.md
+  s_33bdafc1f5b8de::t_b646d80f9613ac 1-51
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.6",
+  "base_commit_sha": "ae11695eed074e9a2cb1fd5e7ef1bfdc0e63f97d",
+  "prompts": {},
+  "sessions": {
+    "s_33bdafc1f5b8de": {
+      "agent_id": {
+        "tool": "pi",
+        "id": "01a2054f-ba19-7336-a8f7-74f16ecc2af7",
+        "model": "deepseek-v4.1-flash_high"
+      },
+      "human_author": "Raul Ripoll <raulral@ext.inditex.com>"
+    }
+  }
+}
