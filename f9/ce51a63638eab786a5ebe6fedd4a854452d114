@@ -1,0 +1,36 @@
+src/ui/app.js
+  s_33bdafc1f5b8de::t_235decdce5ce35 86-88,1549-1560
+src/model/modes/index.js
+  s_33bdafc1f5b8de::t_73624004664063 1-46,62-75
+  s_33bdafc1f5b8de::t_d4d9559917fc17 47-61
+odd/tasks/modos-de-juego.md
+  s_33bdafc1f5b8de::t_8040f8594b1d90 1-41
+test/modes.test.js
+  s_33bdafc1f5b8de::t_29fff45022e0d9 1-21,23-34,38,42-44,48-73,75-78,80-81,83-87,90,92-97
+  s_33bdafc1f5b8de::t_c6ce0316a6f5c3 22,45-47
+  s_33bdafc1f5b8de::t_b34586ad3a5734 35-37,39-41,82,88,91
+  s_33bdafc1f5b8de::t_3208d9afa1cee0 74,79,89
+src/model/world.js
+  s_33bdafc1f5b8de::t_e9da5c3ed46617 579-581,769-773,775,783,823-827
+  s_33bdafc1f5b8de::t_ac035fb50c30bb 13
+  s_33bdafc1f5b8de::t_caebd835c66423 14,503-506,508,537
+  s_33bdafc1f5b8de::t_67952328a3d6c1 533-536
+src/model/modes/by-level.js
+  s_33bdafc1f5b8de::t_3ca5d4f385a0e9 1-102
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.6",
+  "base_commit_sha": "f9ce51a63638eab786a5ebe6fedd4a854452d114",
+  "prompts": {},
+  "sessions": {
+    "s_33bdafc1f5b8de": {
+      "agent_id": {
+        "tool": "pi",
+        "id": "01a2054f-ba19-7336-a8f7-74f16ecc2af7",
+        "model": "deepseek-v4.1-flash_high"
+      },
+      "human_author": "Raul Ripoll <raulral@ext.inditex.com>"
+    }
+  }
+}
