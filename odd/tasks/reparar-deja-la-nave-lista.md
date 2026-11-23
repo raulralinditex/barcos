@@ -32,4 +32,10 @@ L102 (cierre). **`npm test` 1071/1071** (1060 más 11 nuevos). Smokes en 0: `sea
 
 **Un defecto real que el test encontró en mi propio código**: `Math.ceil(total - 1e-9)` devuelve **`-0`** cuando no se compra nada, y `assert.equal(-0, 0)` falla en `strict`. Se arregló con `Math.max(0, ...)`, que además es lo correcto: un precio nunca es negativo.
 
-**Un fallo previo, ajeno a S174 y no tocado**: `scripts/smoke-auto-repair.mjs` está **rojo en `HEAD` limpio** (`git stash -u` verificado). Espera `[40, 30, 42]` de condiciones de casco y lee `[40, 80, 42]`: el casco de la capitana queda en 80. No tiene relación con este cambio (S174 no toca la condición del casco) y se reporta, no se arregla sin decisión del jugador.
+**Un fallo previo, ajeno a S174, reportado y después arreglado** (el jugador dijo "arreglalo"): `scripts/smoke-auto-repair.mjs` estaba **rojo en `HEAD` limpio** (`git stash -u` verificado). Esperaba `[40, 30, 42]` de condiciones de casco y leía `[40, 80, 42]`.
+
+**Diagnóstico**: el defecto estaba en el **fixture**, no en el código. `toRuntimeShip` deja `yardId` sin definir y `yardOf` lo resuelve al puerto de casa, así que las dos naves sembradas (`staleCaptain` y `escort`) quedaban **amarradas**: la escolta nunca entraba al escuadrón, su `combat` nunca se construía, y su daño vivo nunca llegaba a la hoja de flota. Medido con un `console.log` inyectado por `page.route` sobre `sea.js` sin tocar el fichero: `writeFleetSave` veía `escorts[0].combat === undefined`.
+
+**Arreglo**: `yardId: null` en las dos naves que deben zarpar. `ashore` se queda amarrada a propósito, que es lo que ese caso prueba.
+
+**RED honesto del arreglo**: quitando del merge la línea que trae el daño vivo (`...(ship.condition ? ...)`), el smoke vuelve a fallar con `[80, 80, 42]` contra `[40, 30, 42]`. Restaurado con `cmp` verificado.

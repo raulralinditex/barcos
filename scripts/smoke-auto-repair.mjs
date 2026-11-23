@@ -47,8 +47,12 @@ try {
   // Live combat damage wins over stale fleet sheets for sailing hulls; ashore
   // damage also remains unchanged until its own repair button is pressed.
   const livePage = await browser.newPage();
-  const staleCaptain = { ...ship, condition: { ...ship.condition, hull: 80 } };
-  const escort = { ...staleCaptain, id: "live-escort", name: "Escort" };
+  // `toRuntimeShip` leaves `yardId` unset and `yardOf` resolves that to the home yard, so a
+  // hull seeded this way is moored: the escort never joins the squadron, her live combat is
+  // never built, and her damage never reaches the fleet sheet. Both sailing hulls must be
+  // under way for this smoke to test the merge instead of its own fixture.
+  const staleCaptain = { ...ship, yardId: null, condition: { ...ship.condition, hull: 80 } };
+  const escort = { ...staleCaptain, id: "live-escort", name: "Escort", yardId: null };
   const ashore = { ...ship, id: "ashore", name: "Ashore", sails: false };
   const liveCaptain = { ...ship.condition, hull: 40 };
   const liveEscort = { ...ship.condition, hull: 30 };
