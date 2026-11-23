@@ -1,0 +1,21 @@
+scripts/smoke-own-wreck.mjs
+  s_33bdafc1f5b8de::t_0a48fff020b210 140-191
+odd/tasks/pecio-propio.md
+  s_33bdafc1f5b8de::t_9f9db42bc5f26d 47-52
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.6",
+  "base_commit_sha": "a52e35705495addcf4a194f5615f0387b420f345",
+  "prompts": {},
+  "sessions": {
+    "s_33bdafc1f5b8de": {
+      "agent_id": {
+        "tool": "pi",
+        "id": "01a2054f-ba19-7336-a8f7-74f16ecc2af7",
+        "model": "deepseek-v4.1-flash_high"
+      },
+      "human_author": "Raul Ripoll <raulral@ext.inditex.com>"
+    }
+  }
+}
