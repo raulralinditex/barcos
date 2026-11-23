@@ -42,7 +42,7 @@ import { bootCatalogue } from "../model/catalogue-storage.js";
 import { withShipSailing, withShipYard } from "../model/fleet.js";
 import { nextImageIndex, shipImagePaths } from "../model/ship-image.js";
 import {
-  addShip,
+  addCaptain,
   captainShip,
   captainYardId,
   deserializeFleet,
@@ -55,6 +55,7 @@ import {
   setCaptain,
   squadrons,
   tradingShip,
+  handoverTargets,
   withShipCommand,
 } from "../model/fleet.js";
 import { conditionOf, damagedShips, priceWithPurse, repairCost, repairFleetShip, repairReport } from "../model/repair.js";
@@ -1213,7 +1214,11 @@ function launch() {
   // combat record rather than replacing the sea save with a home-port start.
   state.gold -= ship.price.total;
   const previousCaptainId = fleet.captainId;
-  fleet = addShip(fleet, runtime);
+  // S179: one captain per shipyard. `addCaptain` gives the new hull to the captain of this
+  // yard when there is one, and takes the yard's command when there is none. `addShip` used
+  // to be called here, and it stole the helm of the whole fleet on every purchase: two hulls
+  // bought in the same yard left only one captain and no captain blocks on screen.
+  fleet = addCaptain(fleet, runtime);
   const previous = fleet.ships.find((entry) => entry.id === previousCaptainId);
   if (previous?.sails === false && previous.yardId === null) {
     fleet = withShipYard(fleet, previous.id, runtime.yardId);
@@ -2422,7 +2427,10 @@ function fleetRow(ship, captain, otherCaptains = []) {
   const sails = isCaptain || ship.sails !== false;
   // A hull can be handed to another captain of this same yard (S155-B/H): only one that is
   // here, and never herself. With nobody to hand her to, there is no control at all.
-  const targets = otherCaptains.filter((entry) => entry && entry.id !== captain?.id);
+  // S178: only the captains this hull can really be handed to. The model refuses a move
+  // across the sea, and offering it left the player with a select that reset itself and no
+  // explanation — which is what she reported as "no funciona".
+  const targets = handoverTargets(localFleet(), ship.id, ship.yardId ?? null);
   const handover = !isCaptain && targets.length > 0
     ? `<select class="fleet-move" data-move="${ship.id}" aria-label="${t("fleet.move", { name: ship.name })}" title="${t("fleet.move", { name: ship.name })}">
             <option value="">${t("fleet.move.placeholder")}</option>

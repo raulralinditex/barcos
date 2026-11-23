@@ -68,7 +68,16 @@ try {
   await page.click("#launch-btn");
   const purchase = await page.evaluate(() => ({ fleet: JSON.parse(localStorage.getItem("barcos:fleet:v1")), game: JSON.parse(localStorage.getItem("barcos:game:v1")) }));
   const bought = purchase.fleet.ships.find((s) => s.name === "Nueva");
-  check(bought?.yardId === "cala-del-abismo" && purchase.fleet.captainId === bought?.id, "S130 C: new captain is launched at the current yard");
+  // S130 C keeps its claim: the hull is launched where the player is, not at home.
+  check(bought?.yardId === "cala-del-abismo", "S130 C: the new hull is launched at the current yard");
+  // S179 changed who commands her. The player's rule (verbatim): "Cualquier capitana
+  // cuenta" — the visiting captain already commands this yard, so the new hull joins her
+  // instead of taking the helm. Updated with her explicit approval.
+  const visitor = purchase.fleet.ships.find((entry) => entry.id === "captain");
+  check(
+    bought?.commandId === visitor?.id && purchase.fleet.captainId === visitor?.id,
+    `S179: the purchase joins the captain already in this yard, got commandId=${bought?.commandId}`,
+  );
   await page.click('.screen-tab[data-screen="mercado"]');
   check(!(await values()).includes("spare"), "S130 C/G: purchase does not reset the screen to the home yard");
 

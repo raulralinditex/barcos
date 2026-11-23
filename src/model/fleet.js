@@ -147,6 +147,28 @@ export function captainAt(fleet, yardId) {
   return captains(fleet).find((captain) => yardOf(captain) === yardId) ?? null;
 }
 
+/**
+ * The captains a hull can be handed to, and only those (S178).
+ *
+ * The player reported that the "hand her to" control did nothing. The model was right to
+ * refuse a move across the sea (S155-B), but the screen offered it anyway, so the only
+ * feedback was a select that reset itself. This is the same rule the model enforces, asked
+ * in advance: same place, not her own captain, never herself.
+ */
+export function handoverTargets(fleet, shipId, yardId = null) {
+  const ships = Array.isArray(fleet?.ships) ? fleet.ships : [];
+  const ship = ships.find((entry) => entry && entry.id === shipId);
+  if (!ship) return [];
+  // A hull that is a captain is not handed anywhere: she commands herself.
+  if (ships.some((entry) => entry && entry.id === shipId && (entry.commandId === entry.id))) return [];
+  const here = yardId ?? yardOf(ship);
+  return captains(fleet).filter((captain) => {
+    if (!captain || captain.id === shipId) return false;
+    if (captain.id === ship.commandId) return false;
+    return yardOf(captain) === here;
+  });
+}
+
 /** Transfer an escort only when she and the target captain are in the same place. */
 export function withShipCommand(fleet, shipId, captainId) {
   const ships = Array.isArray(fleet?.ships) ? fleet.ships : [];
@@ -157,10 +179,35 @@ export function withShipCommand(fleet, shipId, captainId) {
   return { ...fleet, ships: ships.map((entry) => entry === ship ? { ...ship, commandId: captainId } : entry) };
 }
 
-/** Add a captain without changing which captain is selected for the fleet. */
+/**
+ * Add a hull bought at a shipyard (S179): one captain per yard, and a purchase never steals
+ * another's command.
+ *
+ * The player reported it (verbatim): "ahora solo puedo tener una capitana, se supone que puedo
+ * tener una capitana por cada astillero". `addShip` wrote `captainId: ship.id` with no
+ * `commandId`, so the newest hull took the fleet's helm and the previous one stopped being a
+ * captain at all — `captains()` recognises a captain by `commandId === id`.
+ *
+ * Her decision (verbatim): "Se suma a la capitana del astillero". A hull bought where a
+ * captain already commands becomes one of her hulls; bought where there is none, she takes
+ * that yard's command herself, and the fleet's own captain is left alone.
+ */
 export function addCaptain(fleet, ship) {
-  const added = addShip(fleet, { ...ship, commandId: ship.id });
-  return { ...fleet, ...added, captainId: fleet?.captainId ?? ship.id };
+  const ships = Array.isArray(fleet?.ships) ? fleet.ships : [];
+  const here = yardOf(ship);
+  // The captain of this yard, if any. A yard with one captain gives every new hull to her,
+  // which is exactly what keeps "one captain per shipyard" true as the fleet grows.
+  const existing = captains(fleet).find((captain) => yardOf(captain) === here) ?? null;
+  const commandId = existing?.id ?? ship.id;
+  const added = { ...ship, commandId };
+  const next = [...ships, added];
+  // The fleet's own captain is who the player sails. A purchase only takes the helm when the
+  // fleet has none, or when she is the first captain of a yard nobody commanded before and
+  // the fleet's captain is not in the fleet any more.
+  const captainId = fleet?.captainId && next.some((entry) => entry.id === fleet.captainId)
+    ? fleet.captainId
+    : added.id;
+  return { ...fleet, ships: next, captainId };
 }
 
 /**
