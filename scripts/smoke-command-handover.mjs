@@ -21,8 +21,12 @@ const design = buildShip({
   days: 45,
 }, 12000);
 if (!design?.feasible) throw new Error("smoke setup failed: ship is not feasible");
-const captain = { ...toRuntimeShip(design, { name: "Flagship" }), id: "smoke-captain" };
-const escort = { ...toRuntimeShip(design, { name: "Escort" }), id: "smoke-escort" };
+// S170-B: the two hulls are at sea, not moored. `toRuntimeShip` leaves `yardId` unset and
+// `yardOf` resolves that to the home yard, so the escort was never in the squadron and the
+// handover had nobody to hand the helm to. Both hulls must be under way for this smoke to
+// test the handover instead of its own fixture.
+const captain = { ...toRuntimeShip(design, { name: "Flagship" }), id: "smoke-captain", yardId: null };
+const escort = { ...toRuntimeShip(design, { name: "Escort" }), id: "smoke-escort", yardId: null };
 const world = {
   v: 1, seed: 424242, rngState: 424242, nextId: 900, gold: 0, timeS: 0,
   ship: { x: 2200, y: 1200, heading: 0, currentSpeedKn: 0, speedKn: captain.speedKn },

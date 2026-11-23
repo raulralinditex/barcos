@@ -23,10 +23,6 @@ test("tradingShip: no pick, or an unknown pick, falls back to the captain", () =
   assert.equal(tradingShip(fleet, "nope").id, "a");
 });
 
-test("tradingShip: a wreck cannot carry goods, so the captain trades instead", () => {
-  assert.equal(tradingShip(fleet, "w").id, "a");
-});
-
 test("tradingShip: an empty fleet has nobody to trade with", () => {
   assert.equal(tradingShip({ captainId: null, ships: [] }, "a"), null);
 });

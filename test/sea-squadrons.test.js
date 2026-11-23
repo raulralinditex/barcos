@@ -56,7 +56,6 @@ test("S155-C: the fleet names every squadron that is afloat, and only those", ()
       hull("a-escort", { commandId: "a" }),
       hull("b", { commandId: "b" }),
       hull("moored", { commandId: "b", yardId: "puerto-casa" }),
-      hull("wreck", { commandId: "b", wreck: true }),
     ],
   };
 
@@ -64,7 +63,7 @@ test("S155-C: the fleet names every squadron that is afloat, and only those", ()
 
   assert.deepEqual(afloat.map((squadron) => squadron.captain.id), ["a", "b"]);
   assert.deepEqual(afloat[0].ships.map((ship) => ship.id), ["a", "a-escort"]);
-  // A hull moored at a yard, or one kept as a wreck, does not sail with her captain.
+  // A hull moored at a yard does not sail with her captain.
   assert.deepEqual(afloat[1].ships.map((ship) => ship.id), ["b"]);
 });
 

@@ -88,13 +88,13 @@ const shown = {
 };
 check(shown.rows >= 20, `the screen shows only ${shown.rows} values`);
 // Fort reinforcement (S100/S102) adds its own block to the settings screen, and the trade
-// brings two more (S113, S117): the sinking switch and the market prices. The automatic
-// refit adds "Reforma" and the yards' own markets add one block of prices per yard.
-// S140 adds the levels block ("Niveles").
-check(shown.groups.length === 22, `expected twenty-two blocks, got ${shown.groups.join(", ")}`);
+// brings two more (S113): the market prices and the yards' own markets. The automatic
+// refit adds "Reforma". S140 adds the levels block ("Niveles"). S169 removes the sinking
+// block with the rule it tuned, so the count is one lower than it was.
+check(shown.groups.length === 23, `expected twenty-three blocks, got ${shown.groups.join(", ")}`);
 check(
-  shown.groups.some((name) => /Naufragio/i.test(name)) && shown.groups.some((name) => /Comercio/i.test(name)),
-  `the sinking and trade blocks must be on screen, got ${shown.groups.join(", ")}`,
+  shown.groups.some((name) => /Comercio/i.test(name)),
+  `the trade block must be on screen, got ${shown.groups.join(", ")}`,
 );
 // S140: the level curve is a block of its own, with its four numbers on screen.
 check(
@@ -108,13 +108,10 @@ check(
 // No group heading may reach the player as a raw key.
 check(!shown.groups.some((name) => /^settings\./.test(name)), `a raw group key is on screen: ${shown.groups.join(", ")}`);
 
-// S117: the wreck switch is a checkbox, off by default, and it stores a 1 or a 0.
-const wreckSwitch = await screen.locator("#field-sinking\\.keepWreck").getAttribute("type");
-check(wreckSwitch === "checkbox", `the wreck switch must be a checkbox, it is a ${wreckSwitch}`);
-check(
-  (await screen.locator("#field-sinking\\.keepWreck").isChecked()) === false,
-  "the wreck switch ships off, which is the game as it always played",
-);
+// S169: the wreck switch is gone from the screen with the rule it tuned. The screen must not
+// offer it, and no field may sit in a block that no longer exists.
+const wreckSwitch = await screen.locator("#field-sinking\\.keepWreck").count();
+check(wreckSwitch === 0, `the removed wreck switch is still on the screen (${wreckSwitch} found)`);
 // S113: every market price is on the screen, with its label resolved.
 const marketRows = await screen.locator('.settings-row[data-field-id^="commerce."]').count();
 check(marketRows === 8, `expected eight trade fields, got ${marketRows}`);

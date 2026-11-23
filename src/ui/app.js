@@ -93,7 +93,7 @@ import {
   withYardName,
   yardDisplayName,
 } from "../model/shipyard-names.js";
-import { floatsAgain, isWreck, refloatCost } from "../model/sinking.js";
+import { isWreck } from "../model/sinking.js";
 import { rearmQuote, rearmShip } from "../model/rearm.js";
 import { REARM } from "../model/rearm.js";
 // S159-H: a hull with no banks of oars is offered no rowers at all.
@@ -1168,7 +1168,7 @@ function autoSaveRefit() {
   // A refit is a presence action (S133-C): a visit shows the hull, it does not touch her.
   if (visitingYard()) return false;
   const target = localFleet().ships.find((entry) => entry.id === refitId);
-  if (!target || isWreck(target)) return false;
+  if (!target) return false;
   const quote = quoteRefit(target, currentConfig(), state.gold);
   const before = buildShip(configFromShip(target))?.config;
   if (!quote?.feasible || !before) return false;
@@ -1369,7 +1369,7 @@ function showScreen(next) {
   // chips and her button states must not leak the mode the room came from, so the
   // render runs here as well with the refit target already cleared.
   // The market trades with the selected hull, and the rig beside it is that hull's rig:
-  // entering with nobody selected (or a wreck) selects the captain first.
+  // entering with nobody selected selects the captain first.
   if (next === "mercado") ensureMarketSelection();
   // The title bar's selector and the voyage offer belong to every room (S133-A).
   renderYardSelector();
@@ -1930,7 +1930,7 @@ const commodityNameKey = (commodityId) =>
 function renderMarketShipPicker(ship) {
   if (!els.marketShip) return;
   els.marketShip.textContent = "";
-  for (const entry of localFleet().ships.filter((candidate) => !isWreck(candidate))) {
+  for (const entry of localFleet().ships) {
     const option = document.createElement("option");
     option.value = entry.id;
     option.textContent = entry.name ?? entry.hullName ?? entry.id;
@@ -2188,7 +2188,7 @@ function canSailOut() {
   // Under way there is nothing to refuse: she goes back to the voyage she was on (S163-F).
   if (captainIsUnderWay()) return true;
   const local = localFleet();
-  return !visitingYard() && local.ships.some((ship) => ship.id === captain?.id && !isWreck(ship));
+  return !visitingYard() && local.ships.some((ship) => ship.id === captain?.id);
 }
 
 els.setSailBtn.addEventListener("click", () => {
@@ -2361,7 +2361,7 @@ function renderFleet() {
   const local = localFleet();
   // A visit reads the yard but does not sail from it (S133-C): the captain is elsewhere.
   const underWay = captainIsUnderWay();
-  els.setSailBtn.disabled = !underWay && (visitingYard() || !local.ships.some((ship) => ship.id === captain?.id && !isWreck(ship)));
+  els.setSailBtn.disabled = !underWay && (visitingYard() || !local.ships.some((ship) => ship.id === captain?.id));
   els.setSailBtn.title = !underWay && visitingYard() ? visitReason() : "";
   renderFort();
   // Country remains locked by the whole fleet, not just this yard.
@@ -2403,10 +2403,9 @@ function fleetRow(ship, captain, otherCaptains = []) {
   const isCaptain = ship.id === captain?.id;
   // The captain always sails; every other hull sails if its check is on (S35).
   const sails = isCaptain || ship.sails !== false;
-  const wreck = isWreck(ship);
   // A hull can be handed to another captain of this same yard (S155-B/H): only one that is
   // here, and never herself. With nobody to hand her to, there is no control at all.
-  const targets = otherCaptains.filter((entry) => entry && entry.id !== captain?.id && !isWreck(entry));
+  const targets = otherCaptains.filter((entry) => entry && entry.id !== captain?.id);
   const handover = !isCaptain && targets.length > 0
     ? `<select class="fleet-move" data-move="${ship.id}" aria-label="${t("fleet.move", { name: ship.name })}" title="${t("fleet.move", { name: ship.name })}">
             <option value="">${t("fleet.move.placeholder")}</option>
@@ -2414,7 +2413,7 @@ function fleetRow(ship, captain, otherCaptains = []) {
           </select>`
     : "";
   return `
-        <li class="fleet-item${isCaptain ? " is-captain" : ""}${sails ? " is-sailing" : ""}${ship.id === refitId ? " is-refitting" : ""}${wreck ? " is-wreck" : ""}" data-ship-id="${ship.id}">
+        <li class="fleet-item${isCaptain ? " is-captain" : ""}${sails ? " is-sailing" : ""}${ship.id === refitId ? " is-refitting" : ""}" data-ship-id="${ship.id}">
           <input class="fleet-check" type="checkbox" data-sail="${ship.id}"
             ${sails ? "checked" : ""} ${isCaptain ? "disabled" : ""}
             aria-label="${t("fleet.sails", { name: ship.name })}"
@@ -2423,7 +2422,6 @@ function fleetRow(ship, captain, otherCaptains = []) {
             <span class="fleet-mark">${isCaptain ? "⚓" : "·"}</span>
             <span class="fleet-name">${ship.name}</span>
             <span class="fleet-hull">${ship.hullName}</span>
-            ${wreck ? `<span class="fleet-tag fleet-tag-wreck" title="${t("fleet.wreckHint")}">${t("fleet.wreck")}</span>` : ""}
           </button>
           ${isCaptain ? `<span class="fleet-tag" title="${t("fleet.isCaptain")}">${t("fleet.captain")}</span>` : `<button class="fleet-captain-button" type="button" data-captain="${ship.id}" title="${t("fleet.promote")}">${t("shipyard.refit.captain")}</button>`}
           ${handover}
@@ -2509,22 +2507,8 @@ function renderFleetDetail() {
     els.fleetBars.append(row);
   }
 
-  // A wreck has one action (S117): float her again. She cannot be repaired at the
-  // bottom, and a hull nobody can sail is not a hull a buyer wants. A visit does none of
-  // it (S133-C): the hull is here, the captain is not.
-  const visiting = visitingYard();
-  if (isWreck(ship)) {
-    const refloat = refloatCost(ship);
-    els.fleetRepairBtn.disabled = visiting || state.gold < refloat;
-    els.fleetRepairBtn.textContent = t("fleet.refloat", { gold: gold(priceWithPurse(refloat, state.gold)) });
-    els.fleetRepairBtn.title = t("fleet.wreckHint");
-    els.fleetSellBtn.disabled = true;
-    els.fleetSellBtn.textContent = t("shipyard.sell", { gold: gold(0) });
-    if (els.fleetRearmBtn) els.fleetRearmBtn.hidden = true;
-    return;
-  }
-
   // Repair and sell, priced and gated exactly as they were on the row.
+  const visiting = visitingYard();
   const cost = repairCost(ship);
   els.fleetRepairBtn.disabled = visiting || !(cost > 0);
   els.fleetRepairBtn.textContent = cost > 0
@@ -2551,7 +2535,7 @@ function renderFleetDetail() {
   }
 
   const canSell = canSellShip(fleet, ship.id) &&
-    (ship.id !== fleet.captainId || local.ships.some((entry) => entry.id !== ship.id && !isWreck(entry)));
+    (ship.id !== fleet.captainId || local.ships.some((entry) => entry.id !== ship.id));
   els.fleetSellBtn.disabled = visiting || !canSell;
   els.fleetSellBtn.textContent = t("shipyard.sell", { gold: gold(salePrice(ship)) });
   els.fleetSellBtn.title = canSell
@@ -2648,7 +2632,7 @@ function selectRefitShip(ship, { openRoom = true } = {}) {
 els.fleetList.addEventListener("click", (event) => {
   const promote = event.target.closest("[data-captain]");
   if (promote) {
-    if (!localFleet().ships.some((entry) => entry.id === promote.dataset.captain && !isWreck(entry))) return;
+    if (!localFleet().ships.some((entry) => entry.id === promote.dataset.captain)) return;
     const previousCaptainId = fleet.captainId;
     fleet = setCaptain(fleet, promote.dataset.captain);
     const previous = fleet.ships.find((entry) => entry.id === previousCaptainId);
@@ -2679,7 +2663,7 @@ els.fleetList.addEventListener("click", (event) => {
 els.fleetRearmBtn?.addEventListener("click", () => {
   if (refuseVisit()) return;
   const target = localFleet().ships.find((entry) => entry.id === refitId);
-  if (!target || isWreck(target)) return;
+  if (!target) return;
   const live = readLiveCombat(target.id);
   const result = rearmShip(target, live, state.gold);
   if (!result) {
@@ -2706,28 +2690,6 @@ els.fleetRepairBtn.addEventListener("click", () => {
   if (refuseVisit()) return;
   const target = localFleet().ships.find((entry) => entry.id === refitId);
   if (!target) return;
-  // A wreck is floated, not repaired (S117): the yard charges a full repair for her and
-  // hands back the same ship, whole again, with no cargo — that went down with her.
-  if (isWreck(target)) {
-    const price = refloatCost(target);
-    if (state.gold < price) {
-      els.purchaseNotice.textContent = t("fleet.refloatShort", {
-        name: target.name,
-        gold: gold(price - state.gold),
-      });
-      return;
-    }
-    const floated = floatsAgain(target);
-    fleet = { ...fleet, ships: fleet.ships.map((entry) => (entry.id === target.id ? floated : entry)) };
-    state.gold -= price;
-    saveFleet();
-    writeFortSave({}, { gold: state.gold });
-    els.goldValue.textContent = gold(state.gold);
-    els.purchaseNotice.textContent = t("fleet.refloated", { name: floated.name, gold: gold(price) });
-    renderFleet();
-    render();
-    return;
-  }
   const captain = captainShip(fleet);
   const result = repairFleetShip(fleet, target.id, state.gold, { allowCaptain: true });
   if (!result.repaired) return;
@@ -2755,7 +2717,7 @@ els.fleetSellBtn.addEventListener("click", () => {
   const local = localFleet();
   const target = local.ships.find((entry) => entry.id === refitId);
   if (!target) return;
-  const successor = local.ships.find((entry) => entry.id !== target.id && !isWreck(entry));
+  const successor = local.ships.find((entry) => entry.id !== target.id);
   if (target.id === fleet.captainId && !successor) return;
   const result = sellShip(fleet, target.id, state.gold);
   if (!result) return;
@@ -2846,7 +2808,7 @@ els.fleetList.addEventListener("change", (event) => {
   const check = event.target.closest("[data-sail]");
   if (!check) return;
   const shipId = check.dataset.sail;
-  if (!localFleet().ships.some((entry) => entry.id === shipId && !isWreck(entry))) return;
+  if (!localFleet().ships.some((entry) => entry.id === shipId)) return;
   const captain = captainShip(fleet);
   if (shipId === captain?.id) {
     // The captain cannot stay ashore: she is the ship the player sails.

@@ -32,7 +32,7 @@ export const SETTINGS_BRANCHES = [
   {
     id: "yard",
     label: "settings.branch.yard",
-    groups: ["fort", "fortUpgrade", "repair", "refit", "sinking"],
+    groups: ["fort", "fortUpgrade", "repair", "refit"],
   },
   {
     id: "trade",

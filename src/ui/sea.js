@@ -61,7 +61,7 @@ import {
 import { ARRIVAL_NOTICE_KEY } from "../model/arrival-notice.js";
 import { normaliseGold } from "../model/economy.js";
 import { awardHold, bindGameTime, defeatedHold, enemyHoldFor, normaliseMarkets, recoverMarkets } from "../model/commerce.js";
-import { isWreck, wreckHull } from "../model/sinking.js";
+import { isWreck, ownWreck } from "../model/sinking.js";
 import { isOutOfAmmo } from "../model/rearm.js";
 import { bootSettings } from "../model/settings-storage.js";
 import { bootCatalogue } from "../model/catalogue-storage.js";
@@ -2937,6 +2937,11 @@ function pruneLostEscorts() {
   if (lost.length === 0) return;
   for (const gone of lost) {
     showBanner(t("sea.banner.escortLost", { name: gone.name }), "danger", 4000);
+    // S169-C: a hull that went to the bottom leaves her wreck in the water, and the crew is
+    // told where: a prize nobody knows about is a prize nobody collects.
+    if (gone.combat?.status === "sunk") {
+      showBanner(t("sea.banner.ownWreck", { name: gone.name }), "danger", 5000);
+    }
     fleet = loseHull(fleet, gone.id, gone.combat?.status);
     // A hull that left the squadron carries no reserve any more (S132): keeping hers in
     // the map would let the panel report a hull that is no longer there as the worst.
@@ -2947,38 +2952,47 @@ function pruneLostEscorts() {
 }
 
 /**
- * Take a lost hull out of the fleet, or leave her as a wreck (S117).
+ * Take a lost hull out of the fleet (S169).
  *
- * The switch is read right here, when she goes down, so changing it mid-voyage counts.
- * A wreck keeps her entry — floating her again restores that same ship — but she loses
- * everything that was afloat in her: her cargo is at the bottom (S116), her crew went
- * with her, and she does not sail.
+ * The player's rule (verbatim): "barco nuestro hundido, no aparece en el astillero ... y
+ * desaparece en el astillero". So there is no switch and no yard entry any more: a hull that
+ * goes to the bottom is gone from the sheet, and the sea keeps a wreck where she went down
+ * (S169-C), which any hull of the squadron collects by sailing over it.
+ *
+ * A hull that struck her colours was not lost to the sea: she can still be taken, so she
+ * leaves no wreck behind.
  */
 function loseHull(currentFleet, shipId, status) {
   const entry = (currentFleet?.ships ?? []).find((ship) => ship.id === shipId);
-  // A hull that struck her colours was not lost to the sea: she can still be taken, and
-  // the wreck switch is about sinking, so it does not apply to her.
-  const wreck = entry && status === "sunk" ? wreckHull(entry) : null;
+  if (entry && status === "sunk") leaveWreck(entry);
   // A hull that leaves the fleet for good is the voyage's own doing, so the merge is
-  // allowed to drop her from the stored sheet (S151). A wreck stays: she is still a
-  // fleet entry, floated again in a yard.
-  if (wreck) {
-    // Her hold went down with her (S116), and that is the voyage's doing, not the yard's:
-    // without claiming the hold here the merge would keep the cargo the stored sheet still
-    // remembers, and floating her again would bring back goods that are at the bottom.
-    seaHoldsChanged.add(shipId);
-    return {
-      ...currentFleet,
-      ships: currentFleet.ships.map((ship) => (ship.id === shipId ? wreck : ship)),
-      // A wreck cannot captain: the fleet hands over to a hull that still floats.
-      captainId:
-        currentFleet.captainId === shipId
-          ? (currentFleet.ships.find((ship) => ship.id !== shipId && !isWreck(ship))?.id ?? null)
-          : currentFleet.captainId,
-    };
-  }
+  // allowed to drop her from the stored sheet (S151).
   lostHullIds.add(shipId);
   return removeShip(currentFleet, shipId);
+}
+
+/**
+ * Put the wreck of one of our hulls into the water where she went down (S169-C).
+ *
+ * The entry is the same shape an enemy's wreck has, so the world model collects and pays it
+ * with the rule it already has: any hull of the squadron that sails within `pickupRadiusM`
+ * takes the gold. It lives in the sea save, so going back to a yard and sailing out again
+ * neither revives it nor duplicates it (S169-D).
+ *
+ * The position is read from the hull that sank, which is where she was when she went under:
+ * the captain from `world.ship`, an escort from her own row.
+ */
+function leaveWreck(entry) {
+  const place = entry.id === runtimeShip?.id
+    ? world.ship
+    : (world.escorts ?? []).find((escort) => escort.id === entry.id);
+  if (!place) return;
+  // The sea hands out the id, the same counter the spawner uses (S139): a wreck never takes
+  // a number another encounter already has.
+  const id = Number.isFinite(world.nextId) ? world.nextId : 1;
+  const wreck = ownWreck(entry, place, zoneAtRadius(Math.hypot(place.x, place.y)), id);
+  if (!wreck) return;
+  world = { ...world, nextId: id + 1, encounters: [...(world.encounters ?? []), wreck] };
 }
 
 /**

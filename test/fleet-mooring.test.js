@@ -29,10 +29,10 @@ test("S130 B: fleet persistence keeps yard IDs and old and unknown locations bec
   assert.deepEqual(old.ships.map((entry) => entry.yardId), [home, home]);
 });
 
-test("S130 D: departure moves only the local marked and traveling hulls, not the wreck or another yard", () => {
-  const fleet = { captainId: "captain", ships: [ship("captain", { yardId: home }), ship("escort", { yardId: home, sails: true }), ship("stays", { yardId: home, sails: false }), ship("wreck", { yardId: home, sails: true, wreck: true }), ship("remote", { yardId: away, sails: true }), ship("traveler", { yardId: null, sails: false })] };
+test("S130 D: departure moves only the local marked and traveling hulls, not another yard", () => {
+  const fleet = { captainId: "captain", ships: [ship("captain", { yardId: home }), ship("escort", { yardId: home, sails: true }), ship("stays", { yardId: home, sails: false }), ship("remote", { yardId: away, sails: true }), ship("traveler", { yardId: null, sails: false })] };
   const result = fleetModel.departYard(fleet, home);
-  assert.deepEqual(result.ships.map((s) => s.yardId), [null, null, home, home, away, home]);
+  assert.deepEqual(result.ships.map((s) => s.yardId), [null, null, home, away, home]);
   assert.equal(fleet.ships[0].yardId, home);
 });
 

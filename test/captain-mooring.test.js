@@ -27,6 +27,4 @@ test("S130 preserve: absent or invalid sea positions do not move a fleet", () =>
   for (const position of [null, {}, { x: NaN, y: 0 }, { x: 0, y: Infinity }]) {
     assert.deepEqual(fleetModel.reconcileCaptainPosition(fleet, position), fleet);
   }
-  const wreck = { captainId: "wreck", ships: [ship("wreck", { yardId: home, wreck: true })] };
-  assert.deepEqual(fleetModel.reconcileCaptainPosition(wreck, { x: 4600, y: 0 }), wreck);
 });

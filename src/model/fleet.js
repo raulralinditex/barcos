@@ -51,7 +51,7 @@ export function withShipYard(fleet, shipId, yardId) {
 export function reconcileCaptainPosition(fleet, position, { freshlyBought = null } = {}) {
   if (!Number.isFinite(position?.x) || !Number.isFinite(position?.y)) return fleet;
   const captain = captainShip(fleet);
-  if (!captain || isWreck(captain)) return fleet;
+  if (!captain) return fleet;
   // A hull bought a moment ago is moored where she was bought (S163-D), whatever the sea
   // save says about the captain before her. Buying a hull makes her the fleet's captain
   // (S7), and the save still holds the OLD captain's position out on the water: reconciling
@@ -77,7 +77,7 @@ export function shipsAtYard(fleet, yardId) {
 export function shipsAvailableAtYard(fleet, yardId, captainYardId) {
   if (!shipyardById(yardId)) return [];
   return (fleet?.ships ?? []).filter((ship) => yardOf(ship) === yardId ||
-    (yardId === captainYardId && yardOf(ship) === null && !isWreck(ship) &&
+    (yardId === captainYardId && yardOf(ship) === null &&
       (ship.id === fleet?.captainId || ship.sails !== false)));
 }
 
@@ -88,14 +88,13 @@ export function departYard(fleet, yardId) {
   return { ...fleet, ships: ships.map((ship) => {
     const location = yardOf(ship);
     if (location !== yardId && location !== null) return ship;
-    if (isWreck(ship)) return ship;
     return { ...ship, yardId: ship.id === fleet?.captainId || ship.sails !== false ? null : yardId };
   }) };
 }
 
 /** Only hulls that actually departed can join the captain at sea. */
 export function shipsSailingAtSea(fleet) {
-  return sailingShips(fleet).filter((ship) => yardOf(ship) === null && !isWreck(ship));
+  return sailingShips(fleet).filter((ship) => yardOf(ship) === null);
 }
 
 /** The captains are the hulls that command themselves, including the legacy captain. */
@@ -128,17 +127,17 @@ export function squadronOf(fleet, captainId) {
  * The sea shows every captain at once, so it needs the list of squadrons that can be seen
  * and steered, not every squadron the fleet owns. A squadron sails when her captain is at
  * sea, and she takes with her only the hulls that are afloat too: a hull moored at a yard
- * or kept as a wreck waits where she is, and her captain sails without her.
+ * waits where she is, and her captain sails without her.
  *
  * A squadron whose captain is in port is not on this list at all: she is not sailing, and
  * the sea has no business drawing her.
  */
 export function seaSquadrons(fleet) {
   return squadrons(fleet)
-    .filter((squadron) => yardOf(squadron.captain) === null && !isWreck(squadron.captain))
+    .filter((squadron) => yardOf(squadron.captain) === null)
     .map((squadron) => ({
       ...squadron,
-      ships: squadron.ships.filter((ship) => yardOf(ship) === null && !isWreck(ship)),
+      ships: squadron.ships.filter((ship) => yardOf(ship) === null),
     }));
 }
 
@@ -226,15 +225,13 @@ export function captainShip(fleet) {
 }
 
 /**
- * The hull the market trades with: the one the player picked, else the captain. A wreck
- * cannot carry goods (S117), and an unknown pick is no pick, so neither can leave the
- * market without a hold.
+ * The hull the market trades with: the one the player picked, else the captain. An unknown
+ * pick is no pick, so it cannot leave the market without a hold.
  */
 export function tradingShip(fleet, pickedId) {
   const picked = (fleet?.ships ?? []).find((ship) => ship.id === pickedId);
-  if (picked && !isWreck(picked)) return picked;
-  const captain = captainShip(fleet);
-  return captain && !isWreck(captain) ? captain : null;
+  if (picked) return picked;
+  return captainShip(fleet) ?? null;
 }
 
 /** Fleet value in gold: what the hulls cost, which is what the player sank into it. */
@@ -416,7 +413,12 @@ export function deserializeFleet(json, legacyShip = null) {
   }
 
   const validShips = data.ships
-    .filter((ship) => ship && typeof ship.id === "string" && Number.isFinite(ship.speedKn));
+    .filter((ship) => ship && typeof ship.id === "string" && Number.isFinite(ship.speedKn))
+    // S169-E: a save written before S169 can hold a hull waiting in a yard as a wreck. The
+    // player removed that rule and decided those entries are discarded on load (verbatim):
+    // "Se descarta al cargar". Nothing creates one any more, so this is the only place the
+    // old `wreck` flag is still read.
+    .filter((ship) => !isWreck(ship));
   if (validShips.length === 0) {
     return legacyShip ? { ships: [normaliseShip({ ...legacyShip, commandId: legacyShip.id })], captainId: legacyShip.id } : { ships: [], captainId: null };
   }

@@ -73,9 +73,10 @@ check(String(await page.$eval("#purchase-notice", (n) => n.textContent)).include
 
 // --- Configuración: the settings screen is in the room --------------------------------
 await page.click('.screen-tab[data-screen="configuracion"]');
-// 24: S142 added the danger block ("Peligro"), S160/S161 the oars block ("Remos") and S167
-// the fog block ("Niebla"), which the fixed number here had not caught up with.
-check((await page.locator(".settings-card").count()) === 24, `the settings tab mounts every block, got ${await page.locator(".settings-card").count()}`);
+// 23: S142 added the danger block ("Peligro"), S160/S161 the oars block ("Remos") and S167
+// the fog block ("Niebla"), which the fixed number here had not caught up with. S169 removed
+// the sinking block with the rule it tuned, so it comes back down by one.
+check((await page.locator(".settings-card").count()) === 23, `the settings tab mounts every block, got ${await page.locator(".settings-card").count()}`);
 await page.fill("#field-wind\\.maxSpeedBonus", "500");
 await page.click("#settings-apply");
 await page.waitForTimeout(200);

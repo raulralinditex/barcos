@@ -1,84 +1,56 @@
 /**
- * S117: what becomes of one of our hulls when she goes to the bottom.
+ * S169: what becomes of one of our hulls when she goes to the bottom.
  *
- * The player asked for a switch in the settings screen: a sunk hull either leaves the
- * fleet, as the game always played, or stays as a wreck that waits in a yard until the
- * captain pays to float her again.
+ * The player's rule, verbatim: "barco nuestro hundido, no aparece en el astillero, quitamos
+ * la opcion de 'Un barco hundido queda como naufragio' y siempre queda como naufragio, y
+ * desaparece en el astillero". So there is one outcome and no switch: the hull leaves the
+ * fleet and the sea keeps a wreck where she went down, which any hull of the squadron can
+ * collect by sailing over it, exactly as an enemy's wreck is collected.
+ *
+ * S117 had made this a setting — a wreck waiting in a yard until the captain paid to float
+ * her again — and S169 removes it. Nothing waits in a yard any more.
  *
  * Pure and storage-free: the sea screen asks this module what a sinking means and then
- * applies the answer. The setting is read at the moment she sinks, so a switch changed
- * mid-voyage counts for the next hull that goes down.
+ * applies the answer.
  */
 
-import { REPAIR, repairCost } from "./repair.js";
-import { homeShipyard } from "./world.js";
+import { wreckPrize } from "./combat.js";
 
 /**
- * The switch (S117). Off by default, which is the game as it was: losing a hull is
- * losing her. It is a live block, so the settings screen owns the value like every
- * other tuning number.
+ * Whether a stored fleet entry is a hull that S117 left waiting in a yard (S169-E).
+ *
+ * This is the only thing the old `wreck` flag is still read for: a save written before
+ * S169 can hold one, and the player decided it is discarded on load ("Se descarta al
+ * cargar"). Nothing creates a wreck entry any more.
  */
-export const SINKING = { keepWreck: 0 };
-
-/** Whether the switch is on right now, failing closed on anything that is not a yes. */
-export function keepsWreck(options = SINKING) {
-  return Number(options?.keepWreck) > 0;
-}
-
-/** Whether a fleet entry is a hull waiting to be floated again. */
 export function isWreck(ship) {
   return Boolean(ship && ship.wreck === true);
 }
 
 /**
- * The fleet entry of a hull that just sank, or null when she is simply gone (S117).
+ * The encounter a sunk hull of ours leaves in the water (S169-C).
  *
- * A wreck keeps her identity — name, hull, guns, what she cost — because floating her
- * again restores that same ship and not a new one. She loses everything that was afloat
- * in her: her cargo is at the bottom (S116), her crew went with her, and her hull is at
- * zero. She does not sail and she cannot be a captain. A kept wreck returns to the
- * home yard, regardless of where the voyage began (S130).
+ * It is the same shape as the wreck an enemy leaves, so the sea needs no second rule to
+ * draw it, collect it or pay it out: the world model already pays every `type: "wreck"`
+ * encounter under any hull of the squadron. `gold` is the same prize a defeated enemy of
+ * that hull would have paid, which is what makes the loss cost something and not everything.
+ *
+ * Returns null for a hull with no position: a wreck nobody can sail over is not a wreck,
+ * it is a lost entry.
  */
-export function wreckHull(ship, options = SINKING) {
+export function ownWreck(ship, position, zone, id) {
   if (!ship) return null;
-  if (!keepsWreck(options)) return null;
+  const x = Number(position?.x);
+  const y = Number(position?.y);
+  if (!Number.isFinite(x) || !Number.isFinite(y)) return null;
+  if (!Number.isFinite(id)) return null;
   return {
-    ...ship,
-    yardId: homeShipyard()?.id ?? null,
-    wreck: true,
-    sails: false,
-    cargoKg: 0,
-    manifest: [],
-    condition: { ...(ship.condition ?? {}), hull: 0, rigging: 0 },
-    crewAlive: {},
+    id,
+    type: "wreck",
+    x,
+    y,
+    heading: Number(position?.heading) || 0,
+    gold: wreckPrize({ hullId: ship.hullId }, zone),
+    zoneId: zone?.id ?? null,
   };
 }
-
-/**
- * The fleet entry of a wreck floated again in a yard (S117). The yard charges a full
- * repair for it, so the price of the mistake is on the captain and not on the game: she
- * comes back whole, with a hull and a rig, and with no cargo — that was lost with her.
- *
- * Returns null for anything that is not a wreck: a hull that never sank cannot be
- * floated, and pretending otherwise would be a free repair.
- */
-export function floatsAgain(ship) {
-  if (!isWreck(ship)) return null;
-  const { wreck, ...rest } = ship;
-  return {
-    ...rest,
-    // Explicitly not a wreck any more: the fleet entry is a whole ship again, and the
-    // screens read this flag instead of guessing from her condition.
-    wreck: false,
-    sails: true,
-    condition: { ...(ship.condition ?? {}), hull: 100, rigging: 100 },
-  };
-}
-
-/** What the yard charges to float a wreck again (S117): the full repair of her hull. */
-export function refloatCost(ship) {
-  if (!isWreck(ship)) return 0;
-  return repairCost({ ...ship, condition: { ...(ship.condition ?? {}), hull: 0, rigging: 0 } });
-}
-
-export { REPAIR };

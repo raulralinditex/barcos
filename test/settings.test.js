@@ -247,24 +247,8 @@ test("S79: a new block's field is clamped to its own range", () => {
   });
 });
 
-/* S117: the wreck switch is a checkbox on the screen and a number in the model. */
-test("S117: the wreck switch round-trips 1 and 0 like every other setting", async () => {
-  const { applySettings, currentSettings, normaliseSettings, resetSettings } = await import("../src/model/settings.js");
-  const { SINKING } = await import("../src/model/sinking.js");
-  resetSettings();
-  try {
-    assert.equal(normaliseSettings({ "sinking.keepWreck": 1 })["sinking.keepWreck"], 1);
-    applySettings({ "sinking.keepWreck": 1 });
-    assert.equal(SINKING.keepWreck, 1);
-    assert.equal(currentSettings()["sinking.keepWreck"], 1);
-    applySettings({ "sinking.keepWreck": 0 });
-    assert.equal(SINKING.keepWreck, 0);
-    // Junk still falls back to the shipped default, which is off.
-    assert.equal(normaliseSettings({ "sinking.keepWreck": "si" })["sinking.keepWreck"], 0);
-  } finally {
-    resetSettings();
-  }
-  // The screen draws a checkbox only for a field that says so, never by guessing.
+/* S169: the wreck switch is gone, and the exact switch list says so. */
+test("S169: the settings screen no longer offers a wreck switch", async () => {
   const { SETTINGS_FIELDS, fieldId } = await import("../src/model/settings.js");
   const switches = SETTINGS_FIELDS.filter((field) => field.control === "switch").map(fieldId);
   // S142 adds the danger switch: the number is painted at sea or it is not, so it is a
@@ -275,10 +259,11 @@ test("S117: the wreck switch round-trips 1 and 0 like every other setting", asyn
   // S168 adds the two the player named: `combat.showRange` and `combat.autofire` were the
   // last yes/no fields still drawn as numbers. Updated with her explicit approval; the
   // assertion stays exact, so a switch that appears or disappears without a decision fails.
+  // S169 removes `sinking.keepWreck` with the whole sinking block: the player removed the
+  // rule it tuned ("quitamos la opcion de 'Un barco hundido queda como naufragio'").
   assert.deepEqual(switches, [
     "combat.showRange",
     "combat.autofire",
-    "sinking.keepWreck",
     "refit.autoSave",
     "voyage.showTravelButton",
     "fog.enabled",

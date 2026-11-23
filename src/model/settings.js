@@ -15,7 +15,6 @@ import { GUNNERY } from "./gunnery.js";
 import { REPAIR } from "./repair.js";
 import { REFIT } from "./refit.js";
 import { SALES } from "./sale.js";
-import { SINKING } from "./sinking.js";
 import { COMMERCE, MARKETS, YARD_MARKETS } from "./commerce.js";
 import { GAME_TIME } from "./game-time.js";
 import { FORT, FORT_UPGRADE } from "./fort.js";
@@ -131,13 +130,13 @@ export const SETTINGS_FIELDS = [
 
   { group: "sales", key: "share", label: "settings.sales.share", scale: "percent", min: 0, max: 1, step: 0.05, target: "sales", targetKey: "share" },
 
-  // S117: what a sunk hull becomes. Off is the game as it always played (she is gone);
-  // on leaves her waiting in a yard as a wreck that can be floated again. `control:
-  // "switch"` is what the screen reads to draw a checkbox: the player asked for one.
-  { group: "sinking", key: "keepWreck", label: "settings.sinking.keepWreck", scale: "factor", min: 0, max: 1, step: 1, control: "switch", target: "sinking", targetKey: "keepWreck" },
+  // S169: there is no switch here any more. The player removed it (verbatim): "quitamos
+  // la opcion de 'Un barco hundido queda como naufragio' y siempre queda como naufragio".
+  // A sunk hull is gone from the fleet and leaves a wreck in the water; nothing waits in a
+  // yard, so there is nothing for the settings screen to tune.
 
   // The refit editor saves by itself when this is on (the default); off brings the save
-  // button back. A switch, like the wreck one above.
+  // button back. A switch, like the fog and the danger ones.
   { group: "refit", key: "autoSave", label: "settings.refit.autoSave", scale: "factor", min: 0, max: 1, step: 1, control: "switch", target: "refit", targetKey: "autoSave" },
 
   // S137: whether the shipyard offers the automatic voyage to another yard. Off ships it
@@ -227,7 +226,7 @@ export const SETTINGS_FIELDS = [
 /** The automatic-fire switch as a live block, so it is a setting like any other (S88). */
 export const AUTOFIRE = { enabled: AUTOFIRE_DEFAULT ? 1 : 0 };
 
-export const SETTINGS_BLOCKS = { oars: OARS, wind: WIND, world: WORLD, combat: COMBAT, repair: REPAIR, prices: PRICES, gunnery: GUNNERY, gunners: GUNNERY.gunnersPerGun, zones: ZONE_DAMAGE, loot: LOOT, sales: SALES, time: GAME_TIME, fort: FORT, fortUpgrade: FORT_UPGRADE, start: START, turning: TURNING, escort: ESCORT, trail: TRAIL, bars: BAR_SCALE, autofire: AUTOFIRE, sinking: SINKING, refit: REFIT, voyage: VOYAGE, fog: FOG, commerce: COMMERCE, markets: MARKETS, yardMarkets: YARD_MARKETS, levels: LEVELS, danger: DANGER };
+export const SETTINGS_BLOCKS = { oars: OARS, wind: WIND, world: WORLD, combat: COMBAT, repair: REPAIR, prices: PRICES, gunnery: GUNNERY, gunners: GUNNERY.gunnersPerGun, zones: ZONE_DAMAGE, loot: LOOT, sales: SALES, time: GAME_TIME, fort: FORT, fortUpgrade: FORT_UPGRADE, start: START, turning: TURNING, escort: ESCORT, trail: TRAIL, bars: BAR_SCALE, autofire: AUTOFIRE, refit: REFIT, voyage: VOYAGE, fog: FOG, commerce: COMMERCE, markets: MARKETS, yardMarkets: YARD_MARKETS, levels: LEVELS, danger: DANGER };
 
 /**
  * The design constant blocks S79 promises to expose, by name.
