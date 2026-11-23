@@ -1,0 +1,29 @@
+test/seaworthy.test.js
+  s_33bdafc1f5b8de::t_5dc4710d924a9f 1-192
+src/model/seaworthy.js
+  s_33bdafc1f5b8de::t_57dc61d984e391 149,154
+  s_33bdafc1f5b8de::t_88bd45a49952ee 1-148,150-153,155-209
+src/ui/app.js
+  s_33bdafc1f5b8de::t_50cb600d556c0f 61,2530-2537,2539-2540
+  s_33bdafc1f5b8de::t_91f19fce0e447e 2716-2741,2743-2744,2747,2749-2750
+scripts/smoke-seaworthy.mjs
+  s_33bdafc1f5b8de::t_b30b9e1f89c296 1-130
+odd/tasks/reparar-deja-la-nave-lista.md
+  s_33bdafc1f5b8de::t_4f27883fcb5fc9 1-35
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.6",
+  "base_commit_sha": "5547f081dd79701fe3c3ae960feabff05ba00c08",
+  "prompts": {},
+  "sessions": {
+    "s_33bdafc1f5b8de": {
+      "agent_id": {
+        "tool": "pi",
+        "id": "01a2054f-ba19-7336-a8f7-74f16ecc2af7",
+        "model": "deepseek-v4.1-flash_high"
+      },
+      "human_author": "Raul Ripoll <raulral@ext.inditex.com>"
+    }
+  }
+}
