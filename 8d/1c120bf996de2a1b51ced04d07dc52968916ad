@@ -1,0 +1,21 @@
+odd/tasks/reparar-deja-la-nave-lista.md
+  s_33bdafc1f5b8de::t_286db34683b8c0 35-41
+scripts/smoke-auto-repair.mjs
+  s_33bdafc1f5b8de::t_ce06474a720403 50-55
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.6",
+  "base_commit_sha": "8d1c120bf996de2a1b51ced04d07dc52968916ad",
+  "prompts": {},
+  "sessions": {
+    "s_33bdafc1f5b8de": {
+      "agent_id": {
+        "tool": "pi",
+        "id": "01a2054f-ba19-7336-a8f7-74f16ecc2af7",
+        "model": "deepseek-v4.1-flash_high"
+      },
+      "human_author": "Raul Ripoll <raulral@ext.inditex.com>"
+    }
+  }
+}
