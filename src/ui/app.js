@@ -85,7 +85,7 @@ import { GAME_TIME, burnSupply, supplySeconds } from "../model/game-time.js";
 import { currentShipyard, deserializeWorld, shipyardZone } from "../model/world.js";
 // S171: the progress the shipyard shows is the mode's answer, not a rule of its own. The
 // saved record names its mode; a record with none plays the shipped one, as it always did.
-import { modeById } from "../model/modes/index.js";
+import { allModes, DEFAULT_MODE_ID, modeById } from "../model/modes/index.js";
 import { COMMODITIES, SHIPYARDS, shipyardById } from "../data/naval-data.js";
 // S133: the yard selector of the title bar, the editable names and the automatic voyage.
 import { arriveAt, voyageButtonVisible, voyageQuote } from "../model/voyage.js";
@@ -106,6 +106,8 @@ const GAME_KEY = "barcos:game:v1";
 const SHIP_KEY = "barcos:current-ship:v1";
 const FLEET_KEY = "barcos:fleet:v1";
 const COUNTRY_KEY = "barcos:country:v1";
+/** The game picked at the restart button, for the voyage about to be born (S172/S173). */
+const MODE_KEY = "barcos:mode:v1";
 /** The player's own names for the yards (S133), kept apart from the fleet and the sea. */
 const YARD_NAMES_KEY = "barcos:yard-names:v1";
 /** Automatic fire (S47): a preference, so erasing the game does not touch it. */
@@ -265,6 +267,7 @@ const els = {
   eraseDialog: $("#erase-dialog"),
   eraseCancel: $("#erase-cancel"),
   eraseConfirm: $("#erase-confirm"),
+  modeOptions: $("#mode-options"),
   langSelect: $("#lang-select"),
   yardSelect: $("#yard-select"),
   brandYard: $("#brand-yard"),
@@ -3043,13 +3046,60 @@ if (els.dockLater) els.dockLater.addEventListener("click", closeDockDialog);
 
 /* ---------------------------------------------------------------- erase save (S8) */
 
-els.eraseBtn.addEventListener("click", () => els.eraseDialog.showModal());
+/* ------------------------------------------------- S173: pick the game at the restart */
+
+/**
+ * The game the player is about to start, as the restart dialog shows it (S173).
+ *
+ * Drawn from the registry and nowhere else: a mode added to `MODES` appears here with her own
+ * name and description, and this file does not learn her id. A single mode still draws, which
+ * is what makes the screen ready for the second one instead of waiting for it.
+ */
+let chosenMode = DEFAULT_MODE_ID;
+
+function renderModePicker() {
+  if (!els.modeOptions) return;
+  const modes = allModes();
+  // One mode is not a choice, but it is still the truth about what will be played: the
+  // player sees which game she is starting, and the list grows on her own when there are two.
+  els.modeOptions.textContent = "";
+  for (const mode of modes) {
+    const label = document.createElement("label");
+    label.className = "mode-option";
+    const input = document.createElement("input");
+    input.type = "radio";
+    input.name = "game-mode";
+    input.value = mode.id;
+    input.checked = mode.id === chosenMode;
+    input.addEventListener("change", () => {
+      if (input.checked) chosenMode = mode.id;
+    });
+    const text = document.createElement("span");
+    text.className = "mode-option-text";
+    const name = document.createElement("strong");
+    name.textContent = t(mode.labelKey);
+    const description = document.createElement("span");
+    description.className = "mode-option-description";
+    description.textContent = t(mode.descriptionKey);
+    text.append(name, description);
+    label.append(input, text);
+    els.modeOptions.append(label);
+  }
+}
+
+els.eraseBtn.addEventListener("click", () => {
+  renderModePicker();
+  els.eraseDialog.showModal();
+});
 els.eraseCancel.addEventListener("click", () => els.eraseDialog.close());
 els.eraseConfirm.addEventListener("click", () => {
   try {
     for (const key of [STORAGE_KEY, GAME_KEY, SHIP_KEY, FLEET_KEY, COUNTRY_KEY]) {
       localStorage.removeItem(key);
     }
+    // The game picked here is for the voyage about to be born (S172/S173). It is written
+    // after the erase so nothing above can take it away, and `createWorld` reads it back.
+    localStorage.setItem(MODE_KEY, chosenMode);
   } catch {
     /* storage disabled: nothing to erase */
   }

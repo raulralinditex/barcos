@@ -178,6 +178,9 @@ export const es = {
 
   /* ---------------------------------------------------------------- erase dialog */
   "erase.title": "Borrar partida",
+  "erase.mode.legend": "Tipo de juego",
+  "mode.byLevel.name": "Batalla por nivel",
+  "mode.byLevel.description": "La costa se juega por niveles: cada uno trae su cupo de enemigos, y se pasa al siguiente juntando las victorias que pide. Es el juego de siempre.",
   "erase.body": "Se borra la flota entera, la bolsa, el barco que estás capitaneando y el mar que exploraste. No se puede deshacer.",
   "erase.cancel": "Cancelar",
   "erase.confirm": "Borrar todo",

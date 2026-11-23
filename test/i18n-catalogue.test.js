@@ -142,6 +142,9 @@ test("S11: no catalogue key is orphaned (every key is used by the app or the dat
     "catalogue.",
     // S118: the market tab names its own goods and its own verbs.
     "market.",
+    // S171-S173: the mode registry names the games the restart screen offers, and every
+    // mode resolves her own name and description through this family.
+    "mode.",
     "commodity.",
     "shipyard.",
   ];

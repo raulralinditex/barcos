@@ -26,6 +26,9 @@ S173. **Reiniciar elige el modo** (F2). El diálogo de `#erase-dialog` gana la l
 - T92 — S172: `serializeWorld` escribe `mode`; `deserializeWorld` lo lee con `modeById`, que cae al shipped para un id desconocido o ausente. `v` sigue en 1. Ruta: inline. Hecho.
 - T93 — S172: `barcos:mode:v1` y `readChosenMode()` en `sea.js`; un mar nuevo nace en el modo elegido, uno guardado conserva el suyo. Ruta: inline. Hecho.
 - T94 — S172: `test/mode-save.test.js` (7 tests) y `scripts/smoke-mode-save.mjs`. Ruta: inline. Hecho.
+- T95 — S173: `#mode-picker` en `index.html`, `renderModePicker()` en `app.js` que dibuja la lista del registro, y `eraseConfirm` escribiendo `barcos:mode:v1`. CSS de la lista. Ruta: inline. Hecho.
+- T96 — S173: i18n es/en (`erase.mode.legend`, `mode.byLevel.*`) y la familia `mode.` declarada en la lista blanca de `test/i18n-catalogue.test.js`. Ruta: inline. Hecho.
+- T97 — S173: `test/mode-restart.test.js` (4 tests) y `scripts/smoke-mode-restart.mjs`. Ruta: inline. Hecho.
 
 ## Log
 
@@ -48,5 +51,16 @@ L98 (cierre de F1). **`npm test` 1056/1056** (los 1049 de F0 más 7 nuevos), nue
 **Lo que costó**: el smoke nuevo fallaba con «an old save must play the shipped mode, got undefined» y no era el código. El mar **no reescribe un guardado sin cambios**: el autoguardado compara y sólo escribe si el mundo difiere, así que un guardado sembrado y no tocado nunca volvía. Arreglo en el smoke: navegar un momento (lo que hace un jugador) y disparar `beforeunload`, que el mar ya escucha como escritura final. El modelo, medido aparte, ya resolvía bien los dos casos.
 
 **RED honesto del smoke**: con `world.js` de `HEAD` falla nombrando las tres reglas — el mar nuevo pierde el modo, el id desconocido no cae, el guardado viejo no abre.
+
+L99 (cierre de F2, con la decisión del jugador de no escribir todavía el segundo modo). **`npm test` 1060/1060**, once smokes en 0.
+
+**Lo que se hizo, y lo que deliberadamente no**: la lista del reinicio se dibuja **del registro** (`allModes()`), en orden de registro, con el nombre y la descripción que cada modo declara. Con un solo modo, la lista muestra uno. Agregar el segundo es un fichero en `src/model/modes/` y una entrada en `MODES`: no se toca `index.html`, ni `app.js`, ni el smoke. Eso es lo que `test/mode-restart.test.js` fija — registra un modo de prueba y comprueba que **aparece en la lista sin tocar la pantalla**.
+
+**Dos cosas que costaron:**
+
+1. **La lista blanca de i18n.** `test/i18n-catalogue.test.js` exige que toda familia de claves esté declarada, y `mode.` no lo estaba: falló con `orphan catalogue key: mode.byLevel.description`. Es el mismo caso que S80/S82 ya documentó con `catalogue.`. Se agregó `"mode."` con su comentario.
+2. **`addInitScript` se re-ejecuta en cada navegación.** El smoke sembraba la partida, el reinicio la borraba, la recarga volvía a sembrarla, y el smoke leía su propio fixture: «the old voyage survived the restart, the purse still holds 4321». Arreglo: bandera en `sessionStorage`, la misma trampa ya anotada en la memoria del proyecto. Y una segunda corrección de aserción: el astillero reescribe su registro al pintar, así que la clave `barcos:game:v1` **existe de nuevo**; lo que prueba el borrado es que los 4321 doblones no estén.
+
+**RED honesto del smoke**: con `index.html` y `app.js` de `HEAD`, falla nombrando las cuatro reglas — no hay lista, la lista está vacía, falta el modo shipped, y no hay ninguno preseleccionado.
 
 **Un detalle de diseño que se respetó:** `advance(world)` devuelve el mundo siguiente **o `null`** para quedarse. Devolver el mundo siempre habría hecho que un modo sin avance re-sembrara el mismo nivel en cada tick.

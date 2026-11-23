@@ -181,6 +181,9 @@ export const en = {
 
   /* ---------------------------------------------------------------- erase dialog */
   "erase.title": "Erase game",
+  "erase.mode.legend": "Game type",
+  "mode.byLevel.name": "Battle by level",
+  "mode.byLevel.description": "The coast is played in levels: each one brings its own quota of enemies, and you move on by winning the victories it asks for. This is the game as it always played.",
   "erase.body": "This erases the whole fleet, your purse, the ship you captain and the sea you explored. It cannot be undone.",
   "erase.cancel": "Cancel",
   "erase.confirm": "Erase everything",

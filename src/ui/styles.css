@@ -1487,6 +1487,61 @@ input[type="number"] {
   gap: 8px;
 }
 
+/* S173: the game type the player is about to start. */
+.mode-picker {
+  margin: 0 0 16px;
+  padding: 10px 12px 12px;
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  background: #fff;
+}
+
+.mode-picker legend {
+  padding: 0 6px;
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--navy);
+}
+
+.mode-options {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.mode-option {
+  display: flex;
+  align-items: flex-start;
+  gap: 9px;
+  padding: 7px 8px;
+  border-radius: 8px;
+  cursor: pointer;
+}
+
+.mode-option:hover {
+  background: rgba(16, 22, 31, 0.04);
+}
+
+.mode-option input {
+  margin-top: 3px;
+  accent-color: var(--navy);
+}
+
+.mode-option-text {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  font-size: 13px;
+  line-height: 1.45;
+}
+
+.mode-option-description {
+  color: var(--ink-soft, #5a6472);
+  font-size: 12.5px;
+}
+
 /* ---------- sea screen ---------- */
 
 .sea-body {

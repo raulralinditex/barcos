@@ -324,6 +324,14 @@
 
     <dialog id="erase-dialog" class="erase-dialog">
       <h2 data-i18n="erase.title">Borrar partida</h2>
+      <!--
+        S173: the game the player is about to start. The list is drawn from the mode
+        registry, so a new mode appears here without touching this file.
+      -->
+      <fieldset id="mode-picker" class="mode-picker">
+        <legend data-i18n="erase.mode.legend">Tipo de juego</legend>
+        <div id="mode-options" class="mode-options"></div>
+      </fieldset>
       <p data-i18n="erase.body">
         Se borra la flota entera, la bolsa, el barco que estás capitaneando y el mar
         que exploraste. No se puede deshacer.
