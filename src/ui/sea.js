@@ -444,6 +444,12 @@ function settleSharedGameFigures() {
 
 function saveGame() {
   if (!world) return;
+  // S175: a voyage whose squadron is gone is over. Writing it back would keep the dead sea
+  // alive — the next sail would open at the point where the captain went down, with the
+  // hulls the player bought left in the yard, and the sinking dialog would come up again.
+  // `gameOver` is set the moment nothing is left to sail, and the unload handler runs right
+  // after the player leaves, which is exactly the write that used to resurrect her.
+  if (gameOver) return;
   try {
     settleSharedGameFigures();
     world = { ...world, gold: goldEarned };
@@ -3187,8 +3193,14 @@ function showGameOver() {
 
 els.gameoverBack.addEventListener("click", () => {
   try {
-    // The sunk hull leaves the fleet; the player keeps whatever else is in port.
-    const remaining = removeShip(fleet, runtimeShip.id);
+    // S175: the player asked for this in her own words — "en el astillero no hay ningun
+    // barco hundido". Every hull of the squadron went down, not only the one under the
+    // helm, so every hull whose condition is at zero leaves the fleet here. Removing only
+    // the captain left her escorts behind as unusable wrecks in the yard list.
+    const alive = (fleet?.ships ?? []).filter((ship) => (Number(ship?.condition?.hull) || 0) > 0);
+    const remaining = alive.some((ship) => ship.id === fleet?.captainId)
+      ? { ...fleet, ships: alive }
+      : removeShip({ ...fleet, ships: alive }, fleet?.captainId);
     localStorage.setItem(FLEET_KEY, serializeFleet(remaining));
     localStorage.removeItem(SHIP_KEY);
     localStorage.removeItem(GAME_KEY);
