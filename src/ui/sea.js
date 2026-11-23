@@ -138,6 +138,14 @@ const SHIP_KEY = "barcos:current-ship:v1";
 const FLEET_KEY = "barcos:fleet:v1";
 const GAME_KEY = "barcos:game:v1";
 const COUNTRY_KEY = "barcos:country:v1";
+/**
+ * The game the player picked for the voyage about to be born (S172).
+ *
+ * Two authorities, one per moment: a sea already saved is played in the mode her own record
+ * names, and this key only decides the mode of a sea that does not exist yet. Without it, a
+ * new voyage plays the shipped mode, which is what it always did.
+ */
+const MODE_KEY = "barcos:mode:v1";
 
 /**
  * The country the player selected in the shipyard: it is the colours of every hull of
@@ -365,6 +373,19 @@ function shipDays(shipId) {
  */
 const lostHullIds = new Set();
 const seaHoldsChanged = new Set();
+
+/**
+ * The mode the player chose for a new voyage, or `undefined` so `createWorld` keeps her
+ * default (S172). Unreadable storage is no choice, never a broken game.
+ */
+function readChosenMode() {
+  try {
+    const stored = localStorage.getItem(MODE_KEY);
+    return typeof stored === "string" && stored !== "" ? stored : undefined;
+  } catch {
+    return undefined;
+  }
+}
 
 /* ---------------------------------------------------------------- persistence */
 
@@ -3780,7 +3801,9 @@ function boot() {
   const savedWorld = savedGame?.world ? deserializeWorld(savedGame.world) : null;
 
   const worldSeed = (Date.now() ^ Math.floor(Math.random() * 0xffffffff)) >>> 0;
-  world = savedWorld ?? createWorld(worldSeed, runtimeShip, 0, fleet);
+  // A saved sea carries her own mode (S172); a brand new one is born in the mode the player
+  // picked at the restart button, or the shipped one when she picked nothing.
+  world = savedWorld ?? createWorld(worldSeed, runtimeShip, 0, fleet, readChosenMode());
   // Old game records can have a position but no serialized world.
   if (!savedWorld && Number.isFinite(savedGame?.ship?.x) && Number.isFinite(savedGame?.ship?.y)) {
     world = { ...world, ship: { ...world.ship, ...savedGame.ship } };

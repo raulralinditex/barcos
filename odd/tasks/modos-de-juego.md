@@ -23,6 +23,9 @@ S173. **Reiniciar elige el modo** (F2). El diálogo de `#erase-dialog` gana la l
 - T89 — S171-A: el chip del astillero en `app.js` pregunta al modo del guardado. Ruta: inline. Hecho.
 - T90 — S171-D/E: `test/modes.test.js` con los cinco casos, incluido el modo de prueba distinto. Ruta: inline. Hecho.
 - T91 — S171-C: `npm test` completo y los smokes de la zona tocada. Ruta: inline. Hecho.
+- T92 — S172: `serializeWorld` escribe `mode`; `deserializeWorld` lo lee con `modeById`, que cae al shipped para un id desconocido o ausente. `v` sigue en 1. Ruta: inline. Hecho.
+- T93 — S172: `barcos:mode:v1` y `readChosenMode()` en `sea.js`; un mar nuevo nace en el modo elegido, uno guardado conserva el suyo. Ruta: inline. Hecho.
+- T94 — S172: `test/mode-save.test.js` (7 tests) y `scripts/smoke-mode-save.mjs`. Ruta: inline. Hecho.
 
 ## Log
 
@@ -37,5 +40,13 @@ L97 (cierre de F0). **`npm test` 1049/1049**, y los **1044 que existían pasan s
 1. **`withMode` no alcanzaba para probar la siembra.** `createWorld` ya había sembrado con el modo por defecto antes de que el test pudiera estampar otro, así que el test veía el nivel 1 del shipped. La costura exige que `createWorld` **sepa** el modo al nacer: se le agregó `modeId` como quinto parámetro, con default. Estampar después no sirve para la siembra.
 2. **`updateWorld` normaliza el nivel a mínimo 1** (`normaliseLevel`), así que un modo de prueba con `level: 0` es indistinguible del shipped. El modo de prueba usa `level: 7`: un nivel que el shipped no puede alcanzar en una sola siembra, y por eso la aserción es inequívoca.
 3. **Hay un ciclo de importación** entre `modes/by-level.js` (importa `seedLevel` de `world.js`) y `world.js` (importa el registro). Funciona porque `seedLevel` es una declaración izada y sólo se llama en runtime, no al cargar el módulo. Verificado cargando el registro en un proceso aparte antes de cablear nada.
+
+L98 (cierre de F1). **`npm test` 1056/1056** (los 1049 de F0 más 7 nuevos), nueve smokes en 0. `test/mode-save.test.js` prueba la regla del formato: el modo sobrevive al guardado, `v` sigue en 1, un guardado sin `mode` abre como se jugó, y un id roto cae al shipped sin tirar.
+
+**Dos autoridades, una por momento**: el mar guardado manda sobre la partida ya nacida (`world.mode`), y `barcos:mode:v1` sólo decide la partida por nacer. Lo aplica `sea.js`: `savedWorld ?? createWorld(..., readChosenMode())`.
+
+**Lo que costó**: el smoke nuevo fallaba con «an old save must play the shipped mode, got undefined» y no era el código. El mar **no reescribe un guardado sin cambios**: el autoguardado compara y sólo escribe si el mundo difiere, así que un guardado sembrado y no tocado nunca volvía. Arreglo en el smoke: navegar un momento (lo que hace un jugador) y disparar `beforeunload`, que el mar ya escucha como escritura final. El modelo, medido aparte, ya resolvía bien los dos casos.
+
+**RED honesto del smoke**: con `world.js` de `HEAD` falla nombrando las tres reglas — el mar nuevo pierde el modo, el id desconocido no cae, el guardado viejo no abre.
 
 **Un detalle de diseño que se respetó:** `advance(world)` devuelve el mundo siguiente **o `null`** para quedarse. Devolver el mundo siempre habría hecho que un modo sin avance re-sembrara el mismo nivel en cada tick.

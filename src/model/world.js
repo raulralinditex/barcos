@@ -1112,6 +1112,11 @@ export function markDefeated(world, enemyId) {
 export function serializeWorld(world) {
   return JSON.stringify({
     v: 1,
+    // The mode this sea plays (S172). It is written even when it is the shipped one, so a
+    // save never depends on a default that a later version could change. The field is
+    // additive: `v` stays 1 because `deserializeWorld` rejects anything else, and raising
+    // it would turn every saved voyage into "no save".
+    mode: modeOf(world).id,
     seed: world.seed,
     rngState: world.rngState,
     nextId: world.nextId,
@@ -1155,6 +1160,9 @@ export function deserializeWorld(json) {
     if (!data.ship || !Number.isFinite(data.ship.x) || !Number.isFinite(data.ship.y)) return null;
     if (!Array.isArray(data.encounters)) return null;
     return {
+      // S172: a save written before modes existed has none, and it plays the shipped mode,
+      // which is what it was played as. An unknown or broken id is the same case.
+      mode: modeById(data.mode).id,
       seed: data.seed >>> 0,
       rngState: data.rngState | 0,
       nextId: Number.isFinite(data.nextId) ? data.nextId : data.encounters.length + 1,
