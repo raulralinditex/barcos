@@ -1,0 +1,24 @@
+scripts/smoke-gameover-return.mjs
+  s_33bdafc1f5b8de::t_3d2bb7364398e5 1-103,107-136
+  s_33bdafc1f5b8de::t_b1f46e56e87650 104-106
+src/ui/sea.js
+  s_33bdafc1f5b8de::t_f23b5dcadaf5cb 447-452,3196-3203
+odd/tasks/la-partida-termina-una-vez.md
+  s_33bdafc1f5b8de::t_db4ebb368dfec5 1-44
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.6",
+  "base_commit_sha": "6d4c061b0c7d7b00caf662d6cd7981db44577af4",
+  "prompts": {},
+  "sessions": {
+    "s_33bdafc1f5b8de": {
+      "agent_id": {
+        "tool": "pi",
+        "id": "01a2054f-ba19-7336-a8f7-74f16ecc2af7",
+        "model": "deepseek-v4.1-flash_high"
+      },
+      "human_author": "Raul Ripoll <raulral@ext.inditex.com>"
+    }
+  }
+}
