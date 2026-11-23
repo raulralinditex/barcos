@@ -1,0 +1,21 @@
+src/ui/sea.js
+  s_d180fa1ee2635b::t_294e8519050d7f 141-148,377-389,3804-3806
+test/mode-save.test.js
+  s_d180fa1ee2635b::t_1653fbcf01eefb 1-98
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.6",
+  "base_commit_sha": "491c0d8732522477843e8d5315e9e52c88eabba5",
+  "prompts": {},
+  "sessions": {
+    "s_d180fa1ee2635b": {
+      "agent_id": {
+        "tool": "pi",
+        "id": "01a207b9-2f23-75b6-b4e5-1495d5a65c67",
+        "model": "deepseek-v4.1-flash_high"
+      },
+      "human_author": "Raul Ripoll <raulral@ext.inditex.com>"
+    }
+  }
+}
