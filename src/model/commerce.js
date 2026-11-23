@@ -292,27 +292,52 @@ function mulberry32(state) {
 }
 
 /**
- * How much a hold of a zone is worth as a multiplier on the declared enemy hold (S115).
+ * How much a hold of a zone is worth as a multiplier on the declared prize value (S177).
  * Deeper water carries richer cargo, which is what makes a dangerous crossing pay.
  */
 const HOLD_ZONE = { costera: 0.5, abierto: 1, abismo: 1.8 };
 
 /**
- * The hold an enemy sails with (S115). Deterministic in the encounter id and the hull,
- * exactly like her guns (combat.js), so the same sail always carries the same cargo: a
- * reload cannot reroll a rich prize.
+ * What a prize is worth, as a rule about value and not about weight (S177).
  *
- * The kg is scaled by her zone, and the goods are spread across the catalogue so a
- * captured hold is worth selling rather than a single line of barrels.
+ * The player reported a hold worth 13 million doblones and she was right: the prize used to
+ * aim at 12 tonnes of whatever the dice picked, so twelve tonnes of timber (18 loads, 522
+ * doblones) and twelve tonnes of diamonds (3,000 stones, 13,440,000) were the same roll. The
+ * weight limit was never a value limit.
+ *
+ * Now the prize aims at a value: a share of what the hull herself is worth, moved by the
+ * water she sails. The goods are only the form that value takes, so a rich good arrives in
+ * small quantity — which is both the fix and the realistic answer.
+ */
+export const HOLD_VALUE = {
+  /**
+   * The share of the hull's own price a prize is worth, before the zone. 0.08 means a
+   * 50,000-doblón galleon carries about 4,000 doblones of cargo, which pays for the fight
+   * and the crossing without breaking the economy.
+   */
+  prizeShareOfHull: 0.08,
+  /** How far either way one prize may land from that share, as a multiplier band. */
+  minSpread: 0.6,
+  maxSpread: 1.4,
+  /** The value multiplier of each water (S177), the same shape the old weight factor had. */
+  zoneFactor: HOLD_ZONE,
+};
+
+/**
+ * The hold an enemy sails with (S115, S177). Deterministic in the encounter id and the
+ * hull, exactly like her guns (combat.js), so the same sail always carries the same cargo:
+ * a reload cannot reroll a rich prize.
+ *
+ * The target is a value in doblones, scaled by her hull and her water. The goods are drawn
+ * from the catalogue and bought with that value, line by line, so what she carries is worth
+ * what she is meant to be worth whatever the dice hand her.
  */
 export function enemyHoldFor(encounter) {
   const id = Number(encounter?.id);
   const hull = hullById(encounter?.hullId);
   if (!Number.isFinite(id) || !hull) return null;
   const zoneId = encounter.zoneId ?? "costera";
-  const zoneFactor = HOLD_ZONE[zoneId] ?? HOLD_ZONE.costera;
-  const baseKg = Number.isFinite(COMMERCE.enemyHoldKg) ? COMMERCE.enemyHoldKg : 12000;
-  const targetKg = Math.round(baseKg * zoneFactor * (0.6 + 0.8 * ((id * 2654435761) % 1000) / 1000));
+  const zoneFactor = HOLD_VALUE.zoneFactor[zoneId] ?? HOLD_VALUE.zoneFactor.costera;
 
   let state = (id * 40503) ^ 0x9e3779b9;
   const rnd = () => {
@@ -320,17 +345,66 @@ export function enemyHoldFor(encounter) {
     state = r.state;
     return r.value;
   };
+  // The value this sail carries: a share of her hull, the water's factor, and a band that
+  // keeps two prizes of the same water from being identical.
+  const share = HOLD_VALUE.minSpread + (HOLD_VALUE.maxSpread - HOLD_VALUE.minSpread) * rnd();
+  const hullPrice = Number(hull.priceGold) || 0;
+  let leftGold = Math.round(hullPrice * HOLD_VALUE.prizeShareOfHull * zoneFactor * share);
+
   const manifest = [];
-  let leftKg = targetKg;
   // A merchantman fills her hold with a few lines of goods, never one endless one.
   const lines = 2 + Math.floor(rnd() * 3);
-  for (let i = 0; i < lines && leftKg > 0; i += 1) {
+  // S177: the hold also has to be able to carry what she is worth. A value rule alone
+  // bought 104 tonnes of wine for a great galleon, which no hull could take aboard and
+  // which made the prize uncollectable. The weight ceiling is the old declared hold, and
+  // it is a ceiling, not a target: the value decides, the weight only stops nonsense.
+  const maxKg = (Number.isFinite(COMMERCE.enemyHoldKg) ? COMMERCE.enemyHoldKg : 12000) *
+    (HOLD_VALUE.zoneFactor[zoneId] ?? 1);
+  let leftKg = maxKg;
+  for (let i = 0; i < lines && leftGold > 0 && leftKg > 0; i += 1) {
     const commodity = COMMODITIES[Math.floor(rnd() * COMMODITIES.length)];
-    const share = i === lines - 1 ? 1 : 0.2 + rnd() * 0.5;
-    const units = Math.floor((leftKg * share) / commodity.kgPerUnit);
-    if (units <= 0) continue;
-    manifest.push({ commodityId: commodity.id, units });
-    leftKg -= units * commodity.kgPerUnit;
+    const lineGold = i === lines - 1 ? leftGold : Math.round(leftGold * (0.2 + rnd() * 0.5));
+    // Units are bought with the value of the line, at the good's base price: a rich good
+    // therefore arrives in small quantity, which is the whole point of the rule.
+    const units = Math.floor(lineGold / Math.max(1, commodity.baseGold));
+    const unitsByWeight = Math.floor(leftKg / Math.max(1, commodity.kgPerUnit));
+    const taken = Math.min(units, unitsByWeight);
+    if (taken <= 0) continue;
+    manifest.push({ commodityId: commodity.id, units: taken });
+    leftGold -= taken * commodity.baseGold;
+    leftKg -= taken * commodity.kgPerUnit;
+  }
+  // S177: a cheap good cannot carry a rich prize in the weight she has. Twelve tonnes of
+  // timber is worth a few hundred doblones however it is counted, so a line that ran out of
+  // room leaves value unspent — and that is what made two prizes of the same water differ
+  // eightfold. The leftover is placed on the densest goods that still fit, which is exactly
+  // the cargo a real merchantman would carry to be worth what she is worth.
+  if (leftGold > 0 && leftKg > 0) {
+    const densest = [...COMMODITIES].sort((a, b) => b.baseGold / b.kgPerUnit - a.baseGold / a.kgPerUnit);
+    for (const commodity of densest) {
+      if (leftGold <= 0 || leftKg <= 0) break;
+      const units = Math.min(
+        Math.floor(leftGold / Math.max(1, commodity.baseGold)),
+        Math.floor(leftKg / Math.max(1, commodity.kgPerUnit)),
+      );
+      if (units <= 0) continue;
+      const line = manifest.find((entry) => entry.commodityId === commodity.id);
+      if (line) line.units += units;
+      else manifest.push({ commodityId: commodity.id, units });
+      leftGold -= units * commodity.baseGold;
+      leftKg -= units * commodity.kgPerUnit;
+    }
+  }
+  // A roll can still come up empty when every good it drew was too rich for the room. A
+  // prize worth nothing is not a prize, so the hold falls back to the cheapest good, which
+  // always fits a line of it.
+  if (manifest.length === 0) {
+    const cheapest = [...COMMODITIES].sort((a, b) => a.baseGold - b.baseGold)[0];
+    const units = Math.min(
+      Math.floor(leftGold / Math.max(1, cheapest.baseGold)),
+      Math.floor(maxKg / Math.max(1, cheapest.kgPerUnit)),
+    );
+    if (units > 0) manifest.push({ commodityId: cheapest.id, units });
   }
   return holdOf(manifest);
 }
@@ -361,19 +435,27 @@ export function awardHold(ship, prize) {
   const freeKg = Number.isFinite(capacity) ? Math.max(0, capacity - (Number(ship?.cargoKg) || 0)) : Infinity;
 
   const manifest = [...current.manifest.map((entry) => ({ ...entry }))];
+  // S176: the room is measured once, before the loop, but it has to come DOWN with every
+  // line the hold accepts. A prize arrives as several lines of goods, and comparing each
+  // one against the space the hold had when the loop began let three lines fit three times:
+  // a 40,000 kg hold took 40,140 kg, and a rich line of diamonds — which weighs almost
+  // nothing — was the line that could never be stopped by weight.
+  let roomKg = freeKg;
   let leftKg = 0;
   const left = [];
   for (const entry of incoming.manifest) {
-    const fits = Math.min(entry.units, Math.floor(freeKg / commodityById(entry.commodityId).kgPerUnit));
+    const unitKg = commodityById(entry.commodityId).kgPerUnit;
+    const fits = Math.min(entry.units, Math.floor(roomKg / unitKg));
     const remainder = entry.units - Math.max(0, fits);
     if (fits > 0) {
       const existing = manifest.find((line) => line.commodityId === entry.commodityId);
       if (existing) existing.units += fits;
       else manifest.push({ commodityId: entry.commodityId, units: fits });
+      roomKg -= fits * unitKg;
     }
     if (remainder > 0) {
       left.push({ commodityId: entry.commodityId, units: remainder });
-      leftKg += remainder * commodityById(entry.commodityId).kgPerUnit;
+      leftKg += remainder * unitKg;
     }
   }
   return { ship: withHold(ship, holdOf(manifest)), left: holdOf(left), leftKg };
