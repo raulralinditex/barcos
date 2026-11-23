@@ -44,4 +44,10 @@ L94 (cierre, con los recortes que hicieron falta). Al correr la suite apareciero
 
 **S170-B, medido**: el traspaso de mando ya funcionaba. El smoke estaba rojo porque `toRuntimeShip` deja `yardId` sin definir y `yardOf` lo resuelve al puerto de casa, así que la escolta nunca entraba al escuadrón y `nextCommandShip` no tenía a quién pasar el mando. Lo confirmé inyectando un `console.log` con `page.route` sobre `sea.js` sin tocar el fichero: `allies()` devolvía una sola entrada. Con `yardId: null` en las dos naves el smoke da GREEN y conserva los dos caminos de siempre (capitana que pelea conserva el mando; todo hundido muestra el hundimiento).
 
+L95 (pregunta del jugador, verbatim): "si la capitana se hunde tambien desaparece". **Medido en navegador real antes de tocar nada**: sí, ya funcionaba. Con la capitana en `hull: 0` y una escolta sana, al abrir el mar el HUD pasa a la escolta, `fleet.ships` queda con una sola nave, `captainId` es la escolta, `world.ship.id` es la escolta y hay un `type: "wreck"` de 242 doblones en el agua. `handOverCommand` llama a `loseHull` con `playerCombat.status`, que `refreshStatus` ya puso en `"sunk"` al cargar.
+
+**El hueco real no era el comportamiento, era la prueba**: ni un test ni un smoke cubrían el hundimiento de la **capitana**. `smoke-own-wreck` cubría el pecio de una escolta y `smoke-command-handover` el traspaso, pero nadie ataba las dos mitades. Se agregó el caso al final de `smoke-own-wreck`: capitanía hundida ⇒ fuera de la flota, mando a la escolta, HUD con el nombre nuevo, y pecio con oro en el agua.
+
+**RED honesto**: excluyendo a la capitana de `leaveWreck` (`entry.id !== runtimeShip?.id`), el smoke falla nombrando la regla: "S169: the sunk flagship must leave a wreck in the water". Restaurado con `cmp`.
+
 **Trampa anotada**: `buildShip` con `crew: { marino: 20 }` sobre un galeón pequeño es **infeasible** (`crew-below-minimum`, necesita 25). El smoke nuevo naufragó en el setup hasta sembrar `{ marino: 25, artillero: 4, soldado: 6 }`.

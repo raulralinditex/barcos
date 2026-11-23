@@ -137,6 +137,58 @@ try {
     "S169-C: the wreck must be gone from the water once it is collected",
   );
 
+  /* ---------- S169: a sunk captain leaves a wreck and hands over the helm ---------- */
+
+  // The player's rule, twice over (verbatim): "si se nos hunde la capitana otra del grupo se
+  // hace capitana" and "si la capitana se hunde tambien desaparece". Both halves in one
+  // voyage: the flagship is lost, her wreck stays in the water, and the escort takes over.
+  const flagship = await browser.newPage({ viewport: { width: 1400, height: 900 }, locale: "es-AR" });
+  flagship.on("console", (msg) => { if (msg.type() === "error") errors.push(msg.text()); });
+  flagship.on("pageerror", (err) => errors.push(`pageerror: ${err.message}`));
+  const alfa = { ...captain, name: "Alfa" };
+  const beta = { ...captain, id: "smoke-beta", name: "Beta" };
+  const flagshipWorld = { ...oldSave, ship: { x: 0, y: 0, heading: 0, currentSpeedKn: 0, speedKn: alfa.speedKn } };
+  await flagship.addInitScript(([alfa, beta, world]) => {
+    if (sessionStorage.getItem("flagship-seeded")) return;
+    sessionStorage.setItem("flagship-seeded", "1");
+    localStorage.setItem("barcos:lang:v1", "es");
+    localStorage.setItem("barcos:fleet:v1", JSON.stringify({ v: 1, captainId: alfa.id, ships: [alfa, beta] }));
+    localStorage.setItem("barcos:game:v1", JSON.stringify({ gold: 0, world: JSON.stringify(world), combat: {
+      // The flagship is at the bottom; the escort is sound and fighting.
+      player: { condition: { hull: 0, rigging: 100, crew: 100, morale: 100 } },
+      escorts: { [beta.id]: { condition: { hull: 100, rigging: 100 }, crew: beta.crew } },
+    } }));
+  }, [alfa, beta, flagshipWorld]);
+  await flagship.goto("http://localhost:8765/sea.html", { waitUntil: "networkidle" });
+  await flagship.waitForTimeout(2200);
+  const lost = await flagship.evaluate(() => {
+    const game = JSON.parse(localStorage.getItem("barcos:game:v1") ?? "null");
+    const fleet = JSON.parse(localStorage.getItem("barcos:fleet:v1") ?? "null");
+    const world = game?.world ? JSON.parse(game.world) : null;
+    return {
+      hud: document.querySelector("#hud-ship-name")?.textContent ?? "",
+      fleetIds: (fleet?.ships ?? []).map((entry) => entry.id),
+      captainId: fleet?.captainId,
+      wrecks: (world?.encounters ?? []).filter((entry) => entry.type === "wreck"),
+      helm: world?.ship?.id,
+    };
+  });
+  check(
+    !lost.fleetIds.includes("smoke-captain"),
+    `S169: the sunk flagship must disappear from the fleet, it still lists ${JSON.stringify(lost.fleetIds)}`,
+  );
+  check(lost.captainId === "smoke-beta", `S169: the escort must take command, the fleet's captain is ${lost.captainId}`);
+  check(lost.helm === "smoke-beta", `S169: the helm must move to the escort, the sea is steering ${lost.helm}`);
+  check(/^Beta/.test(lost.hud), `S169: the HUD must name the new captain, it says "${lost.hud}"`);
+  check(lost.wrecks.length >= 1, "S169: the sunk flagship must leave a wreck in the water");
+  if (lost.wrecks.length > 0) {
+    check(
+      lost.wrecks.every((entry) => entry.gold > 0),
+      `S169: the flagship's wreck must be worth collecting, got ${JSON.stringify(lost.wrecks.map((w) => w.gold))}`,
+    );
+  }
+  await flagship.close();
+
   if (errors.length) failures.push(`console errors: ${errors.join(" | ")}`);
 } finally {
   await browser.close();
