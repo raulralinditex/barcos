@@ -1,0 +1,59 @@
+scripts/smoke-own-wreck.mjs
+  s_33bdafc1f5b8de::t_2ef2a66d8eb663 24
+  s_33bdafc1f5b8de::t_3043a752893130 1-23,25-149
+scripts/smoke-settings.mjs
+  s_33bdafc1f5b8de::t_3599ee12284a37 91-94,96-97,111-114
+odd/tasks/pecio-propio.md
+  s_33bdafc1f5b8de::t_3ceeb8e5d3beb7 1-37
+  s_33bdafc1f5b8de::t_69e9f590a80813 38-47
+src/i18n/es.js
+  s_33bdafc1f5b8de::t_15fef8cbea5cfa 734
+scripts/smoke-yard-mooring.mjs
+  s_33bdafc1f5b8de::t_e227ea4aebc485 106-113,117-125
+src/model/settings.js
+  s_33bdafc1f5b8de::t_7761a9383164a4 133-136,139,229
+src/ui/app.js
+  s_33bdafc1f5b8de::t_f395d8e6551f28 96,1171,1933,2191,2364,2408,2416,2511,2538,2635,2666,2720,2811
+  s_33bdafc1f5b8de::t_3d084179eb52cb 1372
+test/settings.test.js
+  s_33bdafc1f5b8de::t_f6cfc1cf5c2611 250-251,262-263
+test/fleet-mooring.test.js
+  s_33bdafc1f5b8de::t_3f160b37649152 32-33,35
+src/model/sinking.js
+  s_33bdafc1f5b8de::t_776455c2ec36bf 2,4-11,14,17,20-24,31,33-36,38-39,41-46,48-54
+src/model/settings-branches.js
+  s_33bdafc1f5b8de::t_d41266c91bd6c4 35
+src/ui/sea.js
+  s_33bdafc1f5b8de::t_3493804398c8a9 2955-2960,2962-2963,2967,2969,2974-2995
+  s_33bdafc1f5b8de::t_7b20e23a9fa8e1 64
+  s_33bdafc1f5b8de::t_b97c7703088a76 2940-2944
+  s_33bdafc1f5b8de::t_6441c6e4a2e9f2 2996-2997
+test/sea-squadrons.test.js
+  s_33bdafc1f5b8de::t_9a016a6a6ae976 66
+src/model/fleet.js
+  s_33bdafc1f5b8de::t_9967e5e3d5d13e 54,80,97,130,137,140,228-229,233-234,416-421
+src/i18n/en.js
+  s_33bdafc1f5b8de::t_47ce37b6329044 737
+test/own-wreck.test.js
+  s_33bdafc1f5b8de::t_40f11ec5222ab0 1-138
+scripts/smoke-tabs.mjs
+  s_33bdafc1f5b8de::t_99753976c986d7 76-79
+scripts/smoke-command-handover.mjs
+  s_33bdafc1f5b8de::t_63b94d25620e86 24-29
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.6",
+  "base_commit_sha": "7f3231684c94d25d461b44616fce668280754dc4",
+  "prompts": {},
+  "sessions": {
+    "s_33bdafc1f5b8de": {
+      "agent_id": {
+        "tool": "pi",
+        "id": "01a2054f-ba19-7336-a8f7-74f16ecc2af7",
+        "model": "deepseek-v4.1-flash_high"
+      },
+      "human_author": "Raul Ripoll <raulral@ext.inditex.com>"
+    }
+  }
+}
