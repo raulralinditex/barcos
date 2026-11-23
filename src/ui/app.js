@@ -58,6 +58,7 @@ import {
   withShipCommand,
 } from "../model/fleet.js";
 import { conditionOf, damagedShips, priceWithPurse, repairCost, repairFleetShip, repairReport } from "../model/repair.js";
+import { applySeaworthy, seaworthyPlan } from "../model/seaworthy.js";
 import { buildShip, toRuntimeShip } from "../model/shipyard.js";
 import { repaintSettingsForLanguage } from "./settings-tab.js";
 import { showsBuilderPanels } from "../model/fleet-panels.js";
@@ -2526,12 +2527,17 @@ function renderFleetDetail() {
   // Repair and sell, priced and gated exactly as they were on the row.
   const visiting = visitingYard();
   const cost = repairCost(ship);
-  els.fleetRepairBtn.disabled = visiting || !(cost > 0);
-  els.fleetRepairBtn.textContent = cost > 0
-    ? t("fleet.repair", { gold: gold(priceWithPurse(cost, state.gold)) })
+  // S174: the button also makes her seaworthy — the minimum crew, 25 days of provisions and
+  // the ballast she needs to stop floating high. It is one service with one price, so the
+  // player sees the whole bill before paying it.
+  const seaworthy = seaworthyPlan(ship);
+  const total = cost + seaworthy.cost;
+  els.fleetRepairBtn.disabled = visiting || !(total > 0);
+  els.fleetRepairBtn.textContent = total > 0
+    ? t("fleet.repair", { gold: gold(priceWithPurse(total, state.gold)) })
     : t("fleet.repairNone");
-  els.fleetRepairBtn.title = cost > 0
-    ? t("fleet.repairTitle", { name: ship.name, gold: gold(priceWithPurse(cost, state.gold)) })
+  els.fleetRepairBtn.title = total > 0
+    ? t("fleet.repairTitle", { name: ship.name, gold: gold(priceWithPurse(total, state.gold)) })
     : t("fleet.repairSound", { name: ship.name });
 
   // S121: what the yard charges to put the rounds back. A hull in port has no live racks
@@ -2707,19 +2713,41 @@ els.fleetRepairBtn.addEventListener("click", () => {
   const target = localFleet().ships.find((entry) => entry.id === refitId);
   if (!target) return;
   const captain = captainShip(fleet);
-  const result = repairFleetShip(fleet, target.id, state.gold, { allowCaptain: true });
-  if (!result.repaired) return;
-  fleet = result.fleet;
-  state.gold = result.gold;
+  let spent = 0;
+  let done = false;
+
+  // S174: the same button does both services. The hull is put right first, because a hull
+  // at the bottom takes no crew aboard; then what she is missing to be seaworthy is bought
+  // with what the purse has left. A short purse still buys a part of the repair, exactly as
+  // it always did, and the men and stores are only bought whole.
+  const repaired = repairFleetShip(fleet, target.id, state.gold, { allowCaptain: true });
+  if (repaired.repaired) {
+    fleet = repaired.fleet;
+    state.gold = repaired.gold;
+    spent += repaired.spent ?? 0;
+    done = true;
+  }
+
+  const hull = fleet.ships.find((ship) => ship.id === target.id) ?? null;
+  const plan = hull ? seaworthyPlan(hull) : null;
+  if (hull && plan && plan.cost > 0 && state.gold >= plan.cost) {
+    const ready = applySeaworthy(hull, plan);
+    fleet = { ...fleet, ships: fleet.ships.map((ship) => (ship.id === hull.id ? ready : ship)) };
+    state.gold -= plan.cost;
+    spent += plan.cost;
+    done = true;
+  }
+
+  if (!done) return;
   saveFleet();
-  const repaired = fleet.ships.find((ship) => ship.id === target.id) ?? null;
-  savePurse(repaired, target.id === captain?.id);
+  const after = fleet.ships.find((ship) => ship.id === target.id) ?? null;
+  savePurse(after, target.id === captain?.id);
   els.goldValue.textContent = gold(state.gold);
   lastNoticeKey = "fleet.repaired";
-  lastAddedName = repaired?.name ?? null;
+  lastAddedName = after?.name ?? null;
   els.purchaseNotice.textContent = t("fleet.repaired", {
-    name: repaired?.name ?? "",
-    gold: gold(result.spent ?? 0),
+    name: after?.name ?? "",
+    gold: gold(spent),
   });
   dockSignature = null;
   renderFleet();
