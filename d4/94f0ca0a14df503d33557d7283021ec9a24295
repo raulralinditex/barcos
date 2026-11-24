@@ -1,0 +1,35 @@
+src/model/orders.js
+  s_33bdafc1f5b8de::t_d1b277b6c66443 67-71,74,89-90,151-161,168-172,174-179
+  s_33bdafc1f5b8de::t_f291d9ab0760e0 163-166
+test/fleet-mooring.test.js
+  s_33bdafc1f5b8de::t_aae1cd335191f1 32-48,50-56,58-60
+  s_33bdafc1f5b8de::t_5ec3ca9f376a0f 57
+odd/tasks/ronda-y-zarpe.md
+  s_33bdafc1f5b8de::t_e2ee8f20123fb6 1-53
+scripts/smoke-departure.mjs
+  s_33bdafc1f5b8de::t_903773cd8915d9 81-83
+  s_33bdafc1f5b8de::t_a064964d9f4c8e 1-80,84-107
+src/model/fleet.js
+  s_33bdafc1f5b8de::t_807bfd3173e014 84-95,99,102-107
+test/pickup-round.test.js
+  s_33bdafc1f5b8de::t_38e9038946f87b 50-51,53-55
+  s_33bdafc1f5b8de::t_4d1fa6fde576c5 1-49,52,56-80
+test/departure-command.test.js
+  s_33bdafc1f5b8de::t_8e6ea3835740e5 1-87
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.6",
+  "base_commit_sha": "d494f0ca0a14df503d33557d7283021ec9a24295",
+  "prompts": {},
+  "sessions": {
+    "s_33bdafc1f5b8de": {
+      "agent_id": {
+        "tool": "pi",
+        "id": "01a2054f-ba19-7336-a8f7-74f16ecc2af7",
+        "model": "deepseek-v4.1-flash_high"
+      },
+      "human_author": "Raul Ripoll <raulral@ext.inditex.com>"
+    }
+  }
+}
