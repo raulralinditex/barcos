@@ -64,10 +64,14 @@ export function pickUpOrder(from, encounters) {
   if (!isPoint(from) || !Array.isArray(encounters)) return null;
   let best = null;
   let bestDistance = Infinity;
-  let remaining = 0;
+  // S181: the round names the buoys it set out for. Counting how many are in the water made
+  // the order endless, because the sea tops its quota back up on every tick: the count went
+  // down by one and the sea put one back. The ids are the round; what the sea seeds later is
+  // another round, started by the player.
+  const ids = [];
   for (const encounter of encounters) {
     if (encounter?.type !== "treasure" || !isPoint(encounter)) continue;
-    remaining += 1;
+    if (Number.isFinite(encounter.id)) ids.push(encounter.id);
     const distance = Math.hypot(encounter.x - from.x, encounter.y - from.y);
     if (distance < bestDistance) {
       best = encounter;
@@ -82,7 +86,8 @@ export function pickUpOrder(from, encounters) {
     y: best.y,
     distanceM: bestDistance,
     arrived: false,
-    remaining,
+    remaining: ids.length,
+    ids,
   };
 }
 
@@ -143,15 +148,35 @@ export function orderProgress(ship, order, encounters) {
   const current = list.find(
     (encounter) => encounter?.type === "treasure" && encounter.id === order.targetId,
   );
-  const remaining = Number.isFinite(order.remaining) ? Math.max(0, order.remaining) : null;
-  if (current) return { ...order, x: current.x, y: current.y };
+  // S181: the round is the list of ids it named. A buoy is owed while it is still in the
+  // water, whether or not it is the one being chased right now — the sea keeps seeding new
+  // ones, and those are not this round's business.
+  const named = Array.isArray(order.ids) ? order.ids : null;
+  const stillAfloat = named
+    ? named.filter((id) => list.some((entry) => entry?.type === "treasure" && entry.id === id))
+    : null;
+  const remaining = named
+    ? stillAfloat.length
+    : (Number.isFinite(order.remaining) ? Math.max(0, order.remaining) : null);
+  if (current) return { ...order, x: current.x, y: current.y, remaining };
   // The buoy this tick was aimed at is gone: she was collected, or she drifted out of the
-  // sea. Either way the round owes one less.
-  const left = remaining === null ? null : Math.max(0, remaining - 1);
+  // sea. S181: `remaining` is already the count of the round's named buoys still afloat, so
+  // it needs no second subtraction here — doing it twice ended a three-buoy round after two
+  // and left one named buoy uncollected.
+  const left = remaining;
   if (left === 0) return null;
-  const next = pickUpOrder(ship, list);
+  // The next mark is the nearest buoy this round named, never one the sea seeded afterwards.
+  const candidates = named
+    ? list.filter((entry) => entry?.type === "treasure" && named.includes(entry.id) && isPoint(entry))
+    : list;
+  const next = pickUpOrder(ship, candidates);
   if (!next) return null;
-  return left === null ? next : { ...next, remaining: Math.min(left, next.remaining) };
+  return {
+    ...next,
+    // A round keeps the ids it started with: picking the next mark must not re-name the round.
+    ids: named ?? next.ids,
+    remaining: named ? Math.min(left, next.remaining) : (left === null ? next.remaining : Math.min(left, next.remaining)),
+  };
 }
 
 /** The wheel is the player's again: no order is live. */

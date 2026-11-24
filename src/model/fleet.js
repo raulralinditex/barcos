@@ -81,14 +81,30 @@ export function shipsAvailableAtYard(fleet, yardId, captainYardId) {
       (ship.id === fleet?.captainId || ship.sails !== false)));
 }
 
-/** Sail local marked hulls and leave unmarked visitors at this yard. */
+/**
+ * Sail the captain who is sailing and the hulls of her own command (S182).
+ *
+ * The player reported it (verbatim): "cuando estoy de visita en un astillero, puedo dar a
+ * zarpar a la flota que ese en ese astillero". This used to move every hull moored at the
+ * yard, whatever command she answered to, so a yard holding two captains sent both squadrons
+ * to sea with one button.
+ *
+ * A departure is one command's business: the fleet's captain and the hulls that answer to
+ * her. Another captain's hulls stay where they are until their own captain sails, and a hull
+ * already at sea is left alone.
+ */
 export function departYard(fleet, yardId) {
   const ships = fleet?.ships ?? [];
   if (!shipyardById(yardId)) return { ...fleet, ships };
+  const sailing = typeof fleet?.captainId === "string" ? fleet.captainId : null;
   return { ...fleet, ships: ships.map((ship) => {
     const location = yardOf(ship);
-    if (location !== yardId && location !== null) return ship;
-    return { ...ship, yardId: ship.id === fleet?.captainId || ship.sails !== false ? null : yardId };
+    if (location !== yardId) return ship;
+    // Only the captain under the helm, and only her own hulls. A hull that answers to
+    // another captain is that captain's to sail.
+    const mine = ship.id === sailing || ship.commandId === sailing;
+    if (!mine) return ship;
+    return { ...ship, yardId: ship.id === sailing || ship.sails !== false ? null : yardId };
   }) };
 }
 

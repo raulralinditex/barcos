@@ -29,11 +29,35 @@ test("S130 B: fleet persistence keeps yard IDs and old and unknown locations bec
   assert.deepEqual(old.ships.map((entry) => entry.yardId), [home, home]);
 });
 
-test("S130 D: departure moves only the local marked and traveling hulls, not another yard", () => {
-  const fleet = { captainId: "captain", ships: [ship("captain", { yardId: home }), ship("escort", { yardId: home, sails: true }), ship("stays", { yardId: home, sails: false }), ship("remote", { yardId: away, sails: true }), ship("traveler", { yardId: null, sails: false })] };
+test("S130 D / S182: a departure sails the captain's own hulls and leaves the rest", () => {
+  // S182 changed the rule this case measures. A set-sail used to move every hull moored at
+  // the yard, whatever command she answered to, so a yard with two captains sent both
+  // squadrons to sea with one button. Now a departure is one command's business, so the
+  // assertion says what each hull does and why, instead of one flat list of yard ids.
+  // Updated with the player's explicit approval.
+  const fleet = {
+    captainId: "captain",
+    ships: [
+      ship("captain", { yardId: home, commandId: "captain" }),
+      ship("escort", { yardId: home, commandId: "captain", sails: true }),
+      ship("stays", { yardId: home, commandId: "captain", sails: false }),
+      ship("remote", { yardId: away, commandId: "captain", sails: true }),
+      ship("traveler", { yardId: null, commandId: "captain", sails: false }),
+      ship("other", { yardId: home, commandId: "other", sails: true }),
+    ],
+  };
   const result = fleetModel.departYard(fleet, home);
-  assert.deepEqual(result.ships.map((s) => s.yardId), [null, null, home, away, home]);
-  assert.equal(fleet.ships[0].yardId, home);
+  const byId = Object.fromEntries(result.ships.map((s) => [s.id, s.yardId]));
+  // Her own command: the captain and her marked hull sail, an unmarked one stays, a hull
+  // at another yard is not hers to move, and one already at sea is left alone.
+  assert.equal(byId.captain, null, "the sailing captain leaves");
+  assert.equal(byId.escort, null, "her marked hull sails with her");
+  assert.equal(byId.stays, home, "her unmarked hull stays moored");
+  assert.equal(byId.remote, away, "a hull at another yard is not moved from here");
+  assert.equal(byId.traveler, null, "a hull already at sea is left where she is");
+  // S182: another captain's hull is not hers to send to sea.
+  assert.equal(byId.other, home, "another captain's hull stays until she sails herself");
+  assert.equal(fleet.ships[0].yardId, home, "the input fleet is not mutated");
 });
 
 test("S130 F/G: only local or visiting traveling hulls are available, and a remote selection cannot trade", () => {
