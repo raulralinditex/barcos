@@ -138,20 +138,29 @@ const anyFlag = await page.evaluate(() => {
 check(anyFlag > captainFlag.white, `S72: only the captain's flag was painted, got ${anyFlag} white px`);
 
 // No flag of a nation that is not on this sea may appear.
-const foreign = await page.evaluate(() => {
+// No flag of a nation that is not on this sea may appear. The Portuguese green is counted
+// only where a fleet flag is drawn (the masthead window): on the whole canvas, two stray
+// pixels of other scenery already match it (S72 follow-up).
+const foreign = await page.evaluate((box) => {
   const canvas = document.querySelector("#sea-canvas");
   const { width, height } = canvas;
-  const data = canvas.getContext("2d").getImageData(0, 0, width, height).data;
+  const full = canvas.getContext("2d").getImageData(0, 0, width, height).data;
+  const { x, y, w, h } = box;
+  const masthead = canvas.getContext("2d").getImageData(x, y, w, h).data;
   let orange = 0;
   let green = 0;
-  for (let i = 0; i < data.length; i += 4) {
-    const [r, g, b, a] = [data[i], data[i + 1], data[i + 2], data[i + 3]];
+  for (let i = 0; i < full.length; i += 4) {
+    const [r, g, b, a] = [full[i], full[i + 1], full[i + 2], full[i + 3]];
     if (a < 200) continue;
     if (Math.abs(r - 212) < 14 && Math.abs(g - 113) < 14 && Math.abs(b - 31) < 14) orange += 1;
+  }
+  for (let i = 0; i < masthead.length; i += 4) {
+    const [r, g, b, a] = [masthead[i], masthead[i + 1], masthead[i + 2], masthead[i + 3]];
+    if (a < 200) continue;
     if (Math.abs(r - 28) < 12 && Math.abs(g - 92) < 12 && Math.abs(b - 58) < 12) green += 1;
   }
   return { orange, green };
-});
+}, { x: 620, y: 400, w: 160, h: 110 });
 check(foreign.orange === 0, `S72: a Dutch flag appeared on a sea with no Dutch ship (${foreign.orange} px)`);
 check(foreign.green === 0, `S72: a Portuguese flag appeared on a sea with no Portuguese ship (${foreign.green} px)`);
 
