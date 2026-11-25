@@ -1,0 +1,19 @@
+test/flag-shape.test.js
+  s_a06177f2d49543::t_959f8aa9199795 1-31
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.6",
+  "base_commit_sha": "0b69be158970649ed154a394e5cc04eeddcf2f14",
+  "prompts": {},
+  "sessions": {
+    "s_a06177f2d49543": {
+      "agent_id": {
+        "tool": "pi",
+        "id": "01a21261-f7c8-73c7-8faa-4e3766f9a844",
+        "model": "claude-haiku-5.5"
+      },
+      "human_author": "Raul Ripoll <raulral@ext.inditex.com>"
+    }
+  }
+}
