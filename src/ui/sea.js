@@ -108,6 +108,7 @@ import {
   nearestSquadron,
   safeZoneRadiusM,
   withActiveSquadron,
+  withAfloatSquadrons,
   ZONE_BANDS,
   createWorld,
   deserializeWorld,
@@ -3840,6 +3841,11 @@ function boot() {
   // A saved sea carries her own mode (S172); a brand new one is born in the mode the player
   // picked at the restart button, or the shipped one when she picked nothing.
   world = savedWorld ?? createWorld(worldSeed, runtimeShip, 0, fleet, readChosenMode());
+  // A command that has just put to sea is placed at the yard it sailed from (S183-D), and a
+  // command the sea has never held is added instead of staying invisible until a reload. The
+  // fleet sheet is the authority here: a `stationYardId` left on a hull by her departure is
+  // spent by this placement, and `writeFleetSave` drops it on the way back.
+  world = withAfloatSquadrons(world, fleet);
   // Old game records can have a position but no serialized world.
   if (!savedWorld && Number.isFinite(savedGame?.ship?.x) && Number.isFinite(savedGame?.ship?.y)) {
     world = { ...world, ship: { ...world.ship, ...savedGame.ship } };

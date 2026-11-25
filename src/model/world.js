@@ -9,7 +9,7 @@
  * (canvas y grows downward). Distances are metres; speeds are knots.
  */
 
-import { ZONES, HULLS, SHIPYARDS, hullById, shipyardAt } from "../data/naval-data.js";
+import { ZONES, HULLS, SHIPYARDS, hullById, shipyardAt, shipyardById } from "../data/naval-data.js";
 import { enemiesPerZone, normaliseLevel } from "./levels.js";
 import { DEFAULT_MODE_ID, modeById, modeOf } from "./modes/index.js";
 import { createEscort, escortStation, stepEscort } from "./formation.js";
@@ -356,6 +356,100 @@ export function homeShipyard() {
 }
 
 /**
+ * The anchor a squadron appears at, or null when the sea has no business moving her (S183-D).
+ *
+ * Two cases place a command at a quay instead of at the water the sea saved for her:
+ *   - she carries `stationYardId`, the yard she has just sailed from, so a departure puts her
+ *     next to her own yard and not 420 m from the captain of the helm;
+ *   - the sea has never held her, so there is no station of her own to keep, and the only
+ *     honest place for her is the yard she left.
+ * A hull already afloat with no station flag keeps the position the sea saved, which is the
+ * rule every voyage written before this one relies on.
+ */
+function stationAnchor(fleet, shipId) {
+  const ship = (fleet?.ships ?? []).find((entry) => entry && entry.id === shipId);
+  return shipyardById(ship?.stationYardId) ?? null;
+}
+
+/**
+ * The anchor a command the sea has never held belongs at (S183-D).
+ *
+ * A hull afloat in a fleet with no `stationYardId` has no station of her own, and the only
+ * honest place for her is the yard she left. Without this a captain bought and sailed from
+ * ensenada-abierta appeared on the ring around the captain of the helm, next to ships she has
+ * nothing to do with, which is what the player reported.
+ */
+function harbourAnchor(fleet, shipId) {
+  const ship = (fleet?.ships ?? []).find((entry) => entry && entry.id === shipId);
+  if (!ship || ship.yardId !== null) return null;
+  // A hull the sea already draws keeps the station it has.
+  return shipyardById(ship.stationYardId) ?? null;
+}
+
+/**
+ * Place the squadrons a fleet has afloat at the anchors they belong to (S183-D).
+ *
+ * The sea screen writes `world` on every autosave, so a command keeps the position it had. That
+ * is right for a voyage in progress and wrong for a captain who has just put to sea: she was
+ * placed on a ring 420 m from the captain of the helm, so a hull bought and sailed from
+ * ensenada-abierta appeared beside the ships of a captain she has nothing to do with.
+ *
+ * This is the one place that answers "where does this command stand". It returns the same
+ * world when there is nothing to move, so a caller can tell "placed" from "unchanged" by
+ * identity, and it never invents a squadron the fleet does not have.
+ */
+export function withAfloatSquadrons(world, fleet) {
+  if (!world || typeof world !== "object") return world;
+  const activeId = typeof world.activeId === "string" ? world.activeId : null;
+  let next = world;
+
+  const anchored = stationAnchor(fleet, activeId ?? world.ship?.id);
+  if (anchored && world.ship && (world.ship.x !== anchored.x || world.ship.y !== anchored.y)) {
+    const ship = { ...world.ship, x: anchored.x, y: anchored.y };
+    // The formation follows her helm, as it does on any move of the squadron.
+    const escorts = (Array.isArray(world.escorts) ? world.escorts : [])
+      .map((escort, index) => ({ ...escort, ...escortStation(ship, index) }));
+    next = { ...next, ship, escorts };
+  }
+
+  // A command the sea does not hold yet has to be added, not only moved: a captain who sailed
+  // from a yard while the sea was watching another one was invisible until a reload.
+  const others = Array.isArray(world.squadrons) ? world.squadrons.map((squadron) => ({ ...squadron })) : [];
+  const placed = others.map((squadron) => {
+    const anchor = stationAnchor(fleet, squadron?.id);
+    if (!anchor || !squadron?.ship) return squadron;
+    if (squadron.ship.x === anchor.x && squadron.ship.y === anchor.y) return squadron;
+    const ship = { ...squadron.ship, x: anchor.x, y: anchor.y };
+    return {
+      ...squadron,
+      ship,
+      escorts: (Array.isArray(squadron.escorts) ? squadron.escorts : [])
+        .map((escort, index) => ({ ...escort, ...escortStation(ship, index) })),
+    };
+  });
+  for (const squadron of seaSquadrons(fleet)) {
+    const id = squadron.captain.id;
+    if (id === (activeId ?? world.ship?.id)) continue;
+    if (placed.some((entry) => entry?.id === id)) continue;
+    const anchor = harbourAnchor(fleet, id);
+    if (!anchor) continue;
+    const ship = { ...world.ship, x: anchor.x, y: anchor.y, heading: 0, currentSpeedKn: 0, ...hullSpec(squadron.captain) };
+    placed.push({
+      id,
+      ship,
+      escorts: squadron.ships
+        .filter((entry) => entry.id !== id)
+        .map((entry, index) => createEscort({ ...entry, ...hullSpec(entry) }, ship, index)),
+      order: { throttle: 0, turn: 0 },
+    });
+  }
+  if (placed.length !== others.length || placed.some((squadron, index) => squadron !== others[index])) {
+    next = { ...next, squadrons: placed };
+  }
+  return next;
+}
+
+/**
  * Advance the ship one tick. `input.turn` is helm (-1 port .. +1 starboard),
  * `input.throttle` is sail (0 .. 1), `input.wind` is the wind it feels. Speed
  * eases; it never teleports. The wind trims the speed and pushes the hull
@@ -559,14 +653,19 @@ export function createWorld(seed, ship, gold = 0, fleet = null, modeId = DEFAULT
   world.escorts = shipsSailingAtSea(fleet)
     .filter((entry) => entry.id !== own && ownCommand.has(entry.id))
     .map((entry, index) => createEscort({ ...entry, ...hullSpec(entry) }, world.ship, index));
-  // Every other captain puts to sea too, each with her own formation and her own station
-  // apart from the first, so the sea shows every command at once (S155-C).
+  // Every other captain puts to sea too, each with her own formation. A command that has
+  // just sailed from a yard stands at that yard's anchor (S183-D); one the fleet has no
+  // station for keeps the old ring, so a sea written before this rule opens unchanged.
   const others = seaSquadrons(fleet).filter((squadron) => squadron.captain.id !== own);
   world.squadrons = others.map((squadron, index) => {
     // Her own identity, not the captain-of-the-helm's (S159): spreading `world.ship` here
     // gave every command the first captain's hull, crew and load, so a second captain would
     // have rowed with another woman's crew.
-    const at = { ...world.ship, ...squadronStation(world.ship, index), ...hullSpec(squadron.captain) };
+    const anchor = shipyardById(squadron.captain.stationYardId);
+    const station = anchor
+      ? { x: anchor.x, y: anchor.y, heading: 0, currentSpeedKn: 0 }
+      : squadronStation(world.ship, index);
+    const at = { ...world.ship, ...station, ...hullSpec(squadron.captain) };
     return {
       id: squadron.captain.id,
       ship: at,

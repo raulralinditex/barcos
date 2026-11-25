@@ -82,29 +82,51 @@ export function shipsAvailableAtYard(fleet, yardId, captainYardId) {
 }
 
 /**
- * Sail the captain who is sailing and the hulls of her own command (S182).
+ * Sail the captain who is sailing and the hulls of her own command (S182, S183).
  *
  * The player reported it (verbatim): "cuando estoy de visita en un astillero, puedo dar a
- * zarpar a la flota que ese en ese astillero". This used to move every hull moored at the
+ * zarpar la flota que ese en ese astillero". This used to move every hull moored at the
  * yard, whatever command she answered to, so a yard holding two captains sent both squadrons
  * to sea with one button.
  *
- * A departure is one command's business: the fleet's captain and the hulls that answer to
+ * A departure is one command's business: the captain who sails and the hulls that answer to
  * her. Another captain's hulls stay where they are until their own captain sails, and a hull
  * already at sea is left alone.
+ *
+ * `captainId` names the captain the player picked on screen (S183). Without it the fleet's
+ * own captain sails, which is the rule S182 wrote. With it, a yard whose captain is not the
+ * fleet's own can put to sea: before, the set-sail button always sailed `fleet.captainId`, so
+ * the captain of the yard on screen could never leave it. A named hull that is not a captain
+ * of that yard is not hers to sail, and the pick is ignored.
+ *
+ * The hulls that leave carry `stationYardId`: the yard they sailed from, which is the anchor
+ * the sea places them at (S183-D). `departure` reports the one command that left, or null when
+ * nothing did, so the caller does not have to compare fleets.
  */
-export function departYard(fleet, yardId) {
+export function departYard(fleet, yardId, captainId = null) {
   const ships = fleet?.ships ?? [];
-  if (!shipyardById(yardId)) return { ...fleet, ships };
-  const sailing = typeof fleet?.captainId === "string" ? fleet.captainId : null;
-  return { ...fleet, ships: ships.map((ship) => {
+  if (!shipyardById(yardId)) return { ...fleet, ships, departure: null };
+  const atYard = (ship) => Boolean(ship) && yardOf(ship) === yardId;
+  // A hull commands herself, or she is the legacy captain of a save written before commands.
+  const commands = (ship) => ship.id === ship.commandId || (ship.commandId == null && ship.id === fleet?.captainId);
+  const named = typeof captainId === "string"
+    ? ships.find((ship) => ship && ship.id === captainId && commands(ship) && atYard(ship)) ?? null
+    : null;
+  const helm = typeof fleet?.captainId === "string" ? fleet.captainId : null;
+  const sailing = named?.id ?? (ships.some((ship) => ship && ship.id === helm && commands(ship) && atYard(ship)) ? helm : null);
+  const departure = sailing ? { captainId: sailing, yardId } : null;
+  return { ...fleet, departure, ships: ships.map((ship) => {
     const location = yardOf(ship);
     if (location !== yardId) return ship;
     // Only the captain under the helm, and only her own hulls. A hull that answers to
     // another captain is that captain's to sail.
     const mine = ship.id === sailing || ship.commandId === sailing;
     if (!mine) return ship;
-    return { ...ship, yardId: ship.id === sailing || ship.sails !== false ? null : yardId };
+    const leaves = ship.id === sailing || ship.sails !== false;
+    if (!leaves) return ship;
+    // The anchor she has to appear at (S183-D): the sea places a squadron at the yard it
+    // sailed from instead of on a ring around the captain of the helm.
+    return { ...ship, yardId: null, ...(ship.id === sailing ? { stationYardId: yardId } : {}) };
   }) };
 }
 
@@ -389,9 +411,12 @@ export function mergeSeaFleet(stored, live, { removed = [], holdsChanged = [] } 
       byId.set(ship.id, ship);
       continue;
     }
-    // A hull both sides know: the sea only brings back what she observed or did.
+    // A hull both sides know: the sea only brings back what she observed or did. The yard she
+    // sailed from is spent here (S183-D): the sea has just placed her at that anchor, and a
+    // flag left on the sheet would teleport her back on every later boot.
+    const { stationYardId: _placed, ...sheet } = base;
     byId.set(ship.id, {
-      ...base,
+      ...sheet,
       ...(ship.condition ? { condition: { ...base.condition, ...ship.condition } } : {}),
       ...(ship.crewAlive ? { crewAlive: { ...ship.crewAlive } } : {}),
       ...(ship.yardId !== undefined ? { yardId: ship.yardId } : {}),

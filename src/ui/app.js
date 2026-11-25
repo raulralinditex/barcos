@@ -2232,15 +2232,20 @@ function captainIsUnderWay() {
 }
 
 function sailOut() {
+  // The captain who sails is the one the player picked on this yard (S183-C). When she is
+  // moored here she sails from here, even while the fleet's own captain is under way.
+  const sailingId = sailingCaptainId();
+  const sailing = fleet.ships.find((ship) => ship.id === sailingId) ?? null;
+  const sailsFromHere = Boolean(sailing) && (sailing.yardId ?? null) === (screenShipyard()?.id ?? null);
   // Under way, Escape is simply the way back to the sea (S163-F): the player entered a
   // shipyard to look at it, and leaving must not be refused just because every yard is a
   // visit to a captain who is sailing. Nothing is departed and nothing is moved.
-  if (captainIsUnderWay()) {
+  if (!sailsFromHere && captainIsUnderWay()) {
     window.location.href = "./sea.html";
     return true;
   }
   // A visit does not sail (S133-C): the voyage to that yard is the travel button's job.
-  if (refuseVisit()) return false;
+  if (!sailsFromHere && refuseVisit()) return false;
   const game = (() => {
     try {
       return JSON.parse(localStorage.getItem(GAME_KEY) ?? "null");
@@ -2258,11 +2263,32 @@ function sailOut() {
     els.purchaseNotice.classList.remove("is-error");
     els.purchaseNotice.textContent = "";
   }
-  fleet = departYard(fleet, screenShipyard()?.id);
+  // The captain of the yard on screen is the one who sails (S183-C): the player picked her
+  // hull, so the departure is her command's business. Without a pick of this yard the fleet's
+  // own captain sails, which is the rule S182 wrote.
+  fleet = departYard(fleet, screenShipyard()?.id, sailingCaptainId());
   saveFleet();
   saveConfig();
   window.location.href = "./sea.html";
   return true;
+}
+
+/**
+ * The captain the set-sail button sails (S183-C).
+ *
+ * The hull the player picked, when she is a captain moored at the yard on screen; otherwise
+ * the yard's own captain, and otherwise the fleet's. The model refuses a hull that is not a
+ * captain of that yard, so this only has to answer who the player means: the selection when
+ * it is a captain of this yard, else the fleet's own captain.
+ */
+function sailingCaptainId() {
+  const yard = screenShipyard();
+  const ships = localFleet().ships;
+  const commands = (ship) => Boolean(ship) && (ship.id === ship.commandId ||
+    (ship.commandId == null && ship.id === fleet.captainId));
+  const picked = ships.find((ship) => ship.id === refitId);
+  if (commands(picked) && (picked.yardId ?? null) === (yard?.id ?? null)) return picked.id;
+  return ships.find((ship) => commands(ship))?.id ?? fleet.captainId ?? null;
 }
 
 /**
@@ -2274,7 +2300,10 @@ function canSailOut() {
   // Under way there is nothing to refuse: she goes back to the voyage she was on (S163-F).
   if (captainIsUnderWay()) return true;
   const local = localFleet();
-  return !visitingYard() && local.ships.some((ship) => ship.id === captain?.id);
+  // S183-C: what the button needs is a captain of THIS yard to sail, not the fleet's captain
+  // standing on this quay. A yard whose captain is not the fleet's own can put to sea.
+  const sailing = sailingCaptainId();
+  return !visitingYard() && local.ships.some((ship) => ship.id === sailing);
 }
 
 els.setSailBtn.addEventListener("click", () => {
@@ -2445,9 +2474,10 @@ function saveFleet() {
 function renderFleet() {
   const captain = captainShip(fleet);
   const local = localFleet();
-  // A visit reads the yard but does not sail from it (S133-C): the captain is elsewhere.
+  // A visit reads the yard but does not sail from it (S133-C): the captain is elsewhere. The
+  // hull that would sail is the captain of THIS yard (S183-C), not the fleet's own captain.
   const underWay = captainIsUnderWay();
-  els.setSailBtn.disabled = !underWay && (visitingYard() || !local.ships.some((ship) => ship.id === captain?.id));
+  els.setSailBtn.disabled = !underWay && (visitingYard() || !local.ships.some((ship) => ship.id === sailingCaptainId()));
   els.setSailBtn.title = !underWay && visitingYard() ? visitReason() : "";
   renderFort();
   // Country remains locked by the whole fleet, not just this yard.
@@ -2488,7 +2518,12 @@ function renderFleet() {
  * holds the whole yard, and grouped by captain when there is more than one (S155-H).
  */
 function fleetRow(ship, captain, otherCaptains = []) {
-  const isCaptain = ship.id === captain?.id;
+  // A hull that commands herself is a capitana of her own command, whether or not she is the
+  // hull the player sails (S183-B). The tag and the promote button used to key off
+  // `fleet.captainId` alone, so the captain of the yard on screen read as a plain hull and was
+  // offered a promotion she already had.
+  const commands = ship.id === ship.commandId || (ship.commandId == null && ship.id === captain?.id);
+  const isCaptain = commands;
   // The captain always sails; every other hull sails if its check is on (S35).
   const sails = isCaptain || ship.sails !== false;
   // A hull can be handed to another captain of this same yard (S155-B/H): only one that is
@@ -3286,6 +3321,11 @@ const captain = captainShip(fleet);
 if (captain) selectRefitShip(captain, { openRoom: false });
 refitId = null;
 draftOfCaptainId = captain?.id ?? null;
+// The entered yard is on screen before the first draw (S183-A). The assignment lives here
+// and not only below, because every render between this point and the hash read used to
+// draw the captain's own water.
+const enteredYard = parseEntryHash(window.location.hash).yardId;
+if (enteredYard) viewedYardId = enteredYard;
 renderFleet();
 renderCountry();
 renderHulls();
@@ -3299,7 +3339,10 @@ render();
 // Old settings links land on their room too: config.html now redirects with the hash.
 const entryScreen = captain ? "flota" : "comprar";
 const entry = parseEntryHash(window.location.hash);
-// A yard named in the hash is the yard on screen (S163-A): the player clicked her anchor.
+// A yard named in the hash is the yard on screen (S163-A): the player clicked her anchor. It
+// is set BEFORE the fleet is drawn (S183-A): the list used to be rendered for the captain's
+// own yard, so entering another yard from the sea showed that yard's hulls (or none at all)
+// until the player picked it in the selector.
 if (entry.yardId) viewedYardId = entry.yardId;
 const targetScreen = entry.screen ?? entryScreen;
 showScreen(targetScreen);
