@@ -1,0 +1,16 @@
+src/data/naval-data.js
+  h_8b9b8fe190c867 54-59,85-97,123-135,161-173,198-210,230-243,262-274,293-305,324-336,356-368,393-405,424-436,455-467,493-505,530-542,561-573
+test/hull-defaults.test.js
+  h_8b9b8fe190c867 1-107
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.6",
+  "base_commit_sha": "673b54b15ce5f411ad04dfabcfa9de8004c6141d",
+  "prompts": {},
+  "humans": {
+    "h_8b9b8fe190c867": {
+      "author": "Raul Ripoll <raulral@ext.inditex.com>"
+    }
+  }
+}
