@@ -1,0 +1,24 @@
+scripts/smoke-repair-warnings.mjs
+  h_8b9b8fe190c867 1-87
+scripts/smoke-supply-sea.mjs
+  h_8b9b8fe190c867 1-76
+scripts/smoke-visit-captain.mjs
+  h_8b9b8fe190c867 1-73
+src/i18n/en.js
+  h_8b9b8fe190c867 114,122
+src/i18n/es.js
+  h_8b9b8fe190c867 111,119
+src/ui/app.js
+  h_8b9b8fe190c867 86,389,392,396-397,401-416,477-479,621-637,641-643,648,651-652,695,1010-1011,1252,1763-1773,2812-2814,3273
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.6",
+  "base_commit_sha": "21487aac38135419087f66f3603ba8b37d91b009",
+  "prompts": {},
+  "humans": {
+    "h_8b9b8fe190c867": {
+      "author": "Raul Ripoll <raulral@ext.inditex.com>"
+    }
+  }
+}
