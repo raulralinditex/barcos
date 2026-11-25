@@ -1,0 +1,14 @@
+scripts/smoke-flags.mjs
+  h_8b9b8fe190c867 141-144,147-149,152-153,156-159,163
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.6",
+  "base_commit_sha": "611f0856b992363caf1cefe6109807d1c44ef913",
+  "prompts": {},
+  "humans": {
+    "h_8b9b8fe190c867": {
+      "author": "Raul Ripoll <raulral@ext.inditex.com>"
+    }
+  }
+}
