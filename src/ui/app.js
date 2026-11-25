@@ -2282,13 +2282,20 @@ function sailOut() {
  * it is a captain of this yard, else the fleet's own captain.
  */
 function sailingCaptainId() {
-  const yard = screenShipyard();
+  const yard = screenShipyard()?.id ?? null;
   const ships = localFleet().ships;
   const commands = (ship) => Boolean(ship) && (ship.id === ship.commandId ||
     (ship.commandId == null && ship.id === fleet.captainId));
+  const atYard = (ship) => Boolean(ship) && commands(ship) && (ship.yardId ?? null) === yard;
+  // The hull the player picked, when she commands this yard.
   const picked = ships.find((ship) => ship.id === refitId);
-  if (commands(picked) && (picked.yardId ?? null) === (yard?.id ?? null)) return picked.id;
-  return ships.find((ship) => commands(ship))?.id ?? fleet.captainId ?? null;
+  if (atYard(picked)) return picked.id;
+  // Without a pick, the fleet's own captain sails when she is moored here, which is the rule
+  // S182 wrote; otherwise the captain of THIS yard sails (S183-C). Falling back to the first
+  // captain in fleet order sailed another yard's captain, because array order is not a rule.
+  const own = ships.find((ship) => atYard(ship) && ship.id === fleet.captainId);
+  if (own) return own.id;
+  return ships.find((ship) => atYard(ship))?.id ?? null;
 }
 
 /**

@@ -29,6 +29,9 @@ S184. **El enemigo dispara al astillero si el jugador lo enciende.** Decisión d
 - T130 — S184: `test/enemy-yard-fire.test.js` (6 tests) y `scripts/smoke-enemy-yard-fire.mjs`. Ruta: inline. Hecho.
 - T131 — Verificación: `npm test` completo y los smokes de la tanda, con RED medido. Ruta: inline. Pendiente.
 
+- T132 — S179: `scripts/smoke-fleet.mjs` actualizado a la regla vigente, con OK explícito del jugador ("actualiza y empuja"). Ruta: inline. Hecho.
+- T133 — S183-C: `sailingCaptainId` no cae en el primer capitán del array. Ruta: inline. Hecho.
+
 ## Log
 
 L121 (pedido de S183, verbatim de la ficha de la prueba): "with a captain bought in ensenada-abierta (renamed "aguas costeras") and another in cala-del-abismo ("mar abierto"), buying a second hull in the first yard must show her as that yard's capitana, and setting sail with her must take her out of that yard and leave her next to its quay — not next to the other ships".
@@ -43,5 +46,13 @@ L124 (causa de la regla D, medida): **el defecto era de la prueba, no del produc
 
 L125 (cierre de S183). `npm test` **1136/1136**. Smokes en 0: `yard-captains` (nuevo), `departure`, `fleet-squadrons`, `sea-squadrons`, `dock`, `yard-entry`, `yard-mooring`, `sea-fleet-yard`, `handover`, `yard-switch`, `shipyard-from-sea`.
 
-**Un smoke rojo que NO es de S183**, comprobado con `git stash push -u` y `HEAD` limpio: `smoke-fleet` falla igual sin este cambio, con «the new hull should be captain, got Golden Hind», «expected to re-promote Golden Hind, got Avispa» y «sailing must not lose the fleet, got 1 nave». Es la regla que cambió S179 (una capitana por astillero, la compra se suma a la capitana existente), no S183; el smoke fija la regla anterior. No se tocó: la regla global pide OK explícito del jugador por artefacto. Queda como punto abierto en `pendientes.md`.
+**Un smoke rojo que NO es de S183**, comprobado con `git stash push -u` y `HEAD` limpio: `smoke-fleet` falla igual sin este cambio, con «the new hull should be captain, got Golden Hind», «expected to re-promote Golden Hind, got Avispa» y «sailing must not lose the fleet, got 1 nave». Es la regla que cambió S179 (una capitana por astillero, la compra se suma a la capitana existente), no S183; el smoke fija la regla anterior. No se tocó: la regla global pide OK explícito del jugador por artefacto.
+
+L126 (actualización de `smoke-fleet`, con OK explícito del jugador: «actualiza y empuja»). Cuatro aserciones reescritas a la regla vigente, conservando lo que la prueba sigue afirmando:
+- la compra en un astillero que ya tiene capitana **se le suma** (`commandId` de la capitana) y **no mueve** `fleet.captainId` — antes afirmaba lo contrario;
+- el botón de ascenso se busca **por id**, no con `.first()`: el `.first()` anterior ascendía a quien estuviera ofrecido y hacía pasar la aserción por casualidad;
+- una capitana no ofrece el botón de ascenso y un casco sin mando sí;
+- al volver del mar, el astillero lista **exactamente** las naves amarradas en él (se comparan ids contra `yardId`), no un número fijo: fijar el número es justo lo que hizo derivar el smoke de la regla que defiende.
+
+**Un defecto real encontrado al actualizarlo, y era mío.** `sailingCaptainId` (S183-C) caía en `ships.find(commands)`, es decir **el primer capitán en orden del array**, sin mirar ni la capitana de la flota ni el astillero. Medido: con la capitana de la flota atracada en `puerto-casa` y otra capitana en el mismo astillero, el botón Zarpar se llevaba a la segunda. Ahora el orden de preferencia es explícito: el casco elegido si manda en este astillero, si no la capitana de la flota si está atracada aquí (la regla de S182), y si no la capitana de este astillero. **RED medido** reintroduciendo la línea vieja: el mar navega «Avispa» en vez de la capitana de la flota y el astillero se queda «sin naves»; sha del original `097f6a6` restaurado y comprobado.
 

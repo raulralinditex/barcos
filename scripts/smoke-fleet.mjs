@@ -3,9 +3,10 @@ import { chromium } from "playwright";
 /**
  * Browser smoke for T8 (fleet) and T9 (erase save), driven through the UI only.
  *
- * T8: the player builds and launches a first ship, it becomes the captain, a
- * second hull joins the fleet without losing the first, and the captain can be
- * changed. The sea screen then sails whichever hull is captain.
+ * T8: the player builds and launches a first ship, it becomes the captain of that yard, a
+ * second hull joins the yard without losing the first and without stealing her helm, and the
+ * player can promote another hull of the yard to captain. The sea screen then sails whichever
+ * hull is the fleet's captain.
  *
  * T9: "Borrar partida" asks first and, once confirmed, leaves no save behind.
  */
@@ -63,7 +64,7 @@ async function launchShip(name) {
   if (disabled) throw new Error(`the default loadout does not build for ${name}`);
   await page.click("#launch-btn");
   await page.waitForTimeout(300);
-  return page.locator(".fleet-item.is-captain .fleet-name").textContent();
+  return page.locator(".fleet-item.is-captain .fleet-name").first().textContent();
 }
 
 // --- first ship becomes the captain ---------------------------------------
@@ -73,7 +74,7 @@ check(afterFirst.names.length === 1, `expected 1 ship, got ${afterFirst.names.le
 check(afterFirst.names[0] === "Golden Hind", `captain should be Golden Hind, got ${afterFirst.names[0]}`);
 check(afterFirst.count === "1 nave", `fleet count should read "1 nave", got ${afterFirst.count}`);
 
-// --- buying a second hull keeps the first, and it becomes captain ---------
+// --- buying a second hull keeps the first, and it does not steal the helm ---
 // A cheaper hull so the purse still covers a second launch.
 await page.click('.hull-card[data-hull-id="patache"]').catch(() => {});
 await page.waitForTimeout(250);
@@ -83,30 +84,70 @@ check(afterSecond.names.length === 2, `expected 2 ships, got ${afterSecond.names
 check(afterSecond.names.includes("Golden Hind"), "the first hull was lost when buying a second");
 check(afterSecond.count === "2 naves", `fleet count should read "2 naves", got ${afterSecond.count}`);
 
-// the newest hull is captain, and the old one is offered as a choice
-const captainTag = await page.locator(".fleet-item.is-captain .fleet-name").textContent();
-check(captainTag === "Avispa", `the new hull should be captain, got ${captainTag}`);
+// One captain per yard (S179): a purchase in a yard that already has a captain joins her
+// command, and the fleet's helm does not move. The rule used to be "the newest hull is
+// captain", which is exactly what let a purchase rob the command of the whole fleet.
+const captainTag = await page.locator(".fleet-item.is-captain .fleet-name").first().textContent();
+check(captainTag === "Golden Hind", `the yard's captain must keep the helm after a purchase, got ${captainTag}`);
+const afterSecondSave = JSON.parse((await storage()).fleet);
+const goldenId = afterSecondSave.ships.find((s) => s.name === "Golden Hind")?.id;
+const avispa = afterSecondSave.ships.find((s) => s.name === "Avispa");
+check(Boolean(avispa), "the second hull was never stored in the fleet");
+check(
+  avispa?.commandId === goldenId,
+  `the new hull must join the yard's captain, she answers to ${avispa?.commandId}`,
+);
+check(
+  afterSecondSave.captainId === goldenId,
+  `a purchase must not move the fleet's helm, it reads ${afterSecondSave.captainId}`,
+);
 
-// --- the player can choose which ship to captain --------------------------
-// The flota room owns this control now (S105).
+// --- the player can promote another hull of the yard to captain (S105, S179) ---
+// The flota room owns this control. The button only exists for a hull that does NOT command
+// her own command, so the promoted hull is named by id: the old assertion took `.first()`,
+// which silently promoted whichever hull happened to be offered.
 await page.click('.screen-tab[data-screen="flota"]');
 await page.waitForTimeout(150);
-await page.locator('.fleet-captain-button[data-captain]').first().click();
-await page.waitForTimeout(250);
-const newCaptain = await page.locator(".fleet-item.is-captain .fleet-name").textContent();
-check(newCaptain === "Golden Hind", `expected to re-promote Golden Hind, got ${newCaptain}`);
+const promote = page.locator(`.fleet-captain-button[data-captain="${avispa?.id}"]`);
+check((await promote.count()) === 1, "a hull that is not a captain must be offered the promote button");
+check(
+  (await page.locator(`.fleet-captain-button[data-captain="${goldenId}"]`).count()) === 0,
+  "a captain must not be offered the promote button",
+);
+if ((await promote.count()) === 1) {
+  await promote.click();
+  await page.waitForTimeout(250);
+}
+const newCaptain = await page.locator(`.fleet-item[data-ship-id="${avispa?.id}"] .fleet-tag`).textContent().catch(() => null);
+check((newCaptain ?? "").trim() === "capitana", `the promoted hull must read as capitana, the row says ${JSON.stringify(newCaptain)}`);
+check(
+  (await page.locator("#fleet-list .fleet-item.is-captain").count()) === 2,
+  "one captain per yard: both captains of this yard must read as capitana (S179)",
+);
+const afterPromoteSave = JSON.parse((await storage()).fleet);
+check(
+  afterPromoteSave.captainId === avispa?.id,
+  `the promoted hull must take the fleet's helm, it reads ${afterPromoteSave.captainId}`,
+);
 
 // --- the sea screen sails the captain ------------------------------------
 const savedFleet = JSON.parse((await storage()).fleet);
 check(savedFleet.captainId !== null, "the fleet was never persisted with a captain");
 const captainIdInSave = savedFleet.captainId;
 const captainShipInSave = savedFleet.ships.find((s) => s.id === captainIdInSave);
-
+// The sea's world is written on a 3 s autosave (`setInterval(saveGame, 3000)` in sea.js), so
+// wait for the voyage to exist instead of a fixed delay, or the reads below see nothing.
 await Promise.all([
   page.waitForURL("**/sea.html"),
   page.click("#set-sail-btn"),
 ]);
-await page.waitForTimeout(900);
+await page.waitForFunction(() => {
+  try {
+    return Boolean(JSON.parse(localStorage.getItem("barcos:game:v1"))?.world);
+  } catch {
+    return false;
+  }
+}, null, { timeout: 15000 });
 const seaTitle = await page.locator("#hud-ship-name").textContent();
 check(
   seaTitle.startsWith(captainShipInSave.name),
@@ -118,7 +159,25 @@ await page.goto("http://localhost:8765/index.html", { waitUntil: "networkidle" }
 await page.waitForTimeout(300);
 
 const fleetSurvivedSea = await fleetCount();
-check(fleetSurvivedSea === "2 naves", `sailing must not lose the fleet, got ${fleetSurvivedSea}`);
+// The fleet keeps both hulls, and the yard lists exactly the hulls moored at it (S130, S183).
+// The number is not pinned: it depends on whether the voyage ended back in port, and pinning it
+// is how this smoke drifted from the rule it is meant to defend.
+const savedAfterSea = JSON.parse((await storage()).fleet);
+check(
+  savedAfterSea.ships.length === 2,
+  `sailing must not lose the fleet, the save holds ${savedAfterSea.ships.length} hulls`,
+);
+const listedIds = await page.locator("#fleet-list .fleet-item").evaluateAll((rows) =>
+  rows.map((row) => row.dataset.shipId));
+const mooredHere = savedAfterSea.ships.filter((ship) => ship.yardId === "puerto-casa").map((ship) => ship.id);
+check(
+  listedIds.length === mooredHere.length && mooredHere.every((id) => listedIds.includes(id)),
+  `the yard must list exactly the hulls moored at it (${JSON.stringify(mooredHere)}), it lists ${JSON.stringify(listedIds)}`,
+);
+check(
+  fleetSurvivedSea === `${mooredHere.length} ${mooredHere.length === 1 ? "nave" : "naves"}`,
+  `the fleet count must match what the yard lists, it reads "${fleetSurvivedSea}"`,
+);
 
 // Erasing is the Flota room's action (S105).
 await page.click('.screen-tab[data-screen="flota"]');
