@@ -128,6 +128,12 @@ export const SETTINGS_FIELDS = [
   // S88: the automatic-fire switch was a checkbox in the fleet panel; it is a setting now.
   { group: "combat", key: "autofire", label: "settings.combat.autofire", scale: "factor", min: 0, max: 1, step: 1, control: "switch", target: "autofire", targetKey: "enabled" },
 
+  // Whether an enemy fires at the yard (the player's decision, verbatim): "el enemigo dispara
+  // al astillero o no, si dispara, lo hace por area exactamente como si fuera un barco
+  // nuestro". It ships OFF ("valor por defecto apagado"), so the sea plays as it always did
+  // until she turns it on.
+  { group: "combat", key: "enemyFiresAtYard", label: "settings.combat.enemyFiresAtYard", scale: "factor", min: 0, max: 1, step: 1, control: "switch", target: "yardFire", targetKey: "enabled" },
+
   { group: "sales", key: "share", label: "settings.sales.share", scale: "percent", min: 0, max: 1, step: 0.05, target: "sales", targetKey: "share" },
 
   // S169: there is no switch here any more. The player removed it (verbatim): "quitamos
@@ -226,7 +232,21 @@ export const SETTINGS_FIELDS = [
 /** The automatic-fire switch as a live block, so it is a setting like any other (S88). */
 export const AUTOFIRE = { enabled: AUTOFIRE_DEFAULT ? 1 : 0 };
 
-export const SETTINGS_BLOCKS = { oars: OARS, wind: WIND, world: WORLD, combat: COMBAT, repair: REPAIR, prices: PRICES, gunnery: GUNNERY, gunners: GUNNERY.gunnersPerGun, zones: ZONE_DAMAGE, loot: LOOT, sales: SALES, time: GAME_TIME, fort: FORT, fortUpgrade: FORT_UPGRADE, start: START, turning: TURNING, escort: ESCORT, trail: TRAIL, bars: BAR_SCALE, autofire: AUTOFIRE, refit: REFIT, voyage: VOYAGE, fog: FOG, commerce: COMMERCE, markets: MARKETS, yardMarkets: YARD_MARKETS, levels: LEVELS, danger: DANGER };
+/**
+ * Whether an enemy treats the yard as a target, as a live block of its own.
+ *
+ * The player's decision (verbatim): "el enemigo dispara al astillero o no, si dispara, lo
+ * hace por area exactamente como si fuera un barco nuestro". It ships OFF ("valor por
+ * defecto apagado"): until she says otherwise, no enemy aims at the yard at all.
+ */
+export const YARD_FIRE = { enabled: 0 };
+
+/** Whether the enemies may aim at the yard, read live by the sea. */
+export function enemyFiresAtYard() {
+  return Number(YARD_FIRE.enabled) > 0;
+}
+
+export const SETTINGS_BLOCKS = { oars: OARS, wind: WIND, world: WORLD, combat: COMBAT, repair: REPAIR, prices: PRICES, gunnery: GUNNERY, gunners: GUNNERY.gunnersPerGun, zones: ZONE_DAMAGE, loot: LOOT, sales: SALES, time: GAME_TIME, fort: FORT, fortUpgrade: FORT_UPGRADE, start: START, turning: TURNING, escort: ESCORT, trail: TRAIL, bars: BAR_SCALE, autofire: AUTOFIRE, yardFire: YARD_FIRE, refit: REFIT, voyage: VOYAGE, fog: FOG, commerce: COMMERCE, markets: MARKETS, yardMarkets: YARD_MARKETS, levels: LEVELS, danger: DANGER };
 
 /**
  * The design constant blocks S79 promises to expose, by name.

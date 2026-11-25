@@ -66,7 +66,7 @@ import { purseAfterLoss } from "../model/loss.js";
 import { isOutOfAmmo } from "../model/rearm.js";
 import { bootSettings } from "../model/settings-storage.js";
 import { bootCatalogue } from "../model/catalogue-storage.js";
-import { AUTOFIRE } from "../model/settings.js";
+import { AUTOFIRE, enemyFiresAtYard } from "../model/settings.js";
 import { DANGER, dangerValue } from "../model/danger.js";
 import { GAME_TIME, supplySeconds } from "../model/game-time.js";
 import { voyageClock } from "../model/voyage-clock.js";
@@ -2817,9 +2817,17 @@ function processCombat(dt, now) {
 
   for (const encounter of world.encounters) {
     if (encounter.type !== "enemy") continue;
-    // Every hull of every squadron is a target and a shooter (S155-C): a hostile picks the
-    // nearest one, whichever command she serves.
-    const line = alliedHulls();
+    // An enemy aims at the nearest allied hull: an escort that has run ahead of the
+    // captain takes the fire, and pays for it (S36).
+    // The yard is a target of ours only if the player says so ("el enemigo dispara al
+    // astillero o no, si dispara, lo hace por area exactamente como si fuera un barco
+    // nuestro"): with the switch on she is one more hull in the same nearest-target
+    // selection, with the same aim and the same volleys, and her damage still goes through
+    // her own rule (`damageFort`). With it off no enemy ever aims at her.
+    const yardIsTarget = enemyFiresAtYard() && !portClosed(fortCombat);
+    const line = yardIsTarget
+      ? [...alliedHulls(), { id: "fort", name: fortCombat.name, x: 0, y: 0, combat: fortCombat }]
+      : alliedHulls();
     const nearest = closestTarget(line, encounter);
     const distance = nearest
       ? Math.hypot(encounter.x - nearest.x, encounter.y - nearest.y)
@@ -2829,21 +2837,16 @@ function processCombat(dt, now) {
     if (!combat || combat.status !== "fighting") continue;
 
     tickCombatant(combat, dt);
-    // An enemy aims at the nearest allied hull: an escort that has run ahead of the
-    // captain takes the fire, and pays for it (S36).
-    // An abyss squadron that came for the yard shoots the yard, not the captain (S74).
-    // That is the whole point of a fortification: it draws the fire.
-    const assaulting = canAssaultFort(encounter.zoneId ?? currentZone().id) &&
-      !portClosed(fortCombat) &&
-      Math.hypot(encounter.x, encounter.y) <= COMBAT.engageRadiusM;
-    const aimedAt = assaulting
-      ? { id: "fort", name: fortCombat.name, x: 0, y: 0, combat: fortCombat }
-      : nearest ?? {
-          id: runtimeShip.id,
-          name: runtimeShip.name,
-          ...world.ship,
-          combat: playerCombat,
-        };
+    // The yard is not manoeuvred against: a squadron bombarding her fires from where it
+    // lies, because her walls are not a beam to be presented. That branch is the yard's
+    // own, not a special aim rule: it fires when the nearest target IS the yard.
+    const assaulting = yardIsTarget && nearest?.combat === fortCombat;
+    const aimedAt = nearest ?? {
+      id: runtimeShip.id,
+      name: runtimeShip.name,
+      ...world.ship,
+      combat: playerCombat,
+    };
     // The enemy hull feels the same wind the captain feels (S57).
     const result = aiStep(encounter, aimedAt, dt, rnd, { wind: windAt(world.seed, world.timeS) });
 

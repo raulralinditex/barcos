@@ -457,6 +457,8 @@ export const en = {
   "settings.combat.referenceArqueo": "Reference tonnage for damage",
   "settings.combat.casualtyPoints": "Crew damage per casualty",
   "settings.combat.autofire": "The captain fires by herself",
+  "settings.combat.enemyFiresAtYard": "Enemies fire at the shipyard",
+  "settings.combat.enemyFiresAtYardHint": "Off, no enemy aims at the shipyard. On, the shipyard is one more target: picked by distance, like one of our hulls, and her damage goes through her own rule.",
   "settings.fort.gunsPerVictories": "Victories per new shipyard gun",
   "settings.fort.shotsPerGun": "Rounds per shipyard gun",
   "settings.repair.restored": "Condition a repaired segment comes back with",

@@ -65,6 +65,9 @@ page.on("pageerror", (e) => errors.push(`pageerror: ${e.message}`));
 
 await page.addInitScript(([fleetJson, worldJson, fort]) => {
   localStorage.setItem("barcos:lang:v1", "es");
+  // The siege is the yard being fired at: the enemy-fires-at-yard switch is off by default
+  // (S74 follow-up), so this smoke turns it on explicitly.
+  localStorage.setItem("barcos:settings:v1", JSON.stringify({ "combat.enemyFiresAtYard": 1 }));
   localStorage.setItem("barcos:fleet:v1", fleetJson);
   localStorage.setItem("barcos:game:v1", JSON.stringify({
     gold: 5000,

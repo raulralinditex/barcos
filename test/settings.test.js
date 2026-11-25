@@ -259,11 +259,14 @@ test("S169: the settings screen no longer offers a wreck switch", async () => {
   // S168 adds the two the player named: `combat.showRange` and `combat.autofire` were the
   // last yes/no fields still drawn as numbers. Updated with her explicit approval; the
   // assertion stays exact, so a switch that appears or disappears without a decision fails.
+  // The yard-fire switch `combat.enemyFiresAtYard` is added with the player's explicit approval
+  // ("Actualizar ambas pruebas"), off by default.
   // S169 removes `sinking.keepWreck` with the whole sinking block: the player removed the
   // rule it tuned ("quitamos la opcion de 'Un barco hundido queda como naufragio'").
   assert.deepEqual(switches, [
     "combat.showRange",
     "combat.autofire",
+    "combat.enemyFiresAtYard",
     "refit.autoSave",
     "voyage.showTravelButton",
     "fog.enabled",

@@ -454,6 +454,8 @@ export const es = {
   "settings.combat.referenceArqueo": "Arqueo de referencia del daño",
   "settings.combat.casualtyPoints": "Daño de tripulación por baja",
   "settings.combat.autofire": "Disparo automático de la capitana",
+  "settings.combat.enemyFiresAtYard": "El enemigo dispara al astillero",
+  "settings.combat.enemyFiresAtYardHint": "Apagado, ningún enemigo apunta al astillero. Encendido, el astillero es un blanco más: se elige por cercanía, como una nave nuestra, y su daño va por su propia regla.",
   "settings.fort.gunsPerVictories": "Victorias por cañón nuevo del astillero",
   "settings.fort.shotsPerGun": "Munición por cañón del astillero",
   "settings.repair.restored": "Condición con la que vuelve un tramo reparado",
