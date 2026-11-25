@@ -1,0 +1,25 @@
+scripts/smoke-sea-fleet-yard.mjs
+  s_a06177f2d49543::t_c4fa86d04c09ee 1-81
+src/i18n/en.js
+  s_a06177f2d49543::t_a6ea93f4b3d4a1 43
+src/i18n/es.js
+  s_a06177f2d49543::t_f6aae9d75bb553 41
+src/ui/app.js
+  s_a06177f2d49543::t_c0acad1df70669 54,1222-1226,1233-1241,1905-1907,2462-2464
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.6",
+  "base_commit_sha": "fa8506c0beca4ebf3e4fd18de908ad687bb5b900",
+  "prompts": {},
+  "sessions": {
+    "s_a06177f2d49543": {
+      "agent_id": {
+        "tool": "pi",
+        "id": "01a21261-f7c8-73c7-8faa-4e3766f9a844",
+        "model": "claude-haiku-5.5"
+      },
+      "human_author": "Raul Ripoll <raulral@ext.inditex.com>"
+    }
+  }
+}
