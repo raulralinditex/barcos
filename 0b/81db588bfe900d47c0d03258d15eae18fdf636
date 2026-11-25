@@ -1,0 +1,16 @@
+scripts/smoke-yard-entry-from-sea.mjs
+  h_8b9b8fe190c867 1-90
+src/ui/sea.js
+  h_8b9b8fe190c867 766-768,1450
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.6",
+  "base_commit_sha": "0b81db588bfe900d47c0d03258d15eae18fdf636",
+  "prompts": {},
+  "humans": {
+    "h_8b9b8fe190c867": {
+      "author": "Raul Ripoll <raulral@ext.inditex.com>"
+    }
+  }
+}
