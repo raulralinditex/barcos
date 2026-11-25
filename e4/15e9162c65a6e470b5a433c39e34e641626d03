@@ -1,0 +1,29 @@
+scripts/smoke-yard-captains.mjs
+  s_b775d46569269d::t_0ca85a64ffd7bc 1-224
+src/model/fleet.js
+  s_b775d46569269d::t_d29e8672f00643 85,88,92,95-104,106,108-118,125-129,414-417,419
+src/model/world.js
+  s_b775d46569269d::t_8119d27e8fc02f 12,358-451,656-658,664-668
+src/ui/app.js
+  s_b775d46569269d::t_dea49d243dd99b 2235-2239,2243,2248,2266-2269,2276-2293,2303-2306,2477-2478,2480,2521-2526,3324-3328,3342-3345
+src/ui/sea.js
+  s_b775d46569269d::t_40956037169c2b 111,3844-3848
+test/yard-captains.test.js
+  s_b775d46569269d::t_74151b87444d41 1-176
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.6",
+  "base_commit_sha": "e415e9162c65a6e470b5a433c39e34e641626d03",
+  "prompts": {},
+  "sessions": {
+    "s_b775d46569269d": {
+      "agent_id": {
+        "tool": "pi",
+        "id": "01a213dd-0184-7479-8b9d-ce921f75608f",
+        "model": "deepseek-v4.1-flash_high"
+      },
+      "human_author": "Raul Ripoll <raulral@ext.inditex.com>"
+    }
+  }
+}
