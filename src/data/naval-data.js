@@ -51,6 +51,12 @@ export const DEFAULT_COUNTRY = "inglaterra";
  * `countries` (S27) is the list of country ids that may buy the hull. The free-text
  * `country` stays untouched for display; the two composite values resolve as
  * Nápoles -> Spain and "Portugal / Felipe II" -> Spain and Portugal.
+ *
+ * `defaultLoadout` is the rig the buy screen shows when the player selects that hull: the
+ * batteries, crew, days and masses that make her a ship the model accepts without a single
+ * issue (`buildShip` -> `validateShip`). It belongs to the hull and not to the screen, so
+ * picking a barca costera can never inherit the galleon's rig. Only pieces sold in every
+ * country of the hull are used, and each entry fires ammunition its piece carries.
  */
 export const HULLS = [
   {
@@ -76,6 +82,19 @@ export const HULLS = [
      */
     oarBanks: 16,
     oarMaxKn: 4.0,
+    defaultLoadout: {
+      batteries: [
+        { pieceId: "falconete", qty: 2, side: "babor", shotsPerPiece: 20, ammoId: "bala-hierro" },
+        { pieceId: "falconete", qty: 2, side: "estribor", shotsPerPiece: 20, ammoId: "bala-hierro" },
+        { pieceId: "verso", qty: 2, side: "swivel", shotsPerPiece: 20, ammoId: "metralla" },
+      ],
+      crew: { marino: 10, artillero: 3, soldado: 2 },
+      days: 30,
+      cargoKg: 0,
+      ballastKg: 10800,
+      equipmentKg: 0,
+      reserveKg: 0,
+    },
   },
   {
     id: "carabela-latina",
@@ -101,6 +120,19 @@ export const HULLS = [
      */
     oarBanks: 20,
     oarMaxKn: 4.5,
+    defaultLoadout: {
+      batteries: [
+        { pieceId: "falconete", qty: 2, side: "babor", shotsPerPiece: 20, ammoId: "bala-hierro" },
+        { pieceId: "falconete", qty: 2, side: "estribor", shotsPerPiece: 20, ammoId: "bala-hierro" },
+        { pieceId: "verso", qty: 2, side: "swivel", shotsPerPiece: 20, ammoId: "metralla" },
+      ],
+      crew: { marino: 8, artillero: 3, soldado: 2 },
+      days: 30,
+      cargoKg: 0,
+      ballastKg: 12400,
+      equipmentKg: 0,
+      reserveKg: 0,
+    },
   },
   {
     id: "jacht",
@@ -126,6 +158,19 @@ export const HULLS = [
      */
     oarBanks: 10,
     oarMaxKn: 4.0,
+    defaultLoadout: {
+      batteries: [
+        { pieceId: "minion", qty: 2, side: "babor", shotsPerPiece: 20, ammoId: "bala-hierro" },
+        { pieceId: "minion", qty: 2, side: "estribor", shotsPerPiece: 20, ammoId: "bala-hierro" },
+        { pieceId: "verso", qty: 2, side: "swivel", shotsPerPiece: 20, ammoId: "metralla" },
+      ],
+      crew: { marino: 10, artillero: 3, soldado: 2 },
+      days: 30,
+      cargoKg: 0,
+      ballastKg: 7200,
+      equipmentKg: 0,
+      reserveKg: 0,
+    },
   },
   {
     id: "zabra",
@@ -150,6 +195,19 @@ export const HULLS = [
      */
     oarBanks: 10,
     oarMaxKn: 4.0,
+    defaultLoadout: {
+      batteries: [
+        { pieceId: "falcon", qty: 3, side: "babor", shotsPerPiece: 20, ammoId: "bala-hierro" },
+        { pieceId: "falcon", qty: 3, side: "estribor", shotsPerPiece: 20, ammoId: "bala-hierro" },
+        { pieceId: "verso", qty: 2, side: "swivel", shotsPerPiece: 20, ammoId: "metralla" },
+      ],
+      crew: { marino: 20, artillero: 4, soldado: 4 },
+      days: 30,
+      cargoKg: 0,
+      ballastKg: 27700,
+      equipmentKg: 0,
+      reserveKg: 0,
+    },
   },
   {
     id: "galeon-pequeno",
@@ -169,6 +227,20 @@ export const HULLS = [
     maxPiecesPerSide: 12,
     crewMin: 25,
     priceGold: 3200,
+    defaultLoadout: {
+      batteries: [
+        { pieceId: "minion", qty: 3, side: "babor", shotsPerPiece: 25, ammoId: "bala-hierro" },
+        { pieceId: "minion", qty: 3, side: "estribor", shotsPerPiece: 25, ammoId: "bala-hierro" },
+        { pieceId: "falcon", qty: 2, side: "babor", shotsPerPiece: 30, ammoId: "metralla" },
+        { pieceId: "falcon", qty: 2, side: "estribor", shotsPerPiece: 30, ammoId: "metralla" },
+      ],
+      crew: { marino: 34, artillero: 10, soldado: 26 },
+      days: 45,
+      cargoKg: 6000,
+      ballastKg: 3000,
+      equipmentKg: 2500,
+      reserveKg: 1500,
+    },
   },
   {
     id: "fluyt",
@@ -187,6 +259,19 @@ export const HULLS = [
     maxPiecesPerSide: 15,
     crewMin: 12,
     priceGold: 3600,
+    defaultLoadout: {
+      batteries: [
+        { pieceId: "minion", qty: 2, side: "babor", shotsPerPiece: 20, ammoId: "bala-hierro" },
+        { pieceId: "minion", qty: 2, side: "estribor", shotsPerPiece: 20, ammoId: "bala-hierro" },
+        { pieceId: "verso", qty: 2, side: "swivel", shotsPerPiece: 20, ammoId: "metralla" },
+      ],
+      crew: { marino: 12, artillero: 3, soldado: 3 },
+      days: 30,
+      cargoKg: 6000,
+      ballastKg: 54500,
+      equipmentKg: 0,
+      reserveKg: 0,
+    },
   },
   {
     id: "nao-armada",
@@ -205,6 +290,19 @@ export const HULLS = [
     maxPiecesPerSide: 17,
     crewMin: 30,
     priceGold: 4200,
+    defaultLoadout: {
+      batteries: [
+        { pieceId: "sacre", qty: 3, side: "babor", shotsPerPiece: 20, ammoId: "bala-hierro" },
+        { pieceId: "sacre", qty: 3, side: "estribor", shotsPerPiece: 20, ammoId: "bala-hierro" },
+        { pieceId: "verso", qty: 2, side: "swivel", shotsPerPiece: 20, ammoId: "metralla" },
+      ],
+      crew: { marino: 30, artillero: 4, soldado: 8 },
+      days: 30,
+      cargoKg: 12000,
+      ballastKg: 140500,
+      equipmentKg: 0,
+      reserveKg: 0,
+    },
   },
   {
     id: "galeon-guerra",
@@ -223,6 +321,19 @@ export const HULLS = [
     maxPiecesPerSide: 20,
     crewMin: 60,
     priceGold: 6500,
+    defaultLoadout: {
+      batteries: [
+        { pieceId: "sacre", qty: 4, side: "babor", shotsPerPiece: 20, ammoId: "bala-hierro" },
+        { pieceId: "sacre", qty: 4, side: "estribor", shotsPerPiece: 20, ammoId: "bala-hierro" },
+        { pieceId: "verso", qty: 3, side: "swivel", shotsPerPiece: 20, ammoId: "metralla" },
+      ],
+      crew: { marino: 60, artillero: 6, soldado: 15 },
+      days: 30,
+      cargoKg: 0,
+      ballastKg: 75000,
+      equipmentKg: 0,
+      reserveKg: 0,
+    },
   },
   {
     id: "gran-mercante",
@@ -242,6 +353,19 @@ export const HULLS = [
     maxPiecesPerSide: 22,
     crewMin: 40,
     priceGold: 7000,
+    defaultLoadout: {
+      batteries: [
+        { pieceId: "minion", qty: 3, side: "babor", shotsPerPiece: 20, ammoId: "bala-hierro" },
+        { pieceId: "minion", qty: 3, side: "estribor", shotsPerPiece: 20, ammoId: "bala-hierro" },
+        { pieceId: "verso", qty: 2, side: "swivel", shotsPerPiece: 20, ammoId: "metralla" },
+      ],
+      crew: { marino: 40, artillero: 4, soldado: 10 },
+      days: 30,
+      cargoKg: 10000,
+      ballastKg: 108300,
+      equipmentKg: 0,
+      reserveKg: 0,
+    },
   },
   {
     id: "galeaza",
@@ -266,6 +390,19 @@ export const HULLS = [
      */
     oarBanks: 300,
     oarMaxKn: 7.0,
+    defaultLoadout: {
+      batteries: [
+        { pieceId: "falcon", qty: 4, side: "babor", shotsPerPiece: 20, ammoId: "bala-hierro" },
+        { pieceId: "falcon", qty: 4, side: "estribor", shotsPerPiece: 20, ammoId: "bala-hierro" },
+        { pieceId: "verso", qty: 3, side: "swivel", shotsPerPiece: 20, ammoId: "metralla" },
+      ],
+      crew: { marino: 100, artillero: 6, soldado: 25, remero: 120 },
+      days: 30,
+      cargoKg: 0,
+      ballastKg: 117200,
+      equipmentKg: 0,
+      reserveKg: 0,
+    },
   },
   {
     id: "gran-galeon",
@@ -284,6 +421,19 @@ export const HULLS = [
     maxPiecesPerSide: 24,
     crewMin: 120,
     priceGold: 11000,
+    defaultLoadout: {
+      batteries: [
+        { pieceId: "media-culebrina-9", qty: 3, side: "babor", shotsPerPiece: 20, ammoId: "bala-hierro" },
+        { pieceId: "media-culebrina-9", qty: 3, side: "estribor", shotsPerPiece: 20, ammoId: "bala-hierro" },
+        { pieceId: "verso", qty: 3, side: "swivel", shotsPerPiece: 20, ammoId: "metralla" },
+      ],
+      crew: { marino: 120, artillero: 5, soldado: 30 },
+      days: 30,
+      cargoKg: 0,
+      ballastKg: 181200,
+      equipmentKg: 0,
+      reserveKg: 0,
+    },
   },
   {
     id: "gran-buque-real",
@@ -302,6 +452,19 @@ export const HULLS = [
     maxPiecesPerSide: 26,
     crewMin: 150,
     priceGold: 14000,
+    defaultLoadout: {
+      batteries: [
+        { pieceId: "media-culebrina-9", qty: 4, side: "babor", shotsPerPiece: 20, ammoId: "bala-hierro" },
+        { pieceId: "media-culebrina-9", qty: 4, side: "estribor", shotsPerPiece: 20, ammoId: "bala-hierro" },
+        { pieceId: "verso", qty: 3, side: "swivel", shotsPerPiece: 20, ammoId: "metralla" },
+      ],
+      crew: { marino: 150, artillero: 6, soldado: 38 },
+      days: 30,
+      cargoKg: 0,
+      ballastKg: 158400,
+      equipmentKg: 0,
+      reserveKg: 0,
+    },
   },
   /* ------------------------------------------------- S28: English small hulls */
   {
@@ -327,6 +490,19 @@ export const HULLS = [
      */
     oarBanks: 8,
     oarMaxKn: 3.5,
+    defaultLoadout: {
+      batteries: [
+        { pieceId: "falconete", qty: 1, side: "babor", shotsPerPiece: 20, ammoId: "bala-hierro" },
+        { pieceId: "falconete", qty: 1, side: "estribor", shotsPerPiece: 20, ammoId: "bala-hierro" },
+        { pieceId: "verso", qty: 1, side: "swivel", shotsPerPiece: 20, ammoId: "metralla" },
+      ],
+      crew: { marino: 6, artillero: 2, soldado: 1 },
+      days: 20,
+      cargoKg: 0,
+      ballastKg: 3700,
+      equipmentKg: 0,
+      reserveKg: 0,
+    },
   },
   {
     id: "pinaza",
@@ -351,6 +527,19 @@ export const HULLS = [
      */
     oarBanks: 12,
     oarMaxKn: 4.0,
+    defaultLoadout: {
+      batteries: [
+        { pieceId: "minion", qty: 2, side: "babor", shotsPerPiece: 20, ammoId: "bala-hierro" },
+        { pieceId: "minion", qty: 2, side: "estribor", shotsPerPiece: 20, ammoId: "bala-hierro" },
+        { pieceId: "verso", qty: 1, side: "swivel", shotsPerPiece: 20, ammoId: "metralla" },
+      ],
+      crew: { marino: 14, artillero: 3, soldado: 2 },
+      days: 30,
+      cargoKg: 0,
+      ballastKg: 4100,
+      equipmentKg: 0,
+      reserveKg: 0,
+    },
   },
   {
     id: "bark-armado",
@@ -369,6 +558,19 @@ export const HULLS = [
     maxPiecesPerSide: 9,
     crewMin: 12,
     priceGold: 1150,
+    defaultLoadout: {
+      batteries: [
+        { pieceId: "minion", qty: 3, side: "babor", shotsPerPiece: 20, ammoId: "bala-hierro" },
+        { pieceId: "minion", qty: 3, side: "estribor", shotsPerPiece: 20, ammoId: "bala-hierro" },
+        { pieceId: "verso", qty: 2, side: "swivel", shotsPerPiece: 20, ammoId: "metralla" },
+      ],
+      crew: { marino: 12, artillero: 4, soldado: 3 },
+      days: 30,
+      cargoKg: 0,
+      ballastKg: 25200,
+      equipmentKg: 0,
+      reserveKg: 0,
+    },
   },
 ].map((hull) => {
   const arqueoMid = (hull.arqueo[0] + hull.arqueo[1]) / 2;
