@@ -1860,21 +1860,28 @@ function drawFlag(ctx, countryId, { x = -10, y = 0, size = 26 } = {}) {
     ctx.fillStyle = colours.bands[i];
     ctx.fillRect(x - size, y - height / 2 + i * bandHeight, size, bandHeight + 0.5);
   }
-  // The cross, when the flag has one: a vertical bar plus a horizontal one.
+  // The cross, when the flag has one: a Latin cross (a vertical bar plus a horizontal one)
+  // or a saltire (an X), as the country declares (S72). A saltire is clipped to the flag,
+  // so its strokes never leave the cloth.
   if (colours.cross) {
     ctx.fillStyle = colours.cross;
-    ctx.fillRect(x - size * 0.58, y - height / 2, size * 0.16, height);
-    ctx.fillRect(x - size, y - bandHeight * 0.55, size, bandHeight * 1.1);
-    if (colours.ragged) {
-      // A ragged cross of Burgundy: short diagonal strokes over the field.
+    if (colours.shape === "saltire") {
+      ctx.save();
+      ctx.beginPath();
+      ctx.rect(x - size, y - height / 2, size, height);
+      ctx.clip();
       ctx.strokeStyle = colours.cross;
-      ctx.lineWidth = 1.6;
-      for (const t of [0.15, 0.45, 0.75]) {
-        ctx.beginPath();
-        ctx.moveTo(x - size * (1 - t), y - height / 2);
-        ctx.lineTo(x - size * (0.82 - t), y + height / 2);
-        ctx.stroke();
-      }
+      ctx.lineWidth = height * 0.34;
+      ctx.beginPath();
+      ctx.moveTo(x - size, y - height / 2);
+      ctx.lineTo(x, y + height / 2);
+      ctx.moveTo(x - size, y + height / 2);
+      ctx.lineTo(x, y - height / 2);
+      ctx.stroke();
+      ctx.restore();
+    } else {
+      ctx.fillRect(x - size * 0.58, y - height / 2, size * 0.16, height);
+      ctx.fillRect(x - size, y - bandHeight * 0.55, size, bandHeight * 1.1);
     }
   }
   ctx.strokeStyle = "rgba(10,18,28,0.55)";

@@ -62,16 +62,19 @@ export const FLAGS = {
     /** The cross of St George: white field, red cross. */
     bands: ["#f4f1e8", "#f4f1e8", "#f4f1e8"],
     cross: "#b02a24",
+    shape: "latin",
   },
   espana: {
-    /** The cross of Burgundy over a white field, the colours of the tercios. */
+    /** The saltire of Burgundy over a white field, the colours of the tercios. An X, not
+     *  a Latin cross: that is what tells her from England at a glance (S72). */
     bands: ["#f4f1e8", "#f4f1e8", "#f4f1e8"],
     cross: "#a8241c",
-    ragged: true,
+    shape: "saltire",
   },
   portugal: {
     bands: ["#1c5c3a", "#f4f1e8", "#f4f1e8"],
     cross: "#a8241c",
+    shape: "latin",
   },
   "paises-bajos": {
     /** The Prince's flag: orange, white and blue. */
