@@ -83,7 +83,7 @@ import {
   withHold,
   withStock,
 } from "../model/commerce.js";
-import { GAME_TIME, burnSupply, supplySeconds } from "../model/game-time.js";
+import { GAME_TIME, burnSupply, daysOfSupply, supplySeconds } from "../model/game-time.js";
 import { currentShipyard, deserializeWorld, shipyardZone } from "../model/world.js";
 // S171: the progress the shipyard shows is the mode's answer, not a rule of its own. The
 // saved record names its mode; a record with none plays the shipped one, as it always did.
@@ -386,12 +386,32 @@ function currentConfig() {
 /**
  * Bring the half-built loadout into the active country's catalogue. Called on boot
  * and on every country change, so no illegal hull or piece can stay on screen.
+ * When the country changes the hull, the rig is that hull's defaults, not the old rig.
  */
 function applyCountryToLoadout() {
+  const previousHull = state.hullId;
   const reconciled = reconcileLoadout(currentConfig(), state.country);
   state.hullId = reconciled.hullId;
   state.batteries = reconciled.batteries;
+  const hull = hullById(state.hullId);
+  if (hull && state.hullId !== previousHull) applyHullDefaults(hull);
   return reconciled;
+}
+
+/**
+ * Selecting a hull loads its own default loadout (naval-data.js defaultLoadout), which is
+ * valid for that hull. Nothing of the previous hull's rig is carried over.
+ */
+function applyHullDefaults(hull) {
+  const defaults = hull.defaultLoadout;
+  state.hullId = hull.id;
+  state.batteries = defaults.batteries.map((entry) => ({ ...entry }));
+  state.crew = { ...defaults.crew };
+  state.days = defaults.days;
+  state.cargoKg = defaults.cargoKg;
+  state.ballastKg = defaults.ballastKg;
+  state.equipmentKg = defaults.equipmentKg;
+  state.reserveKg = defaults.reserveKg;
 }
 
 /** The country's catalogue: what the shipyard is allowed to sell right now. */
@@ -454,12 +474,9 @@ function renderHulls() {
     `;
     card.addEventListener("click", () => {
       if (state.hullId === hull.id) return;
-      state.hullId = hull.id;
-      // Pieces beyond the new hull's limit would be silently illegal: trim them.
-      state.batteries = state.batteries.filter((entry) => pieceById(entry.pieceId));
-      // The same for men the new hull cannot seat (S159-H): a galleon has no banks of oars,
-      // so the rowers of a galleass do not come along.
-      state.crew = withoutUnseatableRowers(hull, state.crew);
+      // The rig of the hull she picks: her own defaults, never the previous hull's rig.
+      draftOfCaptainId = null;
+      applyHullDefaults(hull);
       render();
     });
     els.hullList.appendChild(card);
@@ -601,17 +618,38 @@ function renderCrew() {
   }
 }
 
+/**
+ * The days a ship in the fleet has left at sea, as the sea shows them (S132): her reserve in
+ * the sea save, rounded up like the sea's own supplies line. Null when the sea holds no
+ * reserve for her yet (she has not sailed), so her purchase days stand.
+ */
+function liveSupplyDays(shipId) {
+  let game = null;
+  try {
+    game = JSON.parse(localStorage.getItem(GAME_KEY) ?? "null");
+  } catch {
+    game = null;
+  }
+  const seconds = game?.supplyByHull?.[shipId];
+  if (seconds === null || seconds === undefined || !Number.isFinite(Number(seconds))) return null;
+  return Math.ceil(daysOfSupply(Number(seconds)));
+}
+
 function renderSupply(ship) {
   const hull = ship?.hull ?? hullById(state.hullId);
   const cargoMax = ship?.budget.cargoMaxKg ?? 0;
+  // A ship already in the fleet shows what the sea left her (S132), read-only: restocking is
+  // the Repair button's job. A new purchase keeps its editable days.
+  const afloat = refitId !== null ? liveSupplyDays(refitId) : null;
   const fields = [
     {
       key: "days",
       label: t("shipyard.days"),
-      value: state.days,
+      value: afloat ?? state.days,
       step: 5,
       max: 180,
-      note: t("supply.daysNote", { kg: fmtOne.format(4.5) }),
+      note: afloat === null ? t("supply.daysNote", { kg: fmtOne.format(4.5) }) : t("supply.daysAfloatNote"),
+      readOnly: afloat !== null,
     },
     {
       key: "cargoKg",
@@ -654,7 +692,7 @@ function renderSupply(ship) {
     wrapper.innerHTML = `
       <div class="row">
         <strong>${field.label}</strong>
-        <input type="number" min="0" max="${field.max}" step="${field.step}" value="${field.value}" data-supply="${field.key}" />
+        <input type="number" min="0" max="${field.max}" step="${field.step}" value="${field.value}" data-supply="${field.key}"${field.readOnly ? " disabled" : ""} />
       </div>
       <small>${field.note}</small>
     `;
@@ -969,6 +1007,8 @@ let lastAddedName = null;
 let lastNoticeKey = "shipyard.added";
 let arrivalNotice = null;
 let refitId = null;
+/** The entry draft is the captain's copy until the player changes it (S129): her id, or null. */
+let draftOfCaptainId = null;
 
 function renderArrivalNotice() {
   if (!arrivalNotice) return;
@@ -1209,6 +1249,7 @@ function launch() {
   const name = state.shipName.trim() || defaultShipName(ship.hull);
   const runtime = { ...toRuntimeShip(ship, { name }), yardId: screenShipyard()?.id ?? null };
   freshlyBoughtId = runtime.id;
+  draftOfCaptainId = null;
 
   // The new captain is built here; preserve the voyage location and the old captain's
   // combat record rather than replacing the sea save with a home-port start.
@@ -1719,7 +1760,17 @@ if (els.yardSelect) {
     els.purchaseNotice.textContent = "";
     // The refit editor is a room of the yard on screen: a hull of another yard must not
     // stay selected, or the panel would edit her from the wrong water.
-    if (refitId && !localFleet().ships.some((ship) => ship.id === refitId)) refitId = null;
+    const leftRefit = refitId && !localFleet().ships.some((ship) => ship.id === refitId);
+    if (leftRefit) refitId = null;
+    // The draft that came from the captain is hers, not this yard's: it goes with her.
+    const captainLeft = draftOfCaptainId !== null && !localFleet().ships.some((ship) => ship.id === draftOfCaptainId);
+    if (captainLeft) draftOfCaptainId = null;
+    if (leftRefit || captainLeft) {
+      state.shipName = "";
+      els.shipName.value = "";
+      const first = countryHulls()[0];
+      if (first) applyHullDefaults(first);
+    }
     renderYardRooms();
   });
 }
@@ -2758,6 +2809,9 @@ els.fleetRepairBtn.addEventListener("click", () => {
     gold: gold(spent),
   });
   dockSignature = null;
+  // The avisos are read from the refit editor, which still held her pre-repair loadout:
+  // copy the repaired ship back into it, so the chips and the autosave see what she is now.
+  if (after && refitId === after.id) selectRefitShip(after, { openRoom: false });
   renderFleet();
   render();
 });
@@ -3216,6 +3270,7 @@ const captain = captainShip(fleet);
 // the click silently refitted the captain, which reads as "it always buys the same ship".
 if (captain) selectRefitShip(captain, { openRoom: false });
 refitId = null;
+draftOfCaptainId = captain?.id ?? null;
 renderFleet();
 renderCountry();
 renderHulls();
