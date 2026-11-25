@@ -1,0 +1,23 @@
+scripts/smoke-fort-combat.mjs
+  s_a06177f2d49543::t_aba6c1947da12e 68-70
+src/ui/sea.js
+  s_a06177f2d49543::t_97d450d72cf54f 69,2820-2830,2840-2849
+test/settings.test.js
+  s_a06177f2d49543::t_0826e0816d7a1b 262-263,269
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.6",
+  "base_commit_sha": "c92c90dd65f25bf79051128c71f31315668816e2",
+  "prompts": {},
+  "sessions": {
+    "s_a06177f2d49543": {
+      "agent_id": {
+        "tool": "pi",
+        "id": "01a21261-f7c8-73c7-8faa-4e3766f9a844",
+        "model": "claude-haiku-5.5"
+      },
+      "human_author": "Raul Ripoll <raulral@ext.inditex.com>"
+    }
+  }
+}
