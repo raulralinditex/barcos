@@ -51,6 +51,7 @@ import {
   isEmptyFleet,
   reconcileCaptainPosition,
   serializeFleet,
+  shipsAtYard,
   shipsAvailableAtYard,
   setCaptain,
   squadrons,
@@ -1218,11 +1219,24 @@ function autoSaveRefit() {
   if (!target) return false;
   const quote = quoteRefit(target, currentConfig(), state.gold);
   const before = buildShip(configFromShip(target))?.config;
-  if (!quote?.feasible || !before) return false;
+  if (!quote?.feasible || !before) {
+    // An infeasible loadout is not saved, but the name is not part of the loadout: it is
+    // saved on its own, so a new name never disappears with a loadout that cannot sail.
+    return renameFleetShip(target, state.shipName.trim() || target.name);
+  }
   const loadoutChanged = stableJson(quote.built.config) !== stableJson(before);
   const renamed = (state.shipName.trim() || target.name) !== target.name;
   if (!loadoutChanged && !renamed) return false;
   return saveRefit({ leave: false });
+}
+
+/** Save a new name on the fleet entry alone (the loadout is left as it was). */
+function renameFleetShip(target, name) {
+  if (name === target.name) return false;
+  fleet = { ...fleet, ships: fleet.ships.map((ship) => (ship.id === target.id ? { ...ship, name } : ship)) };
+  saveFleet();
+  renderFleet();
+  return true;
 }
 
 /** The save button belongs to buying, and to refitting only when it is not automatic. */
@@ -1888,10 +1902,9 @@ function localFleet() {
   // The visitors' window is the yard the captain is moored at (S130): a visit to another
   // yard shows her own moored hulls, never the squadron that is sailing elsewhere.
   const mooredAt = captainYard();
-  // With the captain under way there is no yard to scope to (S163-E), and scoping anyway
-  // emptied the fleet panel: she would open the shipyard and read "sin naves" while her
-  // whole fleet existed. The window narrows to a yard only when she is tied up at one.
-  if (!mooredAt) return fleet;
+  // With the captain under way there is no yard of her own, and the window is the yard on
+  // screen alone: only the hulls moored there. The sea squadron is never listed at a yard.
+  if (!mooredAt) return yard ? { ...fleet, ships: shipsAtYard(fleet, yard.id) } : fleet;
   return { ...fleet, ships: shipsAvailableAtYard(fleet, yard?.id, mooredAt.id) };
 }
 
@@ -2446,7 +2459,9 @@ function renderFleet() {
       });
 
   if (isEmptyFleet(local)) {
-    els.fleetList.innerHTML = `<li class="fleet-empty">${t("fleet.empty")}</li>`;
+    // The fleet exists but nothing is moored at this yard: say so, instead of the first-ship hint.
+    const message = fleet.ships.length > 0 ? t("fleet.yardEmpty") : t("fleet.empty");
+    els.fleetList.innerHTML = `<li class="fleet-empty">${message}</li>`;
     renderFleetDetail();
     return;
   }

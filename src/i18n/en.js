@@ -40,6 +40,7 @@ export const en = {
   "fleet.count.many": "{count} ships",
   "fleet.count.none": "no ships",
   "fleet.empty": "You own no ships yet. Build the first one and add it to the fleet.",
+  "fleet.yardEmpty": "No ship moored here.",
   "fleet.captain": "flagship",
   /* S155-H: the yard's fleet, grouped by captain. */
   "fleet.captain.hulls": "{count} hulls",

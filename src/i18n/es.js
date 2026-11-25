@@ -38,6 +38,7 @@ export const es = {
   "fleet.count.many": "{count} naves",
   "fleet.count.none": "sin naves",
   "fleet.empty": "Todavía no tenés naves. Construí la primera y añadila a la flota.",
+  "fleet.yardEmpty": "Ninguna nave atracada aquí.",
   "fleet.captain": "capitana",
   /* S155-H: la flota del astillero, agrupada por capitana. */
   "fleet.captain.hulls": "{count} cascos",
