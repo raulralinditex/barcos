@@ -763,10 +763,9 @@ function updatePortArrival() {
     /* storage disabled: continue to the shipyard */
   }
   saveGame();
-  // Arriving at the yard opens the buy room (S109): the player comes back to buy or
-  // refit, not to stare at a fleet list she just sailed. The hash is the room's name,
-  // the same one config.html redirects with.
-  window.location.href = "./index.html#comprar";
+  // Arriving at the yard opens her fleet (S154): the captain comes back to look at her
+  // squadron. The hash is the room's name, the same one config.html redirects with.
+  window.location.href = "./index.html#flota";
   return true;
 }
 
@@ -1448,7 +1447,7 @@ let hoveredYardId = null;
  * the shipyard does when the player walks in, would greet her with a list of actions every
  * one of which is refused.
  */
-const SHIPYARD_ENTRY_SCREEN = "comprar";
+const SHIPYARD_ENTRY_SCREEN = "flota";
 
 /** The shipyard whose anchor the pointer is over, or null (S163-G). */
 function yardAtPointer(event) {
